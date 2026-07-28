@@ -1,15 +1,24 @@
-# Prerequisites
-*.d
+# Build
+x64/
+build/
+Build/
+build-*/
+*.user
+*.vcxproj.user
+
+# VS
+.vs/
 
 # Compiled Object files
-*.slo
-*.lo
 *.o
 *.obj
+*.slo
+*.lo
 
 # Precompiled Headers
 *.gch
 *.pch
+*.d
 
 # Linker files
 *.ilk
@@ -17,32 +26,20 @@
 # Debugger Files
 *.pdb
 
-# Compiled Dynamic libraries
+# Compiled libraries
 *.so
 *.dylib
 *.dll
 *.so.*
-
-
-# Fortran module files
-*.mod
-*.smod
-
-# Compiled Static libraries
+*.lib
+*.a
 *.lai
 *.la
-*.a
-*.lib
 
 # Executables
 *.exe
 *.out
 *.app
-
-# Build directories
-build/
-Build/
-build-*/
 
 # CMake generated files
 CMakeFiles/
@@ -52,18 +49,28 @@ Makefile
 install_manifest.txt
 compile_commands.json
 
-# Temporary files
+# vcpkg
+vcpkg_installed/
+
+# Fortran
+*.mod
+*.smod
+
+# Temp
 *.tmp
 *.log
 *.bak
 *.swp
-
-# vcpkg
-vcpkg_installed/
-
-# debug information files
 *.dwo
-
-# test output & cache
 Testing/
 .cache/
+
+# Env
+.env
+
+# Project-specific
+BallsHac.cbdbce15/
+
+# OS
+Thumbs.db
+Desktop.ini
