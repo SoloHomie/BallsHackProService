@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light" />
+    <title>{{LABEL}}验证码 — BallsHackPro</title>
+    <style>
+        /* 重置与基础 */
+        body {
+            margin: 0;
+            padding: 0;
+            background: #f0f2f5;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .email-wrap {
+            max-width: 520px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+            border: 1px solid #e8eaed;
+        }
+
+        @media screen and (max-width: 560px) {
+            .email-wrap {
+                border-radius: 0;
+                border-left: none;
+                border-right: none;
+                box-shadow: none;
+            }
+
+            .inner-pad {
+                padding: 36px 24px 32px !important;
+            }
+
+            .code-box {
+                font-size: 36px !important;
+                letter-spacing: 10px !important;
+                padding: 12px 6px !important;
+            }
+
+            .main-title {
+                font-size: 24px !important;
+            }
+        }
+        /* 邮件内联样式为主，此 <style> 仅辅助预览 */
+    </style>
+</head>
+<body style="margin:0;padding:0;background:#f0f2f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei','Helvetica Neue',sans-serif;">
+
+    <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background:#f0f2f5;padding:36px 16px;">
+        <tr>
+            <td align="center" style="padding:0;">
+                <!-- 主卡片 -->
+                <table cellpadding="0" cellspacing="0" role="presentation" style="max-width:520px;width:100%;background:#ffffff;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.04);border:1px solid #e8eaed;margin:0 auto;">
+                    <tr>
+                        <td style="border-radius:16px;background:#ffffff;">
+                            <table cellpadding="0" cellspacing="0" role="presentation" style="width:100%;">
+                                <tr>
+                                    <td class="inner-pad" style="padding:44px 40px 36px;">
+
+                                        <!-- ═══ 品牌 + 装饰 ═══ -->
+                                        <table cellpadding="0" cellspacing="0" role="presentation" style="margin:0 auto 28px;width:100%;">
+                                            <tr>
+                                                <td align="center" style="font-size:18px;font-weight:600;color:#111827;letter-spacing:-0.2px;">
+                                                    BallsHackPro
+                                                    <span style="display:inline-block;width:6px;height:6px;background:#2563eb;border-radius:50%;margin-left:8px;vertical-align:middle;"></span>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td align="center" style="padding-top:10px;">
+                                                    <table cellpadding="0" cellspacing="0" role="presentation" style="margin:0 auto;">
+                                                        <tr>
+                                                            <td style="width:40px;height:2px;background:#2563eb;border-radius:2px;"></td>
+                                                            <td style="width:6px;"></td>
+                                                            <td style="width:40px;height:2px;background:#d1d5db;border-radius:2px;"></td>
+                                                        </tr>
+                                                    </table>
+                                                </td>
+                                            </tr>
+                                        </table>
+
+                                        <!-- ═══ 标题 ═══ -->
+                                        <table cellpadding="0" cellspacing="0" role="presentation" style="margin:0 auto 6px;">
+                                            <tr>
+                                                <td align="center" style="font-size:28px;font-weight:700;color:#111827;text-align:center;letter-spacing:-0.4px;" class="main-title">
+                                                    {{LABEL}}验证码
+                                                </td>
+                                            </tr>
+                                        </table>
+
+                                        <!-- ═══ 描述 ═══ -->
+                                        <table cellpadding="0" cellspacing="0" role="presentation" style="margin:0 auto 32px;">
+                                            <tr>
+                                                <td align="center" style="font-size:15px;color:#4b5563;text-align:center;line-height:1.7;">
+                                                    {{DESC}}
+                                                </td>
+                                            </tr>
+                                        </table>
+
+                                        <!-- ═══ 验证码区块（精致卡片） ═══ -->
+                                        <table cellpadding="0" cellspacing="0" role="presentation" style="margin:0 auto 38px;width:100%;">
+                                            <tr>
+                                                <td align="center" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px 12px;transition:border-color 0.2s;">
+                                                    <span style="font-size:46px;font-weight:700;color:#0b1a33;font-family:'SF Mono','JetBrains Mono','Cascadia Code','Consolas','Courier New',monospace;letter-spacing:16px;padding-left:16px;display:inline-block;" class="code-box">
+                                                        {{CODE}}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        </table>
+
+                                        <!-- ═══ 有效期 ═══ -->
+                                        <table cellpadding="0" cellspacing="0" role="presentation" style="margin:0 auto 34px;">
+                                            <tr>
+                                                <td align="center" style="font-size:14px;color:#6b7280;text-align:center;line-height:1.6;">
+                                                    <strong style="color:#374151;">{{TTL_MIN}} 分钟</strong> 后失效  ·  如非本人操作请忽略
+                                                </td>
+                                            </tr>
+                                        </table>
+
+                                        <!-- ═══ 分割线 ═══ -->
+                                        <table cellpadding="0" cellspacing="0" role="presentation" style="margin:0 auto 24px;width:100%;">
+                                            <tr>
+                                                <td align="center">
+                                                    <hr style="border:0;border-top:1px solid #e8eaed;margin:0;" />
+                                                </td>
+                                            </tr>
+                                        </table>
+
+                                        <!-- ═══ 安全提醒（带背景色块，更醒目） ═══ -->
+                                        <table cellpadding="0" cellspacing="0" role="presentation" style="margin:0 auto;width:100%;">
+                                            <tr>
+                                                <td align="center" style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 16px;">
+                                                    <table cellpadding="0" cellspacing="0" role="presentation" style="margin:0 auto;">
+                                                        <tr>
+                                                            <td style="font-size:14px;font-weight:500;color:#991b1b;text-align:center;line-height:1.5;">
+                                                                安全提醒：BallsHackPro 绝不会以任何形式主动向你索要验证码
+                                                            </td>
+                                                        </tr>
+                                                    </table>
+                                                </td>
+                                            </tr>
+                                        </table>
+
+                                        <!-- ═══ 页脚 ═══ -->
+                                        <table cellpadding="0" cellspacing="0" role="presentation" style="margin:30px auto 0;">
+                                            <tr>
+                                                <td align="center" style="font-size:12px;color:#9ca3af;text-align:center;letter-spacing:0.2px;">
+                                                    BallsHackPro  ·  系统自动发送，请勿直接回复
+                                                </td>
+                                            </tr>
+                                        </table>
+
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+
+                <!-- ═══ 底部小字（防钓鱼提示） ═══ -->
+                <table cellpadding="0" cellspacing="0" role="presentation" style="margin:16px auto 0;">
+                    <tr>
+                        <td align="center" style="font-size:11px;color:#9ca3af;text-align:center;line-height:1.5;">
+                            如果您没有进行此操作，请忽略该邮件，并确保您的账户安全。
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

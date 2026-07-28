@@ -1,0 +1,43 @@
+HTTP/1.1 200 OK
+Server: nginx
+Date: Tue, 21 Jul 2026 10:18:34 GMT
+Content-Type: text/html; charset=utf-8
+Transfer-Encoding: chunked
+Connection: keep-alive
+Vary: Accept-Encoding
+Strict-Transport-Security: max-age=31536000
+
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>跳转中</title>
+    <style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{display:flex;flex-direction:column;justify-content:center;align-items:center;min-height:100vh;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",sans-serif}
+.box{text-align:center;padding:40px}
+.loader{display:flex;justify-content:center;align-items:center;gap:8px;margin-bottom:28px}
+.loader-dot{width:12px;height:12px;border-radius:50%;background:#1677ff;animation:bounce 1.4s ease-in-out infinite}
+.loader-dot:first-child{animation-delay:0s}
+.loader-dot:nth-child(2){animation-delay:.2s}
+.loader-dot:nth-child(3){animation-delay:.4s}
+@keyframes bounce{0%,100%,80%{transform:scale(.6);opacity:.4}
+40%{transform:scale(1);opacity:1}
+}
+.loading-text{color:#1a1a1a;font-size:18px;font-weight:500;line-height:1.5;margin-bottom:8px}
+.loading-sub{color:#999;font-size:14px}
+    </style>
+  </head>
+  <body>
+    <div class="box">
+      <div class="loader">
+        <div class="loader-dot"></div>
+        <div class="loader-dot"></div>
+        <div class="loader-dot"></div>
+      </div>
+      <p class="loading-text">跳转支付中</p>
+      <p class="loading-sub">请稍候...</p>
+      <form id='alipaysubmit' name='alipaysubmit' action='https://openapi.alipay.com/gateway.do?charset=UTF-8' method='POST'><input type='hidden' name='app_id' value='2021004191636987'/><input type='hidden' name='version' value='1&period;0'/><input type='hidden' name='alipay_sdk' value='alipay-sdk-PHP-4&period;11&period;14&period;ALL'/><input type='hidden' name='charset' value='UTF-8'/><input type='hidden' name='format' value='json'/><input type='hidden' name='sign_type' value='RSA2'/><input type='hidden' name='method' value='alipay&period;trade&period;page&period;pay'/><input type='hidden' name='timestamp' value='2026-07-21 18&colon;18&colon;34'/><input type='hidden' name='notify_url' value='https&colon;&sol;&sol;pay&period;jkou&period;cn&sol;pay&sol;notify&sol;2026072118183434182&sol;'/><input type='hidden' name='return_url' value='https&colon;&sol;&sol;pay&period;jkou&period;cn&sol;pay&sol;return&sol;2026072118183434182&sol;'/><input type='hidden' name='biz_content' value='&lbrace;&quot;out&lowbar;trade&lowbar;no&quot;&colon;&quot;2026072118183434182&quot;&comma;&quot;total&lowbar;amount&quot;&colon;&quot;5&period;00&quot;&comma;&quot;subject&quot;&colon;&quot;2026072118183434182&quot;&comma;&quot;time&lowbar;expire&quot;&colon;&quot;2026-07-21 20&colon;18&colon;34&quot;&comma;&quot;business&lowbar;params&quot;&colon;&lbrace;&quot;mc&lowbar;create&lowbar;trade&lowbar;ip&quot;&colon;&quot;125&period;68&period;75&period;214&quot;&rcub;&comma;&quot;product&lowbar;code&quot;&colon;&quot;FAST&lowbar;INSTANT&lowbar;TRADE&lowbar;PAY&quot;&rcub;'/><input type='hidden' name='sign' value='j2FomDHnConswUCMmOFmF05voRDEXNYuXnZfo6GDnilLED&plus;X8N1vW&plus;dfFsvw6ljxq17ymwrWieixgu&sol;pEVYGB4VaCVQ&sol;KFCpQWa7l&sol;hduYMr5iJMoUa8Yy&sol;rYObIT&sol;oz90gC2bOg0BFFhm&sol;sXoKckJCDNgJ6mJVkFxActZ0BdFCIrinpkOuGUZPPSrqWzF5IfyYZjrmDSRec1Bco&plus;2l34F&sol;isjV0bC6RxcvrwOW2tARM9E4rJmMmfFWbW0l3T&sol;dXS3AfJWmQFwMA1blP2j9k9PBv8vhFwC8l3p52FltN2g43O51D&sol;AhW1CVoqaivKu04aWjTCgutw5xmh2xPPUDRYw&equals;&equals;'/><input type='submit' value='ok' style='display:none;'></form><script>document.forms['alipaysubmit'].submit();</script>    </div>
+  </body>
+</html>
