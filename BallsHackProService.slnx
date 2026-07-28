@@ -1,0 +1,7 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="BallsHackProService.vcxproj" Id="cbdbce15-777b-458b-af8e-887482128629" />
+</Solution>

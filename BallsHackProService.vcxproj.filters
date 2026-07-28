@@ -1,0 +1,319 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <!-- Module: entry -->
+    <Filter Include="entry">
+      <UniqueIdentifier>{10000000-0000-0000-0000-000000000001}</UniqueIdentifier>
+    </Filter>
+    <!-- Module: auth -->
+    <Filter Include="auth">
+      <UniqueIdentifier>{20000000-0000-0000-0000-000000000001}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="auth\header">
+      <UniqueIdentifier>{21000000-0000-0000-0000-000000000001}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="auth\source">
+      <UniqueIdentifier>{21000000-0000-0000-0000-000000000002}</UniqueIdentifier>
+    </Filter>
+    <!-- Module: common -->
+    <Filter Include="common">
+      <UniqueIdentifier>{30000000-0000-0000-0000-000000000001}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="common\header">
+      <UniqueIdentifier>{31000000-0000-0000-0000-000000000001}</UniqueIdentifier>
+    </Filter>
+    <!-- Module: core\config -->
+    <Filter Include="core\config">
+      <UniqueIdentifier>{41000000-0000-0000-0000-000000000001}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="core\config\header">
+      <UniqueIdentifier>{41100000-0000-0000-0000-000000000001}</UniqueIdentifier>
+    </Filter>
+    <!-- Module: core\server -->
+    <Filter Include="core\server">
+      <UniqueIdentifier>{42000000-0000-0000-0000-000000000001}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="core\server\header">
+      <UniqueIdentifier>{42100000-0000-0000-0000-000000000001}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="core\server\source">
+      <UniqueIdentifier>{42100000-0000-0000-0000-000000000002}</UniqueIdentifier>
+    </Filter>
+    <!-- Module: core\database -->
+    <Filter Include="core\database">
+      <UniqueIdentifier>{43000000-0000-0000-0000-000000000001}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="core\database\header">
+      <UniqueIdentifier>{43100000-0000-0000-0000-000000000001}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="core\database\source">
+      <UniqueIdentifier>{43100000-0000-0000-0000-000000000002}</UniqueIdentifier>
+    </Filter>
+    <!-- Module: core\cache -->
+    <Filter Include="core\cache">
+      <UniqueIdentifier>{44000000-0000-0000-0000-000000000001}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="core\cache\header">
+      <UniqueIdentifier>{44100000-0000-0000-0000-000000000001}</UniqueIdentifier>
+    </Filter>
+    <!-- Module: data -->
+    <Filter Include="data">
+      <UniqueIdentifier>{50000000-0000-0000-0000-000000000001}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="data\header">
+      <UniqueIdentifier>{51000000-0000-0000-0000-000000000001}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="data\source">
+      <UniqueIdentifier>{51000000-0000-0000-0000-000000000002}</UniqueIdentifier>
+    </Filter>
+    <!-- Module: email -->
+    <Filter Include="email">
+      <UniqueIdentifier>{60000000-0000-0000-0000-000000000001}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="email\header">
+      <UniqueIdentifier>{61000000-0000-0000-0000-000000000001}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="email\source">
+      <UniqueIdentifier>{61000000-0000-0000-0000-000000000002}</UniqueIdentifier>
+    </Filter>
+    <!-- Module: payment -->
+    <Filter Include="payment">
+      <UniqueIdentifier>{90000000-0000-0000-0000-000000000001}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="payment\header">
+      <UniqueIdentifier>{91000000-0000-0000-0000-000000000001}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="payment\source">
+      <UniqueIdentifier>{91000000-0000-0000-0000-000000000002}</UniqueIdentifier>
+    </Filter>
+    <!-- Module: route -->
+    <Filter Include="route">
+      <UniqueIdentifier>{70000000-0000-0000-0000-000000000001}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="route\header">
+      <UniqueIdentifier>{71000000-0000-0000-0000-000000000001}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="route\source">
+      <UniqueIdentifier>{71000000-0000-0000-0000-000000000002}</UniqueIdentifier>
+    </Filter>
+    <!-- Module: sync -->
+    <Filter Include="sync">
+      <UniqueIdentifier>{a0000000-0000-0000-0000-000000000001}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="sync\header">
+      <UniqueIdentifier>{a1000000-0000-0000-0000-000000000001}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="sync\source">
+      <UniqueIdentifier>{a1000000-0000-0000-0000-000000000002}</UniqueIdentifier>
+    </Filter>
+    <!-- Module: view -->
+    <Filter Include="view">
+      <UniqueIdentifier>{80000000-0000-0000-0000-000000000001}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="view\header">
+      <UniqueIdentifier>{81000000-0000-0000-0000-000000000001}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="view\source">
+      <UniqueIdentifier>{81000000-0000-0000-0000-000000000002}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- entry -->
+    <ClCompile Include="src\main.cpp">
+      <Filter>entry</Filter>
+    </ClCompile>
+    <!-- auth -->
+    <ClCompile Include="src\auth\AuthService.cpp">
+      <Filter>auth\source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\auth\CodeManager.cpp">
+      <Filter>auth\source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\auth\OAuthService.cpp">
+      <Filter>auth\source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\auth\TokenService.cpp">
+      <Filter>auth\source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\auth\UserStore.cpp">
+      <Filter>auth\source</Filter>
+    </ClCompile>
+    <!-- core\server -->
+    <ClCompile Include="src\core\server\HttpServer.cpp">
+      <Filter>core\server\source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\server\TlsConnection.cpp">
+      <Filter>core\server\source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\server\TlsContext.cpp">
+      <Filter>core\server\source</Filter>
+    </ClCompile>
+    <!-- core\database -->
+    <ClCompile Include="src\core\database\DbMigration.cpp">
+      <Filter>core\database\source</Filter>
+    </ClCompile>
+    <!-- data -->
+    <!-- email -->
+    <ClCompile Include="src\email\EmailService.cpp">
+      <Filter>email\source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\email\SmtpClient.cpp">
+      <Filter>email\source</Filter>
+    </ClCompile>
+    <!-- payment -->
+    <ClCompile Include="src\payment\VPayService.cpp">
+      <Filter>payment\source</Filter>
+    </ClCompile>
+    <!-- route -->
+    <ClCompile Include="src\route\AuthRoutes.cpp">
+      <Filter>route\source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\route\PaymentRoutes.cpp">
+      <Filter>route\source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\route\SystemRoutes.cpp">
+      <Filter>route\source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\route\WalletRoutes.cpp">
+      <Filter>route\source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\route\WelfareRoutes.cpp">
+      <Filter>route\source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\route\SyncRoutes.cpp">
+      <Filter>route\source</Filter>
+    </ClCompile>
+    <!-- sync -->
+    <ClCompile Include="src\sync\SyncService.cpp">
+      <Filter>sync\source</Filter>
+    </ClCompile>
+    <!-- view -->
+    <ClCompile Include="src\view\EmailPage.cpp">
+      <Filter>view\source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\view\OAuthPage.cpp">
+      <Filter>view\source</Filter>
+    </ClCompile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- auth -->
+    <ClInclude Include="src\auth\AuthService.h">
+      <Filter>auth\header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\auth\CodeManager.h">
+      <Filter>auth\header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\auth\OAuthService.h">
+      <Filter>auth\header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\auth\PasswordHash.h">
+      <Filter>auth\header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\auth\SessionManager.h">
+      <Filter>auth\header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\auth\TokenService.h">
+      <Filter>auth\header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\auth\UserStore.h">
+      <Filter>auth\header</Filter>
+    </ClInclude>
+    <!-- common -->
+    <ClInclude Include="src\common\Logger.h">
+      <Filter>common\header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\common\Snowflake.h">
+      <Filter>common\header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\common\StringUtils.h">
+      <Filter>common\header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\common\JsonConfig.h">
+      <Filter>common\header</Filter>
+    </ClInclude>
+    <!-- core\config -->
+    <ClInclude Include="src\core\config\DbConfig.h">
+      <Filter>core\config\header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\config\EmailConfig.h">
+      <Filter>core\config\header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\config\Env.h">
+      <Filter>core\config\header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\config\OAuthConfig.h">
+      <Filter>core\config\header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\config\ServerConfig.h">
+      <Filter>core\config\header</Filter>
+    </ClInclude>
+    <!-- core\server -->
+    <ClInclude Include="src\core\server\HttpServer.h">
+      <Filter>core\server\header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\server\TlsConnection.h">
+      <Filter>core\server\header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\server\TlsContext.h">
+      <Filter>core\server\header</Filter>
+    </ClInclude>
+    <!-- core\database -->
+    <ClInclude Include="src\core\database\DbMigration.h">
+      <Filter>core\database\header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\database\DbPool.h">
+      <Filter>core\database\header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\database\Schema.h">
+      <Filter>core\database\header</Filter>
+    </ClInclude>
+    <!-- core\cache -->
+    <ClInclude Include="src\core\cache\RedisClient.h">
+      <Filter>core\cache\header</Filter>
+    </ClInclude>
+    <!-- data -->
+    <!-- email -->
+    <ClInclude Include="src\email\EmailService.h">
+      <Filter>email\header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\email\SmtpClient.h">
+      <Filter>email\header</Filter>
+    </ClInclude>
+    <!-- payment -->
+    <ClInclude Include="src\payment\VPayService.h">
+      <Filter>payment\header</Filter>
+    </ClInclude>
+    <!-- route -->
+    <ClInclude Include="src\route\AuthRoutes.h">
+      <Filter>route\header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\route\PaymentRoutes.h">
+      <Filter>route\header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\route\SystemRoutes.h">
+      <Filter>route\header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\route\WalletRoutes.h">
+      <Filter>route\header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\route\WelfareRoutes.h">
+      <Filter>route\header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\route\SyncRoutes.h">
+      <Filter>route\header</Filter>
+    </ClInclude>
+    <!-- sync -->
+    <ClInclude Include="src\sync\SyncService.h">
+      <Filter>sync\header</Filter>
+    </ClInclude>
+    <!-- view -->
+    <ClInclude Include="src\view\EmailPage.h">
+      <Filter>view\header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\view\OAuthPage.h">
+      <Filter>view\header</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

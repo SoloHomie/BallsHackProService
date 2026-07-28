@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>18.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{cbdbce15-777b-458b-af8e-887482128629}</ProjectGuid>
+    <RootNamespace>BallsHackProService</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v145</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Debug'">
+    <UseDebugLibraries>true</UseDebugLibraries>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Release'">
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings" />
+  <ImportGroup Label="Shared" />
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <AdditionalIncludeDirectories>$(ProjectDir)src;$(VcpkgRoot)installed\x64-windows\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(VcpkgRoot)installed\x64-windows\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libmysql.lib;ws2_32.lib;crypt32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <!-- ===== Source Files ===== -->
+  <ItemGroup Label="entry">
+    <ClCompile Include="src\main.cpp" />
+  </ItemGroup>
+  <ItemGroup Label="auth (source)">
+    <ClCompile Include="src\auth\AuthService.cpp" />
+    <ClCompile Include="src\auth\CodeManager.cpp" />
+    <ClCompile Include="src\auth\OAuthService.cpp" />
+    <ClCompile Include="src\auth\TokenService.cpp" />
+    <ClCompile Include="src\auth\UserStore.cpp" />
+  </ItemGroup>
+  <ItemGroup Label="core\server (source)">
+    <ClCompile Include="src\core\server\HttpServer.cpp" />
+    <ClCompile Include="src\core\server\TlsConnection.cpp" />
+    <ClCompile Include="src\core\server\TlsContext.cpp" />
+  </ItemGroup>
+  <ItemGroup Label="core\database (source)">
+    <ClCompile Include="src\core\database\DbMigration.cpp" />
+  </ItemGroup>
+  <ItemGroup Label="data (source)">
+  </ItemGroup>
+  <ItemGroup Label="email (source)">
+    <ClCompile Include="src\email\EmailService.cpp" />
+    <ClCompile Include="src\email\SmtpClient.cpp" />
+  </ItemGroup>
+  <ItemGroup Label="route (source)">
+    <ClCompile Include="src\route\AuthRoutes.cpp" />
+    <ClCompile Include="src\route\PaymentRoutes.cpp" />
+    <ClCompile Include="src\route\WelfareRoutes.cpp" />
+    <ClCompile Include="src\route\SystemRoutes.cpp" />
+    <ClCompile Include="src\route\WalletRoutes.cpp" />
+    <ClCompile Include="src\route\SyncRoutes.cpp" />
+  </ItemGroup>
+  <ItemGroup Label="view (source)">
+    <ClCompile Include="src\view\EmailPage.cpp" />
+    <ClCompile Include="src\view\OAuthPage.cpp" />
+  </ItemGroup>
+  <ItemGroup Label="payment (source)">
+    <ClCompile Include="src\payment\VPayService.cpp" />
+  </ItemGroup>
+  <ItemGroup Label="sync (source)">
+    <ClCompile Include="src\sync\SyncService.cpp" />
+  </ItemGroup>
+  <!-- ===== Header Files ===== -->
+  <ItemGroup Label="auth (header)">
+    <ClInclude Include="src\auth\AuthService.h" />
+    <ClInclude Include="src\auth\CodeManager.h" />
+    <ClInclude Include="src\auth\OAuthService.h" />
+    <ClInclude Include="src\auth\PasswordHash.h" />
+    <ClInclude Include="src\auth\SessionManager.h" />
+    <ClInclude Include="src\auth\TokenService.h" />
+    <ClInclude Include="src\auth\UserStore.h" />
+  </ItemGroup>
+  <ItemGroup Label="common (header)">
+    <ClInclude Include="src\common\Logger.h" />
+    <ClInclude Include="src\common\Snowflake.h" />
+    <ClInclude Include="src\common\StringUtils.h" />
+    <ClInclude Include="src\common\JsonConfig.h" />
+  </ItemGroup>
+  <ItemGroup Label="core\config (header)">
+    <ClInclude Include="src\core\config\DbConfig.h" />
+    <ClInclude Include="src\core\config\EmailConfig.h" />
+    <ClInclude Include="src\core\config\Env.h" />
+    <ClInclude Include="src\core\config\OAuthConfig.h" />
+    <ClInclude Include="src\core\config\ServerConfig.h" />
+  </ItemGroup>
+  <ItemGroup Label="core\server (header)">
+    <ClInclude Include="src\core\server\HttpServer.h" />
+    <ClInclude Include="src\core\server\TlsConnection.h" />
+    <ClInclude Include="src\core\server\TlsContext.h" />
+  </ItemGroup>
+  <ItemGroup Label="core\database (header)">
+    <ClInclude Include="src\core\database\DbMigration.h" />
+    <ClInclude Include="src\core\database\DbPool.h" />
+    <ClInclude Include="src\core\database\Schema.h" />
+  </ItemGroup>
+  <ItemGroup Label="core\cache (header)">
+    <ClInclude Include="src\core\cache\RedisClient.h" />
+  </ItemGroup>
+  <ItemGroup Label="data (header)">
+  </ItemGroup>
+  <ItemGroup Label="email (header)">
+    <ClInclude Include="src\email\EmailService.h" />
+    <ClInclude Include="src\email\SmtpClient.h" />
+  </ItemGroup>
+  <ItemGroup Label="route (header)">
+    <ClInclude Include="src\route\AuthRoutes.h" />
+    <ClInclude Include="src\route\PaymentRoutes.h" />
+    <ClInclude Include="src\route\SystemRoutes.h" />
+    <ClInclude Include="src\route\WalletRoutes.h" />
+    <ClInclude Include="src\route\WelfareRoutes.h" />
+    <ClInclude Include="src\route\SyncRoutes.h" />
+  </ItemGroup>
+  <ItemGroup Label="view (header)">
+    <ClInclude Include="src\view\EmailPage.h" />
+    <ClInclude Include="src\view\OAuthPage.h" />
+  </ItemGroup>
+  <ItemGroup Label="payment (header)">
+    <ClInclude Include="src\payment\VPayService.h" />
+  </ItemGroup>
+  <ItemGroup Label="sync (header)">
+    <ClInclude Include="src\sync\SyncService.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="announcement.json" />
+    <None Include="version.json" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets" />
+</Project>
