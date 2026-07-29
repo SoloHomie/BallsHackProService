@@ -50,5 +50,19 @@ services:
       - "127.0.0.1:8080:8080"
     restart: unless-stopped
 
+  app:
+    build: .
+    container_name: bhpro-app
+    ports:
+      - "8920:8920"
+    env_file:
+      - .env
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   mysql_data:

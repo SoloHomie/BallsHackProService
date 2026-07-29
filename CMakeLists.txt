@@ -78,6 +78,12 @@ set(SOURCES
     src/route/AuthRoutes.cpp
     src/route/WalletRoutes.cpp
     src/route/SystemRoutes.cpp
+    src/route/PaymentRoutes.cpp
+    src/route/WelfareRoutes.cpp
+    src/route/SyncRoutes.cpp
+    src/route/AssetRoutes.cpp
+    src/payment/VPayService.cpp
+    src/sync/SyncService.cpp
 )
 
 set(HEADERS
@@ -101,6 +107,7 @@ set(HEADERS
     src/common/StringUtils.h
     src/common/Snowflake.h
     src/common/Logger.h
+    src/common/JsonConfig.h
     src/view/OAuthPage.h
     src/view/EmailPage.h
     src/core/cache/RedisClient.h
@@ -110,6 +117,12 @@ set(HEADERS
     src/route/AuthRoutes.h
     src/route/WalletRoutes.h
     src/route/SystemRoutes.h
+    src/route/PaymentRoutes.h
+    src/route/WelfareRoutes.h
+    src/route/SyncRoutes.h
+    src/route/AssetRoutes.h
+    src/payment/VPayService.h
+    src/sync/SyncService.h
 )
 
 # ── Executable ────────────────────────────────────────
