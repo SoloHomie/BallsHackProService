@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BallsHackPro — 球球大作战助手</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+  :root {
+    --bg: #0a0a0f;
+    --card: #13131f;
+    --border: #1e1e33;
+    --accent: #7c3aed;
+    --accent2: #06b6d4;
+    --text: #e2e8f0;
+    --muted: #8b949e;
+    --green: #22c55e;
+    --red: #ef4444;
+    --yellow: #f59e0b;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', 'Microsoft YaHei UI', sans-serif;
+    overflow-x: hidden;
+    line-height: 1.6;
+  }
+  /* ── 动态背景粒子 ── */
+  canvas#bg { position:fixed; top:0; left:0; z-index:0; pointer-events:none; }
+  /* ── 导航 ── */
+  nav {
+    position:fixed; top:0; width:100%; z-index:100;
+    backdrop-filter:blur(16px); background:rgba(10,10,15,0.8);
+    border-bottom:1px solid var(--border);
+  }
+  nav .inner { max-width:1200px; margin:0 auto; padding:16px 24px; display:flex; align-items:center; justify-content:space-between; }
+  nav .logo { font-size:22px; font-weight:800; background:linear-gradient(135deg,var(--accent),var(--accent2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  nav .links { display:flex; gap:24px; }
+  nav .links a { color:var(--muted); text-decoration:none; font-size:15px; transition:color .2s; }
+  nav .links a:hover { color:var(--text); }
+  /* ── 内容容器 ── */
+  .container { max-width:1200px; margin:0 auto; padding:0 24px; position:relative; z-index:1; }
+  /* ── Hero ── */
+  .hero { padding:160px 0 80px; text-align:center; }
+  .hero .badge {
+    display:inline-block; padding:6px 18px; border-radius:20px;
+    background:rgba(124,58,237,0.12); border:1px solid rgba(124,58,237,0.3);
+    color:var(--accent); font-size:14px; font-weight:600; margin-bottom:24px;
+    letter-spacing:0.5px;
+  }
+  .hero h1 { font-size:clamp(36px,6vw,64px); font-weight:800; line-height:1.15; margin-bottom:20px; }
+  .hero h1 span { background:linear-gradient(135deg,var(--accent),var(--accent2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .hero p { color:var(--muted); font-size:19px; max-width:600px; margin:0 auto 36px; }
+  .btn-group { display:flex; gap:16px; justify-content:center; flex-wrap:wrap; }
+  .btn {
+    display:inline-flex; align-items:center; gap:8px;
+    padding:14px 32px; border-radius:12px; font-size:17px; font-weight:700;
+    text-decoration:none; cursor:pointer; transition:all .25s;
+    border:1px solid transparent;
+  }
+  .btn-primary { background:var(--accent); color:#fff; }
+  .btn-primary:hover { background:#6d28d9; transform:translateY(-2px); box-shadow:0 8px 30px rgba(124,58,237,0.3); }
+  .btn-outline { border-color:var(--border); color:var(--text); background:var(--card); }
+  .btn-outline:hover { border-color:var(--accent); background:rgba(124,58,237,0.08); }
+  /* ── 特性 ── */
+  .features { padding:80px 0; }
+  .section-title { text-align:center; font-size:32px; font-weight:800; margin-bottom:48px; }
+  .section-title span { background:linear-gradient(135deg,var(--accent),var(--accent2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:20px; }
+  .card {
+    background:var(--card); border:1px solid var(--border); border-radius:16px;
+    padding:28px; transition:all .3s;
+  }
+  .card:hover { border-color:var(--accent); transform:translateY(-4px); box-shadow:0 12px 40px rgba(124,58,237,0.1); }
+  .card .icon { font-size:32px; margin-bottom:16px; }
+  .card h3 { font-size:18px; font-weight:700; margin-bottom:8px; }
+  .card p { color:var(--muted); font-size:15px; }
+  .card .tag {
+    display:inline-block; padding:3px 10px; border-radius:6px; font-size:12px; font-weight:600; margin-top:12px;
+  }
+  .tag-pro { background:rgba(124,58,237,0.15); color:var(--accent); }
+  .tag-free { background:rgba(34,197,94,0.15); color:var(--green); }
+  /* ── 下载区 ── */
+  .download { padding:80px 0; text-align:center; }
+  .download .card { max-width:500px; margin:0 auto; text-align:left; }
+  .download .version { color:var(--accent2); font-size:14px; font-weight:600; margin-bottom:4px; }
+  .download .file-info { display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid var(--border); }
+  .download .file-info:last-child { border:none; }
+  .download .file-name { font-weight:600; }
+  .download .file-size { color:var(--muted); font-size:14px; }
+  /* ── 页脚 ── */
+  footer { padding:40px 0; border-top:1px solid var(--border); text-align:center; color:var(--muted); font-size:14px; }
+  footer a { color:var(--accent); text-decoration:none; }
+  footer a:hover { text-decoration:underline; }
+  /* ── 动画 ── */
+  @keyframes float { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-10px); } }
+  .floating { animation:float 3s ease-in-out infinite; }
+  /* ── Toast ── */
+  .toast {
+    position:fixed; top:24px; left:50%; transform:translateX(-50%); z-index:200;
+    background:var(--card); border:1px solid var(--border); border-radius:12px;
+    padding:14px 28px; font-size:15px; font-weight:600;
+    opacity:0; transition:opacity .3s; pointer-events:none;
+  }
+  .toast.show { opacity:1; }
+  @media(max-width:640px) {
+    .hero { padding:120px 0 40px; }
+    .hero h1 { font-size:30px; }
+    .btn { padding:12px 24px; font-size:15px; }
+  }
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+
+<nav>
+  <div class="inner">
+    <div class="logo">BallsHackPro</div>
+    <div class="links">
+      <a href="#features">功能</a>
+      <a href="#download">下载</a>
+      <a href="https://discord.gg/YtvJrFvcC5" target="_blank">Discord</a>
+      <a href="https://github.com/SoloHomie/BallsHackPro-Public" target="_blank">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="container">
+    <div class="badge floating">🚀 v2.0 正式版</div>
+    <h1>球球大作战<br><span>专业助手</span></h1>
+    <p>智能锁球 · 动态投影算法 · 合球操作 · 内存黑屏卡点 · 多端同步</p>
+    <div class="btn-group">
+      <a href="https://github.com/SoloHomie/BallsHackPro-Public/releases" class="btn btn-primary" id="dlBtn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        立即下载
+      </a>
+      <a href="https://github.com/SoloHomie/BallsHackPro-Public" class="btn btn-outline">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.385-1.335-1.755-1.335-1.755-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.418-1.305.762-1.604-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 21.795 24 17.295 24 12 24 5.37 18.63 0 12 0z"/></svg>
+        GitHub
+      </a>
+      <a href="https://discord.gg/YtvJrFvcC5" class="btn btn-outline">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="#5865F2"><path d="M20.317 4.37a19.791 19.791 0 00-4.885-1.515.074.074 0 00-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 00-5.487 0 12.64 12.64 0 00-.617-1.25.077.077 0 00-.079-.037A19.736 19.736 0 003.677 4.37a.07.07 0 00-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 00.031.057 19.9 19.9 0 005.993 3.03.078.078 0 00.084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 00-.041-.106 13.107 13.107 0 01-1.872-.892.077.077 0 01-.008-.128 10.2 10.2 0 00.372-.292.074.074 0 01.077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 01.078.01c.12.098.246.198.373.292a.077.077 0 01-.006.127 12.299 12.299 0 01-1.873.892.077.077 0 00-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 00.084.028 19.839 19.839 0 006.002-3.03.077.077 0 00.032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 00-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
+        Discord
+      </a>
+    </div>
+  </div>
+</section>
+
+<section class="features" id="features">
+  <div class="container">
+    <h2 class="section-title">✨ <span>全部功能</span></h2>
+    <div class="grid">
+      <div class="card">
+        <div class="icon">🎯</div>
+        <h3>智能锁球</h3>
+        <p>动态投影算法，所有分身精准锁定目标球体，自动写入摇杆方向</p>
+        <span class="tag tag-pro">Pro</span>
+      </div>
+      <div class="card">
+        <div class="icon">💣</div>
+        <h3>锁球大炮</h3>
+        <p>监测目标半径骤降 → 自动分身连射，double精度归一化摇杆</p>
+        <span class="tag tag-pro">Pro</span>
+      </div>
+      <div class="card">
+        <div class="icon">🔄</div>
+        <h3>合球操作</h3>
+        <p>三角、冲球、四分、中分、后仰、旋转、半旋、蛇手 — 一键释放</p>
+        <span class="tag tag-pro">Pro</span>
+      </div>
+      <div class="card">
+        <div class="icon">🖥️</div>
+        <h3>内存操控</h3>
+        <p>实时修改视野、全局变速、摇杆解限、名字大小、动画粘合</p>
+        <span class="tag tag-pro">Pro</span>
+      </div>
+      <div class="card">
+        <div class="icon">⚫</div>
+        <h3>黑屏卡点</h3>
+        <p>鼠标触碰黑色区域自动分身，快捷键瞬时切换，支持球体箭头方向</p>
+        <span class="tag tag-pro">Pro</span>
+      </div>
+      <div class="card">
+        <div class="icon">🔗</div>
+        <h3>多端同步</h3>
+        <p>创建/加入房间，一人控制多方同步合球，延迟可配，受控方实时接收</p>
+        <span class="tag tag-free">Beta</span>
+      </div>
+      <div class="card">
+        <div class="icon">🛡️</div>
+        <h3>反黑屏检测</h3>
+        <p>智能检测黑屏状态，自动分身逃脱，确保球宝时刻在线</p>
+        <span class="tag tag-pro">Pro</span>
+      </div>
+      <div class="card">
+        <div class="icon">🎨</div>
+        <h3>外观定制</h3>
+        <p>浅色/深色主题、Win11 Mica/Acrylic 材质、简体中文界面</p>
+        <span class="tag tag-free">免费</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="download" id="download">
+  <div class="container">
+    <h2 class="section-title">📥 <span>下载客户端</span></h2>
+    <div class="card">
+      <div class="version">最新版本 v2.0</div>
+      <p style="color:var(--muted);font-size:14px;margin-bottom:16px;">仅支持 Windows 10/11 x64 · MuMu 模拟器</p>
+      <div class="file-info">
+        <span class="file-name">BallsHackPro-Setup.exe</span>
+        <span class="file-size">~12 MB</span>
+      </div>
+      <div class="file-info">
+        <span class="file-name">发布时间</span>
+        <span class="file-size">2026-07-30</span>
+      </div>
+      <a href="https://github.com/SoloHomie/BallsHackPro-Public/releases" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:20px;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        前往 GitHub 下载
+      </a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <p>Made with ❤️ by <a href="https://github.com/SoloHomie">SoloHomie</a> ·
+    <a href="https://github.com/SoloHomie/BallsHackPro-Public">GitHub</a> ·
+    <a href="https://discord.gg/YtvJrFvcC5">Discord</a></p>
+    <p style="margin-top:8px;">本工具仅供学习交流，请勿用于非法用途</p>
+  </div>
+</footer>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- 粒子背景 -->
+<script>
+const c = document.getElementById('bg');
+const ctx = c.getContext('2d');
+let w, h, particles = [];
+function resize() { w = c.width = window.innerWidth; h = c.height = window.innerHeight; }
+resize(); window.addEventListener('resize', resize);
+
+class Particle {
+  constructor() {
+    this.x = Math.random() * w;
+    this.y = Math.random() * h;
+    this.vx = (Math.random() - 0.5) * 0.5;
+    this.vy = (Math.random() - 0.5) * 0.5;
+    this.r = Math.random() * 2 + 0.5;
+    this.o = Math.random() * 0.4 + 0.1;
+  }
+  update() {
+    this.x += this.vx; this.y += this.vy;
+    if (this.x < 0) this.x = w;
+    if (this.x > w) this.x = 0;
+    if (this.y < 0) this.y = h;
+    if (this.y > h) this.y = 0;
+  }
+  draw() {
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(124,58,237,${this.o})`;
+    ctx.fill();
+  }
+}
+
+// 连线
+function drawLines() {
+  for (let i = 0; i < particles.length; i++) {
+    for (let j = i + 1; j < particles.length; j++) {
+      const dx = particles[i].x - particles[j].x;
+      const dy = particles[i].y - particles[j].y;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d < 120) {
+        ctx.beginPath();
+        ctx.moveTo(particles[i].x, particles[i].y);
+        ctx.lineTo(particles[j].x, particles[j].y);
+        ctx.strokeStyle = `rgba(124,58,237,${0.06 * (1 - d / 120)})`;
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+      }
+    }
+  }
+}
+
+for (let i = 0; i < 60; i++) particles.push(new Particle());
+
+function animate() {
+  ctx.clearRect(0, 0, w, h);
+  particles.forEach(p => { p.update(); p.draw(); });
+  drawLines();
+  requestAnimationFrame(animate);
+}
+animate();
+
+// 下载计数
+const dlBtn = document.getElementById('dlBtn');
+const toast = document.getElementById('toast');
+let count = parseInt(localStorage.getItem('dlCount') || '0');
+function showToast(msg) {
+  toast.textContent = msg; toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2500);
+}
+dlBtn.addEventListener('click', () => {
+  localStorage.setItem('dlCount', ++count);
+  showToast(`🎉 感谢下载！已有 ${count} 位球宝加入我们`);
+});
+</script>
+</body>
+</html>

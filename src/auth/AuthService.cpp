@@ -112,7 +112,7 @@ std::string AuthService::login(const std::string &email, const std::string &pass
     tp.email    = email;
     tp.provider = "password";
     tp.jti      = SessionManager::generateJti();
-    std::string accessToken = m_token.generateAccess(tp, 86400);
+    std::string accessToken = m_token.generateAccess(tp, 900);
 
     // 清除旧 refresh token，只保留最新一个
     SessionManager::revokeAllForUser(user->id);
@@ -152,7 +152,7 @@ std::string AuthService::loginWithCode(const std::string &email,
     tp.email    = email;
     tp.provider = "password";
     tp.jti      = SessionManager::generateJti();
-    std::string accessToken  = m_token.generateAccess(tp, 86400);
+    std::string accessToken  = m_token.generateAccess(tp, 900);
     std::string refreshToken = TokenService::generateRefresh();
     SessionManager::revokeAllForUser(user->id);
     SessionManager::storeRefresh(refreshToken, tp.sub, email, "password", 30*24*3600, &m_pool);
@@ -266,7 +266,7 @@ std::string AuthService::oauthCallback(const std::string &provider,
     tp.email    = email;
     tp.provider = ou.provider;
     tp.jti      = SessionManager::generateJti();
-    std::string accessToken  = m_token.generateAccess(tp, 86400);
+    std::string accessToken  = m_token.generateAccess(tp, 900);
     std::string refreshToken = TokenService::generateRefresh();
     SessionManager::revokeAllForUser(user->id);
     SessionManager::storeRefresh(refreshToken, tp.sub, email, ou.provider, 30*24*3600, &m_pool);
@@ -313,7 +313,7 @@ std::string AuthService::oauthCallbackBind(const std::string &provider,
     tp.email    = user->email;
     tp.provider = ou.provider;
     tp.jti      = SessionManager::generateJti();
-    std::string accessToken  = m_token.generateAccess(tp, 86400);
+    std::string accessToken  = m_token.generateAccess(tp, 900);
     std::string refreshToken = TokenService::generateRefresh();
     SessionManager::storeRefresh(refreshToken, tp.sub, tp.email, ou.provider, 30*24*3600, &m_pool);
 
