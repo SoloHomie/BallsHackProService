@@ -132,7 +132,8 @@ bool VPayService::handleCallback(const std::string &q){
     mysql_query(db,qb);MYSQL_RES*res=mysql_store_result(db);
     if(res&&mysql_num_rows(res)>0){MYSQL_ROW rw=mysql_fetch_row(res);du=std::stoull(rw[0]?rw[0]:"0");dd=(uint32_t)std::stoul(rw[1]?rw[1]:"0");if(rw[2]){std::strncpy(ds,rw[2],31);ds[31]='\0';}amt=std::stoull(rw[3]?rw[3]:"0");fd=true;}
     if(res)mysql_free_result(res);if(!fd)return false;if(std::string(ds)=="paid")return true;
-    snprintf(qb,sizeof(qb),"UPDATE payment_orders SET status='paid',zp_trade_no='%s' WHERE id=%llu",tn.c_str(),oid);mysql_query(db,qb);
+    char etn[512]; mysql_real_escape_string(db, etn, tn.c_str(), tn.size());
+    snprintf(qb,sizeof(qb),"UPDATE payment_orders SET status='paid',zp_trade_no='%s' WHERE id=%llu",etn,oid);mysql_query(db,qb);
     snprintf(qb,sizeof(qb),"UPDATE users SET subscription_expires=DATE_ADD(GREATEST(COALESCE(subscription_expires,NOW()),NOW()),INTERVAL %u DAY), balance=balance+%llu WHERE id=%llu",dd,amt,du);mysql_query(db,qb);
     try{RedisClient::instance().del("sub:"+std::to_string(du));RedisClient::instance().del("pay:order:"+on);}catch(...){}
     return true;

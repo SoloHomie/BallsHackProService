@@ -20,6 +20,7 @@
 #include "route/WelfareRoutes.h"
 #include "route/WalletRoutes.h"
 #include "route/SyncRoutes.h"
+#include "route/AssetRoutes.h"
 #include "sync/SyncService.h"
 #include <iostream>
 #include <fstream>
@@ -30,7 +31,7 @@
 int main() {
     Env::loadDotEnv();
 
-    if (Env::get("BH_JWT_SECRET", "balls-hack-pro-dev-secret").empty()) {
+    if (Env::get("BH_JWT_SECRET").empty()) {
         std::cerr << "FATAL: BH_JWT_SECRET is not set" << std::endl;
         return 1;
     }
@@ -74,6 +75,7 @@ int main() {
     // 6. 同步服务 + 路由
     SyncService syncSvc(pool);
     registerSyncRoutes(server, auth, syncSvc);
+    registerAssetRoutes(server, auth, pool);
 
     // 7. 启动
     bool useTls = Env::get("BH_TLS_DISABLE").empty();  // set to disable

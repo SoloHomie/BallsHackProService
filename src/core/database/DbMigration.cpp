@@ -18,6 +18,7 @@ bool DbMigration::run(DbPool& pool) {
         Schema::WELFARE_EVENTS,
         Schema::WELFARE_CLAIMS,
         Schema::ROOMS,
+        Schema::REFRESH_TOKENS,
     };
 
     for (const char* ddl : tables) {

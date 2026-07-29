@@ -6,6 +6,17 @@
 #include <cstdlib>
 #include <ctime>
 #include <chrono>
+#include <cstring>
+
+// SQL escape helper
+static std::string esc(MYSQL *db, const std::string &s) {
+    if (s.empty()) return s;
+    char *buf = new char[s.size() * 2 + 1];
+    mysql_real_escape_string(db, buf, s.c_str(), s.size());
+    std::string r(buf);
+    delete[] buf;
+    return r;
+}
 
 // ═══════════════════════════════════════════════════════════
 //  RoomSyncState — 条件变量等待
@@ -100,7 +111,7 @@ std::string SyncService::createRoom(const std::string &roomName, const std::stri
         code = generateRoomCode();
         char q[256];
         snprintf(q, sizeof(q),
-                 "SELECT COUNT(*) FROM rooms WHERE room_code='%s'", code.c_str());
+                 "SELECT COUNT(*) FROM rooms WHERE room_code='%s'", esc(db, code).c_str());
         if (mysql_query(db, q) == 0) {
             MYSQL_RES *res = mysql_store_result(db);
             if (res) {
@@ -119,7 +130,7 @@ std::string SyncService::createRoom(const std::string &roomName, const std::stri
     snprintf(ins, sizeof(ins),
              "INSERT INTO rooms (id,room_code,room_name,creator_email,status) "
              "VALUES (%llu,'%s','%s','%s',0)",
-             id, code.c_str(), roomName.c_str(), email.c_str());
+             id, esc(db, code).c_str(), esc(db, roomName).c_str(), esc(db, email).c_str());
 
     if (mysql_query(db, ins) != 0) {
         Logger::err("SyncService",
@@ -157,7 +168,7 @@ std::string SyncService::joinRoom(const std::string &roomCode, const std::string
     char q[512];
     snprintf(q, sizeof(q),
              "SELECT id,room_name,creator_email,controller_email,controlled_email,status "
-             "FROM rooms WHERE room_code='%s'", roomCode.c_str());
+             "FROM rooms WHERE room_code='%s'", esc(db, roomCode).c_str());
     if (mysql_query(db, q) != 0)
         return "{\"success\":false,\"errcode\":\"DB_ERROR\",\"message\":\"查询房间失败\"}";
 
@@ -182,13 +193,13 @@ std::string SyncService::joinRoom(const std::string &roomCode, const std::string
     char upd[512];
     snprintf(upd, sizeof(upd),
              "UPDATE rooms SET %s='%s', status=1 WHERE room_code='%s'",
-             col, email.c_str(), roomCode.c_str());
+             col, email.c_str(), esc(db, roomCode).c_str());
     mysql_query(db, upd);
 
     // 重新统计
     snprintf(q, sizeof(q),
              "SELECT controller_email,controlled_email FROM rooms WHERE room_code='%s'",
-             roomCode.c_str());
+             esc(db, roomCode).c_str());
     mysql_query(db, q);
     res = mysql_store_result(db);
     int memberCount = 0;
@@ -238,13 +249,13 @@ std::string SyncService::leaveRoom(const std::string &roomCode, const std::strin
              "controller_email = IF(controller_email='%s', NULL, controller_email), "
              "controlled_email = IF(controlled_email='%s', NULL, controlled_email) "
              "WHERE room_code='%s'",
-             email.c_str(), email.c_str(), roomCode.c_str());
+             email.c_str(), email.c_str(), esc(db, roomCode).c_str());
     mysql_query(db, upd);
 
     char q[256];
     snprintf(q, sizeof(q),
              "SELECT controller_email,controlled_email FROM rooms WHERE room_code='%s'",
-             roomCode.c_str());
+             esc(db, roomCode).c_str());
     mysql_query(db, q);
     MYSQL_RES *res = mysql_store_result(db);
     bool empty = true;
@@ -256,7 +267,7 @@ std::string SyncService::leaveRoom(const std::string &roomCode, const std::strin
         mysql_free_result(res);
     }
     if (empty) {
-        snprintf(q, sizeof(q), "UPDATE rooms SET status=2 WHERE room_code='%s'", roomCode.c_str());
+        snprintf(q, sizeof(q), "UPDATE rooms SET status=2 WHERE room_code='%s'", esc(db, roomCode).c_str());
         mysql_query(db, q);
         removeState(roomCode);
     } else {
@@ -282,7 +293,7 @@ std::string SyncService::roomStatus(const std::string &roomCode) {
     char q[512];
     snprintf(q, sizeof(q),
              "SELECT room_code,room_name,creator_email,controller_email,controlled_email,status "
-             "FROM rooms WHERE room_code='%s'", roomCode.c_str());
+             "FROM rooms WHERE room_code='%s'", esc(db, roomCode).c_str());
     if (mysql_query(db, q) != 0)
         return "{\"success\":false,\"errcode\":\"DB_ERROR\",\"message\":\"查询失败\"}";
 

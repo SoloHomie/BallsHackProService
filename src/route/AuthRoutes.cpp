@@ -196,7 +196,7 @@ void registerAuthRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
             if (refreshToken.empty())
                 return AuthService::jsonErr("TOKEN_REQUIRED", "请提供 refresh_token");
 
-            auto data = SessionManager::getRefresh(refreshToken);
+            auto data = SessionManager::getRefresh(refreshToken, &pool);
             if (!data)
                 return AuthService::jsonErr("INVALID_TOKEN", "登录凭证无效或已过期，请重新登录");
 
@@ -217,7 +217,7 @@ void registerAuthRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
             std::string newAccess = auth.tokenService().generateAccess(tp, 900);
 
             std::string newRefresh = TokenService::generateRefresh();
-            SessionManager::storeRefresh(newRefresh, sub, email, provider);
+            SessionManager::storeRefresh(newRefresh, sub, email, provider, 30*24*3600, &pool);
 
             std::ostringstream resp;
             resp << "{\"success\":true"
@@ -330,10 +330,21 @@ void registerAuthRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
             std::string nn = StringUtils::jsonVal(body, "username");
             if (nn.empty()) return AuthService::jsonErr("FIELDS_REQUIRED", "username required");
             if (nn.size() < 2 || nn.size() > 20) return AuthService::jsonErr("INVALID_NAME", "2-20 chars");
+            // 过滤特殊字符, 防SQL注入
+            for (char c : nn) { if (!isalnum((unsigned char)c) && c != '_' && c != '-') return AuthService::jsonErr("INVALID_NAME", "only a-z 0-9 _ -"); }
             auto g = pool.acquire(5000);
             if (!g) return AuthService::jsonErr("DB_ERROR", "db busy");
-            std::string q = "UPDATE users SET username='" + nn + "' WHERE id=" + tp->sub;
-            mysql_query(g->get(), q.c_str());
+            // 参数化查询
+            MYSQL_STMT *stmt = mysql_stmt_init(g->get());
+            const char* q = "UPDATE users SET username=? WHERE id=?";
+            mysql_stmt_prepare(stmt, q, strlen(q));
+            MYSQL_BIND b[2] = {};
+            b[0].buffer_type = MYSQL_TYPE_STRING; b[0].buffer = (void*)nn.c_str(); b[0].buffer_length = nn.size();
+            unsigned long long uid = std::stoull(tp->sub);
+            b[1].buffer_type = MYSQL_TYPE_LONGLONG; b[1].buffer = &uid;
+            mysql_stmt_bind_param(stmt, b);
+            mysql_stmt_execute(stmt);
+            mysql_stmt_close(stmt);
             return AuthService::jsonOk("ok");
         });
 }

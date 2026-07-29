@@ -19,8 +19,10 @@
 #include <cstdint>
 #include <sstream>
 #include <openssl/rand.h>
+#include <openssl/sha.h>
 #include <iostream>
 #include "../core/cache/RedisClient.h"
+#include "../core/database/DbPool.h"
 
 namespace SessionManager {
 
@@ -43,31 +45,85 @@ namespace SessionManager {
                              const std::string& userId,
                              const std::string& email,
                              const std::string& provider,
-                             int ttlSeconds = 30 * 24 * 3600) {
+                             int ttlSeconds = 30 * 24 * 3600,
+                             DbPool *pool = nullptr) {
+        // Redis 热层
         try {
             auto& r = RedisClient::instance();
             std::string json = "{\"sub\":\"" + userId + "\""
                              + ",\"email\":\"" + email + "\""
                              + ",\"provider\":\"" + provider + "\"}";
             r.setex("refresh:" + token, ttlSeconds, json);
-            // 用户令牌集合，用于批量撤销（改密码等场景）
             r.sadd("user:tokens:" + userId, token);
             r.expire("user:tokens:" + userId, ttlSeconds);
-        } catch (const std::exception &e) {
-            std::cerr << "[SessionManager] " << __func__ << ": " << e.what() << std::endl;
-        } catch (...) {
-            std::cerr << "[SessionManager] " << __func__ << ": unknown error" << std::endl;
+        } catch (...) {}
+
+        // MySQL 持久层
+        if (pool) {
+            auto guard = pool->acquire(5000);
+            if (guard) {
+                MYSQL *db = guard->get();
+                unsigned char hash[SHA256_DIGEST_LENGTH];
+                SHA256((const unsigned char*)token.c_str(), token.size(), hash);
+                char hex[65];
+                for (int i = 0; i < 32; i++) snprintf(hex + i*2, 3, "%02x", hash[i]);
+                hex[64] = 0;
+                // 生成唯一ID
+                auto now = std::chrono::system_clock::now();
+                auto id = std::chrono::duration_cast<std::chrono::microseconds>(
+                    now.time_since_epoch()).count();
+                char expireStr[32];
+                time_t expireT = time(nullptr) + ttlSeconds;
+                strftime(expireStr, sizeof(expireStr), "%Y-%m-%d %H:%M:%S", gmtime(&expireT));
+                std::string q = "INSERT INTO refresh_tokens (id,token_hash,user_id,email,provider,expires_at) VALUES("
+                    + std::to_string(id) + ",'" + hex + "'," + userId + ",'"
+                    + email + "','" + provider + "','" + expireStr + "')"
+                    + " ON DUPLICATE KEY UPDATE expires_at='" + expireStr + "'";
+                mysql_query(db, q.c_str());
+            }
         }
     }
 
-    // 查询 refresh token
-    inline std::optional<std::string> getRefresh(const std::string& token) {
+    // 查询 refresh token (Redis → MySQL 回退, 服务重启不丢失)
+    inline std::optional<std::string> getRefresh(const std::string& token, class DbPool *pool = nullptr) {
         try {
             auto& r = RedisClient::instance();
             auto val = r.get("refresh:" + token);
-            if (!val) return std::nullopt;
-            return *val;
-        } catch (...) { return std::nullopt; }
+            if (val) return *val;
+        } catch (...) {}
+        // Redis未命中 → 查MySQL
+        if (pool) {
+            auto guard = pool->acquire(5000);
+            if (guard) {
+                MYSQL *db = guard->get();
+                // SHA256 hash the token for lookup
+                unsigned char hash[SHA256_DIGEST_LENGTH];
+                SHA256((const unsigned char*)token.c_str(), token.size(), hash);
+                char hex[65];
+                for (int i = 0; i < 32; i++) snprintf(hex + i*2, 3, "%02x", hash[i]);
+                hex[64] = 0;
+                std::string q = "SELECT user_id, email, provider, expires_at FROM refresh_tokens WHERE token_hash='"
+                    + std::string(hex) + "'";
+                if (mysql_query(db, q.c_str()) == 0) {
+                    MYSQL_RES *res = mysql_store_result(db);
+                    if (res && mysql_num_rows(res) > 0) {
+                        MYSQL_ROW row = mysql_fetch_row(res);
+                        std::string uid = row[0] ? row[0] : "";
+                        std::string email = row[1] ? row[1] : "";
+                        std::string provider = row[2] ? row[2] : "";
+                        std::string expires = row[3] ? row[3] : "";
+                        mysql_free_result(res);
+                        if (!uid.empty()) {
+                            // 回写Redis
+                            std::string json = "{\"sub\":\"" + uid + "\",\"email\":\"" + email + "\",\"provider\":\"" + provider + "\"}";
+                            try { RedisClient::instance().setex("refresh:" + token, 3600, json); } catch(...) {}
+                            return json;
+                        }
+                    } else if (res) { mysql_free_result(res); }
+                }
+            }
+        }
+        return std::nullopt;
     }
 
     // 删除单个 refresh token

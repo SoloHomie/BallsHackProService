@@ -67,6 +67,21 @@ CREATE TABLE IF NOT EXISTS welfare_events (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 )SQL";
 
+    constexpr const char* REFRESH_TOKENS = R"SQL(
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+    id          BIGINT UNSIGNED PRIMARY KEY,
+    token_hash  CHAR(64)      NOT NULL,
+    user_id     BIGINT UNSIGNED NOT NULL,
+    email       VARCHAR(255)  NOT NULL,
+    provider    VARCHAR(32)   NOT NULL DEFAULT 'local',
+    expires_at  DATETIME      NOT NULL,
+    created_at  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_token_hash (token_hash),
+    INDEX idx_user_id (user_id),
+    INDEX idx_expires (expires_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+)SQL";
+
     constexpr const char* ROOMS = R"SQL(
 CREATE TABLE IF NOT EXISTS rooms (
     id              BIGINT UNSIGNED PRIMARY KEY,

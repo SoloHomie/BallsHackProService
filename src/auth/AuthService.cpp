@@ -117,7 +117,7 @@ std::string AuthService::login(const std::string &email, const std::string &pass
     // 清除旧 refresh token，只保留最新一个
     SessionManager::revokeAllForUser(user->id);
     std::string refreshToken = TokenService::generateRefresh();
-    SessionManager::storeRefresh(refreshToken, tp.sub, email, "password");
+    SessionManager::storeRefresh(refreshToken, tp.sub, email, "password", 30*24*3600, &m_pool);
 
     std::ostringstream resp;
     resp << "{\"success\":true,\"message\":\"欢迎回来！塔坦已经迫不及待想和你开一局了~\""
@@ -155,7 +155,7 @@ std::string AuthService::loginWithCode(const std::string &email,
     std::string accessToken  = m_token.generateAccess(tp, 86400);
     std::string refreshToken = TokenService::generateRefresh();
     SessionManager::revokeAllForUser(user->id);
-    SessionManager::storeRefresh(refreshToken, tp.sub, email, "password");
+    SessionManager::storeRefresh(refreshToken, tp.sub, email, "password", 30*24*3600, &m_pool);
 
     std::ostringstream resp;
     resp << "{\"success\":true,\"message\":\"欢迎回来！塔坦已经迫不及待想和你开一局了~\""
@@ -269,7 +269,7 @@ std::string AuthService::oauthCallback(const std::string &provider,
     std::string accessToken  = m_token.generateAccess(tp, 86400);
     std::string refreshToken = TokenService::generateRefresh();
     SessionManager::revokeAllForUser(user->id);
-    SessionManager::storeRefresh(refreshToken, tp.sub, email, ou.provider);
+    SessionManager::storeRefresh(refreshToken, tp.sub, email, ou.provider, 30*24*3600, &m_pool);
 
     std::ostringstream resp;
     resp << "{\"success\":true,\"message\":\"欢迎回来！塔坦已经迫不及待想和你开一局了~\""
@@ -315,7 +315,7 @@ std::string AuthService::oauthCallbackBind(const std::string &provider,
     tp.jti      = SessionManager::generateJti();
     std::string accessToken  = m_token.generateAccess(tp, 86400);
     std::string refreshToken = TokenService::generateRefresh();
-    SessionManager::storeRefresh(refreshToken, tp.sub, tp.email, ou.provider);
+    SessionManager::storeRefresh(refreshToken, tp.sub, tp.email, ou.provider, 30*24*3600, &m_pool);
 
     std::ostringstream resp;
     resp << "{\"success\":true,\"message\":\"绑定成功\""

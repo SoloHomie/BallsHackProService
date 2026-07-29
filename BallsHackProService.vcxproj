@@ -87,6 +87,7 @@
     <ClCompile Include="src\route\SystemRoutes.cpp" />
     <ClCompile Include="src\route\WalletRoutes.cpp" />
     <ClCompile Include="src\route\SyncRoutes.cpp" />
+    <ClCompile Include="src\route\AssetRoutes.cpp" />
   </ItemGroup>
   <ItemGroup Label="view (source)">
     <ClCompile Include="src\view\EmailPage.cpp" />
