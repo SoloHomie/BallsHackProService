@@ -3,6 +3,7 @@
 #include "../core/server/HttpServer.h"
 #include "../auth/AuthService.h"
 #include "../common/StringUtils.h"
+#include "../core/cache/RedisClient.h"
 #include "../core/database/DbPool.h"
 #include "../core/config/ServerConfig.h"
 #include "../core/config/Env.h"
@@ -118,6 +119,38 @@ void registerSystemRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
         [&](const std::string &, const std::string &, const std::string &) {
             return "{\"success\":true,\"message\":\"ok\",\"users\":" +
                    std::to_string(auth.userStore().count()) + "}";
+        });
+
+    // ── 管理: 修改订阅天数 (需admin token) ──────────
+    server.route("POST", "/api/admin/subscription",
+        [&](const std::string &body, const std::string &, const std::string &headers) {
+            auto tp = auth.authenticate(headers);
+            if (!tp) return AuthService::jsonErr("UNAUTHORIZED", "请先登录");
+            // admin 邮箱白名单
+            if (tp->email != "admin@solohomie.top" && tp->email.find("@solohomie.top") == std::string::npos)
+                return AuthService::jsonErr("FORBIDDEN", "无管理员权限");
+            std::string email = StringUtils::jsonVal(body, "email");
+            int days = std::stoi(StringUtils::jsonVal(body, "days"));
+            if (email.empty() || days <= 0)
+                return AuthService::jsonErr("FIELDS_REQUIRED", "email和days必填");
+            auto g = pool.acquire(5000);
+            if (!g) return AuthService::jsonErr("DB_ERROR", "db busy");
+            MYSQL *db = g->get();
+            char q[512]; char eesc[256];
+            mysql_real_escape_string(db, eesc, email.c_str(), email.size());
+            snprintf(q, sizeof(q),
+                "UPDATE users SET subscription_expires=DATE_ADD("
+                "GREATEST(COALESCE(subscription_expires,NOW()),NOW()), INTERVAL %d DAY)"
+                " WHERE email='%s'", days, eesc);
+            if (mysql_query(db, q) != 0)
+                return AuthService::jsonErr("DB_ERROR", mysql_error(db));
+            long long affected = mysql_affected_rows(db);
+            if (affected == 0)
+                return AuthService::jsonErr("NOT_FOUND", "用户不存在");
+            // 清除Redis缓存
+            try { auto u = auth.userStore().findByEmail(email);
+                if (u) RedisClient::instance().del("sub:" + std::to_string(u->id)); } catch(...) {}
+            return AuthService::jsonOk("已添加 " + std::to_string(days) + " 天订阅");
         });
 
     // ── 下载更新包 ────────────────────────────────
