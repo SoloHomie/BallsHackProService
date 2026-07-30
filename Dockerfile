@@ -1,21 +1,20 @@
 FROM ubuntu:24.04 AS builder
 
 RUN apt-get update && apt-get install -y \
-    build-essential cmake g++ git \
+    build-essential cmake g++ \
     libssl-dev libmysqlclient-dev libcurl4-openssl-dev \
     libhiredis-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Build redis++ from source (not in Ubuntu 24.04 repos)
-RUN cd /tmp && \
-    curl -sL https://github.com/sewenew/redis-plus-plus/archive/refs/tags/1.3.11.tar.gz -o redispp.tar.gz && \
-    tar -xzf redispp.tar.gz && \
-    cd redis-plus-plus-1.3.11 && mkdir build && cd build && \
-    cmake .. -DREDIS_PLUS_PLUS_BUILD_TEST=OFF -DCMAKE_BUILD_TYPE=Release && \
-    make -j$(nproc) && make install && ldconfig && \
-    rm -rf /tmp/redispp.tar.gz /tmp/redis-plus-plus-1.3.11
-
 COPY . /src
+
+# Build redis++ from bundled source (no network needed)
+WORKDIR /src/third_party/redis-plus-plus
+RUN mkdir -p build && cd build && \
+    cmake .. -DREDIS_PLUS_PLUS_BUILD_TEST=OFF -DCMAKE_BUILD_TYPE=Release && \
+    make -j$(nproc) && make install && ldconfig
+
+# Build main project
 WORKDIR /src/build
 RUN cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/usr/local && make -j$(nproc)
 
