@@ -32,7 +32,7 @@ RUN ln -sf /usr/local/lib/libredis++.so.1 /usr/local/lib/libredis++.so && ldconf
 
 COPY --from=builder /src/build/SuretyService /app/SuretyService
 COPY --from=builder /src/assets/ /app/assets/
-COPY --from=builder /src/version.json /src/announcement.json /app/
+COPY --from=builder /src/version.json /src/announcement.json /src/rsa_private.pem /src/rsa_plat_pub.pem /app/
 RUN mkdir -p /app/html
 
 WORKDIR /app

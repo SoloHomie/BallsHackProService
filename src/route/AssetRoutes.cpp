@@ -59,7 +59,7 @@ void registerAssetRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
                    "\"全局\":{"
                    "\"pattern\":\"D8 00 00 00 63 04 00 00\","
                    "\"offsets\":{"
-                   "\"摇杆方向X\":68,\"摇杆方向Y\":72,\"体重\":972,\"全局加速\":972"
+                   "\"偏移_摇杆方向X\":68,\"偏移_摇杆方向Y\":72,\"偏移_体重\":972,\"偏移_全局加速\":972"
                    "}}}}");
         });
 
