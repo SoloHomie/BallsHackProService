@@ -40,8 +40,10 @@ set(SUREITY_REDIS_FOUND FALSE)
 if(HIREDIS_LIBRARY AND HIREDIS_INCLUDE_DIR)
     # Find redis++ manually (skip redis++-config.cmake — it requires
     # hiredis cmake config which apt's libhiredis-dev doesn't ship)
-    find_path(REDISPP_INCLUDE_DIR NAMES sw/redis++/redis++.h)
-    find_library(REDISPP_LIBRARY NAMES redis++)
+    find_path(REDISPP_INCLUDE_DIR NAMES sw/redis++/redis++.h
+        HINTS /usr/local/include)
+    find_library(REDISPP_LIBRARY NAMES redis++
+        HINTS /usr/local/lib)
     if(REDISPP_INCLUDE_DIR AND REDISPP_LIBRARY)
         message(STATUS "Found redis++: ${REDISPP_LIBRARY}")
         set(SUREITY_REDIS_FOUND TRUE)
@@ -160,5 +162,6 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 if(MSVC)
     target_compile_options(${PROJECT_NAME} PRIVATE /utf-8 /W3)
 else()
-    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE _popen=popen _pclose=pclose)
+    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wno-format)
 endif()
