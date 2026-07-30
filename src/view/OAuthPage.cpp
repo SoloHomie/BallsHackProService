@@ -130,7 +130,7 @@ static std::string postMessageJson(const OAuthCallbackData &d) {
 
 // ── Desktop callback: auto-submit POST form to localhost ──
 // Tokens in POST body → not logged in browser history (vs query string)
-static std::string desktopRedirect(const OAuthCallbackData &d,
+std::string desktopRedirect(const OAuthCallbackData &d,
                                     const std::string &cbport) {
     if (!d.success || d.token.empty()) return "";
     if (!cbport.empty() && cbport != "0") {

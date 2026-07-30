@@ -10,6 +10,7 @@
 #include "../core/database/DbPool.h"
 
 #include <chrono>
+#include <cstring>
 #include <ctime>
 #include <iomanip>
 #include <sstream>

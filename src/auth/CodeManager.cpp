@@ -48,9 +48,10 @@ std::string CodeManager::generate(const std::string &email,
     try {
         r.setex(codeKey(email, purpose), ServerConfig::CODE_TTL_SEC, code);
         r.setex(cdKey(email, purpose), ServerConfig::CODE_COOLDOWN, "1");
-    } catch (const std::exception &) {
-        // continue — code is still valid even if Redis storage failed
+    } catch (const std::exception &e) {
+        std::cerr << "[CodeManager] Redis setex error: " << e.what() << std::endl;
     } catch (...) {
+        std::cerr << "[CodeManager] Redis setex unknown error" << std::endl;
     }
     return code;
 }

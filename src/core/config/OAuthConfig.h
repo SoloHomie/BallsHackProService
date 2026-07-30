@@ -2,7 +2,7 @@
 #include "Env.h"
 
 namespace OAuthConfig {
-    constexpr const char *REDIRECT_URI = "http://localhost:8920/api/auth/oauth/callback";
+    constexpr const char *REDIRECT_URI = "https://api.solohomie.top/api/auth/oauth/callback";
 
     inline std::string OAUTH_PROXY() { return Env::get("BH_OAUTH_PROXY", ""); }
 

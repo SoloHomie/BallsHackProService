@@ -1,5 +1,5 @@
 {
-  "latest_version": "1.2.0",
+  "latest_version": "1.0.0",
   "min_version": "1.0.0",
   "download_url": "https://github.com/SoloHomie/BallsHackPro/releases/latest",
   "release_notes": "首个测试版本\n• 合球辅助功能\n• 内存注入模块\n• 卡点自动化\n• 多端同步\n• 账号注册登录"

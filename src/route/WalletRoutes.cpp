@@ -5,6 +5,7 @@
 #include "../common/StringUtils.h"
 #include "../core/database/DbPool.h"
 
+#include <cstring>
 #include <mysql/mysql.h>
 #include <string>
 

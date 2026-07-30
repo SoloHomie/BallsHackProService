@@ -114,6 +114,15 @@ void registerSystemRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
             return std::string((std::istreambuf_iterator<char>(af)), std::istreambuf_iterator<char>());
         });
 
+    // ── 下载页 ────────────────────────────────────
+    server.route("GET", "/",
+        [&](const std::string &, const std::string &, const std::string &) {
+            std::ifstream f("assets/download.html");
+            if (!f) return std::string("download page not found");
+            std::ostringstream ss; ss << f.rdbuf();
+            return ss.str();
+        });
+
     // ── 健康检查 ──────────────────────────────────
     server.route("GET", "/api/health",
         [&](const std::string &, const std::string &, const std::string &) {

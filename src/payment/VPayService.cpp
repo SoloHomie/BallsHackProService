@@ -86,9 +86,26 @@ std::pair<bool,std::string> VPayService::createOrder(uint64_t uid,const std::str
     std::vector<std::pair<std::string,std::string>> pr={
         {"clientip","127.0.0.1"},{"device","mobile"},{"money",money},{"name",nm},
         {"notify_url",m_notifyUrl},{"out_trade_no",ono},{"pid",m_appId},{"type","alipay"}};
-    std::string ss=buildSignStr(pr);std::string sig=rsaSign(ss);
-    printf("[VPay] sign_src: %s\n[VPay] sign: %s\n",ss.c_str(),sig.c_str());
-    std::ostringstream bd;bd<<"pid="<<m_appId<<"&type=alipay&out_trade_no="<<ono<<"&notify_url="<<StringUtils::urlEncode(m_notifyUrl)<<"&name="<<StringUtils::urlEncode(nm)<<"&money="<<money<<"&clientip=127.0.0.1&device=mobile&sign="<<StringUtils::urlEncode(sig)<<"&sign_type=RSA";
+    std::string ss=buildSignStr(pr);
+    std::string sig;
+    if (!m_rsaKey.empty()) {
+        sig = rsaSign(ss);
+    } else {
+        // MD5 fallback when RSA key is missing
+        ss += m_md5Key;
+        auto md5 = [](const std::string &s){
+            unsigned char d[16]; unsigned int l=0;
+            EVP_MD_CTX*c=EVP_MD_CTX_new();EVP_DigestInit_ex(c,EVP_md5(),nullptr);
+            EVP_DigestUpdate(c,s.data(),s.size());EVP_DigestFinal_ex(c,d,&l);EVP_MD_CTX_free(c);
+            static const char h[]="0123456789abcdef";std::string r(32,'\0');
+            for(int i=0;i<16;++i){r[i*2]=h[d[i]>>4];r[i*2+1]=h[d[i]&0xF];}
+            return r;
+        };
+        sig = md5(ss);
+    }
+    std::string signType = m_rsaKey.empty() ? "MD5" : "RSA";
+    printf("[VPay] sign_src: %s\n[VPay] sign(%s): %s\n",ss.c_str(),signType.c_str(),sig.c_str());
+    std::ostringstream bd;bd<<"pid="<<m_appId<<"&type=alipay&out_trade_no="<<ono<<"&notify_url="<<StringUtils::urlEncode(m_notifyUrl)<<"&name="<<StringUtils::urlEncode(nm)<<"&money="<<money<<"&clientip=127.0.0.1&device=mobile&sign="<<StringUtils::urlEncode(sig)<<"&sign_type="<<signType;
     std::string resp=httpPost(m_apiUrl+"/mapi.php",bd.str());
     printf("[VPay] resp: %s\n",resp.c_str());
     std::string qr=StringUtils::jsonVal(resp,"qrcode"),pu=StringUtils::jsonVal(resp,"payurl"),tn=StringUtils::jsonVal(resp,"trade_no");

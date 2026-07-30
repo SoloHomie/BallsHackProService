@@ -54,12 +54,12 @@ void registerAssetRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
                 return ss.str();
             }
 
-            // 非订阅: 仅全局特征码 (只含摇杆XY+全局变速偏移)
+            // 非订阅: 仅全局特征码 (摇杆XY+体重+全局加速)
             return std::string("{\"success\":true,\"limited\":true,\"groups\":{"
                    "\"全局\":{"
                    "\"pattern\":\"D8 00 00 00 63 04 00 00\","
                    "\"offsets\":{"
-                   "\"摇杆方向X\":68,\"摇杆方向Y\":72,\"全局加速\":972"
+                   "\"摇杆方向X\":68,\"摇杆方向Y\":72,\"体重\":972,\"全局加速\":972"
                    "}}}}");
         });
 
@@ -82,9 +82,9 @@ void registerAssetRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
                 return ss.str();
             }
 
-            // 非订阅: 仅摇杆XY+全局变速
+            // 非订阅: 摇杆XY+体重+全局变速
             return std::string("{\"success\":true,\"limited\":true,\"offsets\":{"
-                   "\"ygfangxiang\":68,\"joystickDirY\":72,\"全局加速\":972"
+                   "\"ygfangxiang\":68,\"joystickDirY\":72,\"tiji\":972,\"全局加速\":972"
                    "}}");
         });
 
