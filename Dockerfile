@@ -8,11 +8,12 @@ RUN apt-get update && apt-get install -y \
 
 # Build redis++ from source (not in Ubuntu 24.04 repos)
 RUN cd /tmp && \
-    git clone --depth 1 --branch 1.3 https://github.com/sewenew/redis-plus-plus.git && \
-    cd redis-plus-plus && mkdir build && cd build && \
+    curl -sL https://github.com/sewenew/redis-plus-plus/archive/refs/tags/1.3.11.tar.gz -o redispp.tar.gz && \
+    tar -xzf redispp.tar.gz && \
+    cd redis-plus-plus-1.3.11 && mkdir build && cd build && \
     cmake .. -DREDIS_PLUS_PLUS_BUILD_TEST=OFF -DCMAKE_BUILD_TYPE=Release && \
     make -j$(nproc) && make install && ldconfig && \
-    rm -rf /tmp/redis-plus-plus
+    rm -rf /tmp/redispp.tar.gz /tmp/redis-plus-plus-1.3.11
 
 COPY . /src
 WORKDIR /src/build
