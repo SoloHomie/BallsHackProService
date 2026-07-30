@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BallsHackPro - 下载</title>
+<style>
+  :root {
+    --bg: #0a0a0f; --card: #13131f; --border: #1e1e33;
+    --accent: #7c3aed; --accent2: #06b6d4; --text: #e2e8f0; --muted: #8b949e;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'Inter', 'Microsoft YaHei UI', sans-serif;
+    min-height:100vh; display:flex; align-items:center; justify-content:center;
+  }
+  .main {
+    width:100%; max-width:560px; padding:40px 24px; text-align:center;
+  }
+  h1 {
+    font-size:48px; font-weight:800; margin-bottom:8px;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  }
+  .subtitle { color:var(--muted); font-size:17px; margin-bottom:32px; }
+  .btns { display:flex; gap:14px; justify-content:center; flex-wrap:wrap; margin-bottom:40px; }
+  .btn {
+    display:inline-flex; align-items:center; gap:8px;
+    padding:14px 28px; border-radius:10px; font-size:16px; font-weight:700;
+    text-decoration:none; transition:all .25s; border:1px solid transparent;
+  }
+  .btn-server { background: var(--accent); color:#fff; }
+  .btn-server:hover { background:#6d28d9; transform:translateY(-2px); box-shadow:0 8px 30px rgba(124,58,237,0.3); }
+  .btn-gh { border-color:var(--border); color:var(--text); background:var(--card); }
+  .btn-gh:hover { border-color:var(--accent); background:rgba(124,58,237,0.08); }
+  .features { text-align:left; max-width:420px; margin:0 auto 36px; }
+  .features h2 { font-size:20px; font-weight:700; margin-bottom:16px; color:var(--text); }
+  .features ul { list-style:none; }
+  .features li {
+    padding:10px 0; border-bottom:1px solid var(--border); color:var(--muted); font-size:15px;
+  }
+  .features li:last-child { border:none; }
+  .features li::before { content:""; display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--accent); margin-right:10px; vertical-align:middle; }
+  .footer { color:var(--muted); font-size:13px; }
+  .footer a { color:var(--accent); text-decoration:none; }
+  .footer a:hover { text-decoration:underline; }
+</style>
+</head>
+<body>
+<div class="main">
+  <h1>BallsHackPro</h1>
+  <p class="subtitle">球球大作战 · 球宝の秘密武器</p>
+
+  <div class="btns">
+    <a href="/api/mxelf" class="btn btn-server" download="BallsHackPro.exe">点我下载 (服务器)</a>
+    <a href="https://github.com/SoloHomie/BallsHackPro-Public/releases" class="btn btn-gh" target="_blank">从 GitHub 下载</a>
+  </div>
+
+  <div class="features">
+    <h2>这东西能干啥</h2>
+    <ul>
+      <li>自动追着目标咬 — 锁就完了</li>
+      <li>目标被扎刺？一秒分身糊脸</li>
+      <li>三角/冲球/四分/中分/后仰/旋转/半旋/蛇手 — 花式合球</li>
+      <li>黑屏了？自动帮你分身出来</li>
+      <li>调视野/改速度/拉摇杆 — 内存级调参，爽就完事了</li>
+      <li>开个房间，两个人互相看对方视角</li>
+      <li>暂时弃坑；下次更新增相关功能</li>
+      <li>深色浅色随便换，Win11毛玻璃特效</li>
+    </ul>
+  </div>
+
+  <p class="footer">
+    用爱发电 by <a href="https://github.com/SoloHomie">SoloHomie</a> |
+    给颗Star球宝~  <a href="https://github.com/SoloHomie/BallsHackPro-Public">GitHub</a> |
+    <a href="https://discord.gg/YtvJrFvcC5">Discord</a>
+  </p>
+  <p class="footer" style="margin-top:6px;">由 Cloudflare 提供内容分发服务</p>
+</div>
+</body>
+</html>
