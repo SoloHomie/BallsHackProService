@@ -37,7 +37,6 @@ bool HttpServer::start(uint16_t port, bool useTls) {
     m_listenSock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (m_listenSock == INVALID_SOCK) return false;
 
-    // Allow address reuse (prevents "address already in use" on restart)
     int opt = 1;
 #ifdef _WIN32
     setsockopt(m_listenSock, SOL_SOCKET, SO_REUSEADDR, (const char*)&opt, sizeof(opt));
@@ -79,10 +78,14 @@ void HttpServer::stop() {
 }
 
 void HttpServer::route(const std::string &method, const std::string &path, Handler h) {
-    m_routes.push_back({method, path, std::move(h)});
+    m_routes.push_back({method, path, std::move(h), false, nullptr});
 }
 
-// ── Accept loop ─────────────────────────────────────────
+void HttpServer::routeStream(const std::string &method, const std::string &path, StreamHandler h) {
+    m_routes.push_back({method, path, nullptr, true, std::move(h)});
+}
+
+// ── Accept loop: 无上限并发 ─────────────────────────────
 void HttpServer::acceptLoop() {
     while (m_running) {
         sockaddr_in clientAddr{};
@@ -94,19 +97,9 @@ void HttpServer::acceptLoop() {
         socket_t client = accept(m_listenSock, (sockaddr*)&clientAddr, &addrLen);
         if (client == INVALID_SOCK) continue;
 
-        // Thread pool throttle
-        {
-            std::unique_lock<std::mutex> lock(m_threadMtx);
-            m_threadCv.wait(lock, [this] {
-                return m_activeThreads < MAX_THREADS || !m_running;
-            });
-            if (!m_running) { sock_close(client); break; }
-            m_activeThreads++;
-        }
+        // 无上限: 每个连接直接起独立线程
         std::thread([this, client]() {
             handleClient(client);
-            m_activeThreads--;
-            m_threadCv.notify_one();
         }).detach();
     }
 }
@@ -115,7 +108,6 @@ void HttpServer::acceptLoop() {
 TlsConnection* HttpServer::tlsHandshake(socket_t sock) {
     if (!m_useTls || !m_tlsCtx) return nullptr;
 
-    // Set socket timeout (5s)
 #ifdef _WIN32
     DWORD tv = 5000;
     setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
@@ -142,7 +134,7 @@ TlsConnection* HttpServer::tlsHandshake(socket_t sock) {
     return tls;
 }
 
-// ── Read HTTP request (TLS-aware) ──────────────────────
+// ── Read HTTP request ──────────────────────────────────
 std::string HttpServer::readRequest(socket_t sock, TlsConnection *tls) {
     char buf[ServerConfig::BUF_SIZE];
     std::string raw;
@@ -159,10 +151,9 @@ std::string HttpServer::readRequest(socket_t sock, TlsConnection *tls) {
 #endif
         }
 
-        if (n <= 0) break; // error or connection closed
+        if (n <= 0) break;
         raw.append(buf, n);
 
-        // Check if we have the full HTTP request
         size_t hdrEnd = raw.find("\r\n\r\n");
         if (hdrEnd != std::string::npos) {
             size_t clPos = raw.find("Content-Length:");
@@ -172,9 +163,9 @@ std::string HttpServer::readRequest(socket_t sock, TlsConnection *tls) {
                 try {
                     cl = std::stoull(raw.substr(clPos + 15, clEnd - clPos - 15));
                 } catch (...) { cl = 0; }
-                static constexpr size_t MAX_BODY = 10 * 1024 * 1024; // 10MB
-                if (cl > MAX_BODY) break; // reject oversized body
-                if (raw.size() - (hdrEnd + 4) < cl) continue; // need more data
+                static constexpr size_t MAX_BODY = 10 * 1024 * 1024;
+                if (cl > MAX_BODY) break;
+                if (raw.size() - (hdrEnd + 4) < cl) continue;
             }
             break;
         }
@@ -182,7 +173,7 @@ std::string HttpServer::readRequest(socket_t sock, TlsConnection *tls) {
     return raw;
 }
 
-// ── Send HTTP response (TLS-aware) ─────────────────────
+// ── Send response ──────────────────────────────────────
 void HttpServer::sendResponse(socket_t sock, TlsConnection *tls,
                                int status, const std::string &body,
                                const std::string &redirectUrl) {
@@ -214,7 +205,6 @@ void HttpServer::sendResponse(socket_t sock, TlsConnection *tls,
     }
 
     std::string response = ss.str();
-
     if (tls) {
         tls->write(response.data(), (int)response.size());
     } else {
@@ -226,74 +216,109 @@ void HttpServer::sendResponse(socket_t sock, TlsConnection *tls,
     }
 }
 
-// ── Per-client handler ──────────────────────────────────
+void HttpServer::sendStreamHeader(socket_t sock, TlsConnection *tls,
+                                   const std::string &contentType, size_t fileSize) {
+    std::ostringstream ss;
+    ss << "HTTP/1.1 200 OK\r\n"
+       << "Content-Type: " << contentType << "\r\n"
+       << "Content-Length: " << fileSize << "\r\n"
+       << "Connection: close\r\n"
+       << "Access-Control-Allow-Origin: *\r\n"
+       << "Strict-Transport-Security: max-age=31536000\r\n"
+       << "\r\n";
+    std::string header = ss.str();
+    if (tls) {
+        tls->write(header.data(), (int)header.size());
+    } else {
+#ifdef _WIN32
+        send(sock, header.data(), (int)header.size(), 0);
+#else
+        send(sock, header.data(), header.size(), 0);
+#endif
+    }
+}
+
+// ── Per-client handler ─────────────────────────────────
 void HttpServer::handleClient(socket_t sock) {
-    // 1. TLS handshake
     TlsConnection *tls = tlsHandshake(sock);
     if (m_useTls && m_tlsCtx && !tls) { sock_close(sock); return; }
 
-    // 2. Read request
     std::string raw = readRequest(sock, tls);
     Parsed req = parseRequest(raw);
 
-    // 3. Route dispatch
-    std::string respBody;
-    int status = 200;
-    std::string redirectUrl;
-
     if (req.method == "OPTIONS") {
-        status = 204;
-    } else if (req.method.empty()) {
-        status = 400;
-        respBody = "{\"success\":false,\"message\":\"Bad Request\"}";
-    } else {
-        bool matched = false;
-        for (auto &r : m_routes) {
-            if (r.method == req.method && r.path == req.path) {
-                try {
-                    respBody = r.handler(req.body, req.query, req.headers);
-                } catch (const std::exception &e) {
-                    respBody = "{\"success\":false,\"message\":\"Internal Server Error\"}";
-                    status = 500;
-                    std::cerr << "[ERROR] " << r.method << " " << r.path << ": " << e.what() << std::endl;
-                } catch (...) {
-                    respBody = "{\"success\":false,\"message\":\"Internal Server Error\"}";
-                    status = 500;
-                    std::cerr << "[ERROR] " << r.method << " " << r.path << ": unknown exception" << std::endl;
-                }
-                if (respBody.rfind("REDIRECT:", 0) == 0) {
-                    redirectUrl = respBody.substr(9);
-                    status = 302;
-                } else if (respBody.find("\"success\":false") != std::string::npos)
-                    status = 422;
-                matched = true;
-                break;
-            }
-        }
-        if (!matched) {
-            status = 404;
-            respBody = "{\"success\":false,\"message\":\"not found\"}";
-        }
+        sendResponse(sock, tls, 204, "", "");
+        delete tls;
+        sock_close(sock);
+        return;
+    }
+    if (req.method.empty()) {
+        sendResponse(sock, tls, 400, "{\"success\":false,\"message\":\"Bad Request\"}", "");
+        delete tls;
+        sock_close(sock);
+        return;
     }
 
-    // 4. Send response
-    sendResponse(sock, tls, status, respBody, redirectUrl);
+    // Route matching — check stream handlers first
+    for (auto &r : m_routes) {
+        if (r.method != req.method || r.path != req.path) continue;
 
-    // 5. Graceful shutdown
+        if (r.isStream) {
+            // 流式 handler: 直接发文件, 不经过 string 拷贝
+            try {
+                r.streamHandler(sock, tls, req.query);
+            } catch (...) {
+                sendResponse(sock, tls, 500,
+                    "{\"success\":false,\"message\":\"Internal Server Error\"}", "");
+            }
+            delete tls;
+            sock_close(sock);
+            return;
+        }
+
+        std::string respBody;
+        int status = 200;
+        std::string redirectUrl;
+        try {
+            respBody = r.handler(req.body, req.query, req.headers);
+        } catch (const std::exception &e) {
+            respBody = "{\"success\":false,\"message\":\"Internal Server Error\"}";
+            status = 500;
+            std::cerr << "[ERROR] " << r.method << " " << r.path << ": " << e.what() << std::endl;
+        } catch (...) {
+            respBody = "{\"success\":false,\"message\":\"Internal Server Error\"}";
+            status = 500;
+            std::cerr << "[ERROR] " << r.method << " " << r.path << ": unknown exception" << std::endl;
+        }
+        if (respBody.rfind("REDIRECT:", 0) == 0) {
+            redirectUrl = respBody.substr(9);
+            status = 302;
+        } else if (respBody.find("\"success\":false") != std::string::npos)
+            status = 422;
+        sendResponse(sock, tls, status, respBody, redirectUrl);
+        delete tls;
+
+        // Graceful shutdown
 #ifdef _WIN32
-    shutdown(sock, SD_SEND);
-    DWORD tv = 2000;
-    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
-    char discard[256];
-    while (recv(sock, discard, sizeof(discard), 0) > 0) {}
+        shutdown(sock, SD_SEND);
+        DWORD tv = 2000;
+        setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
+        char discard[256];
+        while (recv(sock, discard, sizeof(discard), 0) > 0) {}
 #else
-    shutdown(sock, SHUT_WR);
-    struct timeval tv;
-    tv.tv_sec = 2; tv.tv_usec = 0;
-    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-    char discard[256];
-    while (recv(sock, discard, sizeof(discard), 0) > 0) {}
+        shutdown(sock, SHUT_WR);
+        struct timeval tv;
+        tv.tv_sec = 2; tv.tv_usec = 0;
+        setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+        char discard[256];
+        while (recv(sock, discard, sizeof(discard), 0) > 0) {}
 #endif
+        sock_close(sock);
+        return;
+    }
+
+    // 404
+    sendResponse(sock, tls, 404, "{\"success\":false,\"message\":\"not found\"}", "");
     delete tls;
     sock_close(sock);
 }
@@ -321,7 +346,6 @@ HttpServer::Parsed HttpServer::parseRequest(std::string_view raw) const {
 
     auto bodySep = raw.find("\r\n\r\n");
     if (bodySep != std::string_view::npos) {
-        // Headers block: from end of request line to body separator
         auto hdrStart = raw.find("\r\n");
         if (hdrStart != std::string_view::npos)
             p.headers = raw.substr(hdrStart + 2, bodySep - hdrStart - 2);

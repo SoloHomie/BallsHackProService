@@ -41,11 +41,14 @@ class TlsConnection;
 
 class HttpServer {
 public:
-    // handler(body, query, headers) — headers is raw HTTP headers block
-    // query is URL query string ("" for most POST requests)
+    // ── 普通 handler: 返回响应体字符串 ──
     using Handler = std::function<std::string(const std::string &body,
                                               const std::string &query,
                                               const std::string &headers)>;
+
+    // ── 流式 handler: 直接操作 socket, 返回 body 大小 (用于大文件)
+    using StreamHandler = std::function<void(socket_t sock, TlsConnection *tls,
+                                             const std::string &query)>;
 
     HttpServer();
     ~HttpServer();
@@ -54,17 +57,19 @@ public:
     void stop();
 
     void route(const std::string &method, const std::string &path, Handler h);
+    void routeStream(const std::string &method, const std::string &path, StreamHandler h);
 
 private:
     void acceptLoop();
     void handleClient(socket_t clientSock);
 
-    // ── Pipeline steps ────────────────────────────────
     TlsConnection* tlsHandshake(socket_t sock);
     std::string    readRequest(socket_t sock, TlsConnection *tls);
     void           sendResponse(socket_t sock, TlsConnection *tls,
                                 int status, const std::string &body,
-                                const std::string &redirectUrl);
+                                const std::string &redirectUrl = "");
+    void           sendStreamHeader(socket_t sock, TlsConnection *tls,
+                                    const std::string &contentType, size_t fileSize);
 
     struct Parsed {
         std::string method;
@@ -82,12 +87,7 @@ private:
 
     std::unique_ptr<TlsContext> m_tlsCtx;
 
-    static constexpr int MAX_THREADS = 64;
-    std::atomic<int> m_activeThreads{0};
-    std::mutex m_threadMtx;
-    std::condition_variable m_threadCv;
-
-    struct Route { std::string method, path; Handler handler; };
+    struct Route { std::string method, path; Handler handler; bool isStream = false; StreamHandler streamHandler; };
     std::vector<Route> m_routes;
 
 #ifdef _WIN32

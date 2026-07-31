@@ -1,12 +1,19 @@
 #include "SystemRoutes.h"
 
 #include "../core/server/HttpServer.h"
+#include "../core/server/TlsConnection.h"
 #include "../auth/AuthService.h"
 #include "../common/StringUtils.h"
 #include "../core/cache/RedisClient.h"
 #include "../core/database/DbPool.h"
 #include "../core/config/ServerConfig.h"
 #include "../core/config/Env.h"
+
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <mswsock.h>
+#endif
 
 #include <sstream>
 #include <fstream>
@@ -195,16 +202,90 @@ void registerSystemRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
             return resp.str();
         });
 
-    // ── 下载更新包 ────────────────────────────────
-    server.route("GET", "/api/download",
-        [](const std::string &, const std::string &, const std::string &) -> std::string {
+    // ── 下载更新包 (零拷贝 + 大缓冲, 满带宽发送) ──
+    server.routeStream("GET", "/api/download",
+        [](socket_t sock, TlsConnection *tls, const std::string &) {
             std::string path = Env::exeDir() + "/releases/Surety-latest.zip";
+
+#ifdef _WIN32
+            // Windows: TransmitFile 零拷贝, 最高速
+            HANDLE hFile = CreateFileA(path.c_str(), GENERIC_READ, FILE_SHARE_READ,
+                                       nullptr, OPEN_EXISTING,
+                                       FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
+            if (hFile == INVALID_HANDLE_VALUE) goto fallback_stream;
+
+            LARGE_INTEGER li;
+            GetFileSizeEx(hFile, &li);
+            size_t fileSize = (size_t)li.QuadPart;
+
+            // 发送 HTTP 头
+            {
+                std::ostringstream hdr;
+                hdr << "HTTP/1.1 200 OK\r\n"
+                    << "Content-Type: application/octet-stream\r\n"
+                    << "Content-Length: " << fileSize << "\r\n"
+                    << "Connection: close\r\n"
+                    << "Access-Control-Allow-Origin: *\r\n\r\n";
+                std::string h = hdr.str();
+                if (tls) tls->write(h.data(), (int)h.size());
+                else send(sock, h.data(), (int)h.size(), 0);
+            }
+
+            if (!tls) {
+                // HTTP: 直接用 TransmitFile
+                TransmitFile(sock, hFile, (DWORD)fileSize, 0, nullptr, nullptr,
+                             TF_DISCONNECT | TF_USE_SYSTEM_THREAD);
+                CloseHandle(hFile);
+                return;
+            }
+            // TLS: 需要应用层加密, 回退到分块
+            CloseHandle(hFile);
+#endif
+fallback_stream:
+            // 通用分块流式发送
             std::ifstream f(path, std::ios::binary | std::ios::ate);
-            if (!f) return "{\"success\":false,\"message\":\"not found\"}";
-            std::streamsize size = f.tellg();
+            if (!f) {
+                std::string err = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+                if (tls) tls->write(err.data(), (int)err.size());
+#ifdef _WIN32
+                else send(sock, err.data(), (int)err.size(), 0);
+#else
+                else send(sock, err.data(), err.size(), 0);
+#endif
+                return;
+            }
+            size_t fileSize = f.tellg();
             f.seekg(0);
-            std::string data(size, '\0');
-            f.read(&data[0], size);
-            return "BIN:" + data;
+
+            // 发送 HTTP 头
+            {
+                std::ostringstream hdr;
+                hdr << "HTTP/1.1 200 OK\r\n"
+                    << "Content-Type: application/octet-stream\r\n"
+                    << "Content-Length: " << fileSize << "\r\n"
+                    << "Content-Disposition: attachment; filename=\"Surety-latest.zip\"\r\n"
+                    << "Connection: close\r\n"
+                    << "Access-Control-Allow-Origin: *\r\n\r\n";
+                std::string h = hdr.str();
+                if (tls) tls->write(h.data(), (int)h.size());
+#ifdef _WIN32
+                else send(sock, h.data(), (int)h.size(), 0);
+#else
+                else send(sock, h.data(), h.size(), 0);
+#endif
+            }
+
+            // 256KB 大块发送, 减少 syscall 次数
+            constexpr size_t CHUNK = 256 * 1024;
+            std::vector<char> chunk(CHUNK);
+            while (f.read(chunk.data(), CHUNK) || f.gcount() > 0) {
+                size_t n = f.gcount();
+                if (tls) tls->write(chunk.data(), (int)n);
+#ifdef _WIN32
+                else send(sock, chunk.data(), (int)n, 0);
+#else
+                else send(sock, chunk.data(), n, 0);
+#endif
+            }
         });
 }
