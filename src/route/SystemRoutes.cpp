@@ -19,6 +19,7 @@
 #include <fstream>
 #include <vector>
 #include <ctime>
+#include <sys/stat.h>
 
 void registerSystemRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
 
@@ -74,6 +75,9 @@ void registerSystemRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
                 if (!cl.empty()) changelog = cl;
             }
 
+            std::string directDl = "http://38.92.9.178:8920/api/download";
+            std::string cloudDl = "https://api.solohomie.top/api/download";
+
             bool force = false;
             if (!clientVer.empty() && !minVer.empty()) {
                 auto splitVer = [](const std::string &v) -> std::vector<int> {
@@ -98,8 +102,8 @@ void registerSystemRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
                 + ",\"min_version\":\"" + minVer + "\""
                 + ",\"force_update\":" + (force ? "true" : "false")
                 + ",\"update_type\":\"" + (force ? "force" : "recommended") + "\""
-                + ",\"github_url\":\"" + ServerConfig::DOWNLOAD_URL + "\""
-                + ",\"download_url\":\"https://api.solohomie.top/api/download\""
+                + ",\"download_url\":\"" + cloudDl + "\""
+                + ",\"direct_download_url\":\"" + directDl + "\""
                 + ",\"changelog\":\"" + changelog + "\""
                 + "}";
         });
@@ -128,6 +132,12 @@ void registerSystemRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
             if (!f) return std::string("download page not found");
             std::ostringstream ss; ss << f.rdbuf();
             return ss.str();
+        });
+
+    // ── 网络延迟探测 (零处理, 纯网络耗时) ────────
+    server.route("GET", "/api/ping",
+        [](const std::string &, const std::string &, const std::string &) {
+            return "{\"pong\":true}";
         });
 
     // ── 健康检查 ──────────────────────────────────
@@ -202,80 +212,152 @@ void registerSystemRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
             return resp.str();
         });
 
+    // ── 管理: 在线用户列表 ─────────────────────────
+    // ── 更新文件下载: /api/dl?file=xxx → releases/xxx ──
+    server.routeStream("GET", "/api/dl",
+        [](socket_t sock, TlsConnection *tls, const std::string &query) {
+            std::string file = StringUtils::queryVal(query, "file");
+            if (file.empty() || file.find("..") != std::string::npos) {
+                std::string err = "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+                if (tls) tls->write(err.data(), (int)err.size());
+                else send(sock, err.data(), (int)err.size(), 0);
+                return;
+            }
+            std::string fullPath = Env::exeDir() + "/releases/" + file;
+            std::ifstream fst(fullPath, std::ios::binary | std::ios::ate);
+            if (!fst) {
+                std::string err = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+                if (tls) tls->write(err.data(), (int)err.size());
+                else send(sock, err.data(), (int)err.size(), 0);
+                return;
+            }
+            size_t fsize = fst.tellg(); fst.close();
+            std::ostringstream hdr;
+            hdr << "HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\n"
+                << "Content-Length: " << fsize << "\r\nConnection: close\r\n\r\n";
+            std::string h = hdr.str();
+            if (tls) tls->write(h.data(), (int)h.size());
+            else send(sock, h.data(), (int)h.size(), 0);
+            std::ifstream fs(fullPath, std::ios::binary);
+            char buf[65536];
+            while (fs.read(buf, sizeof(buf)) || fs.gcount() > 0) {
+                size_t n = fs.gcount();
+                if (tls) tls->write(buf, (int)n);
+                else send(sock, buf, (int)n, 0);
+            }
+        });
+
+    // ── 增量更新文件列表 ─────────────────────────
+    server.route("GET", "/api/update/manifest",
+        [](const std::string &, const std::string &, const std::string &) {
+            std::string dir = Env::exeDir() + "/releases/latest";
+            std::ostringstream resp; resp << "[";
+#ifndef _WIN32
+            std::string cmd = "find \"" + dir + "\" -type f 2>/dev/null";
+            FILE *fp = popen(cmd.c_str(), "r");
+            if (fp) {
+                char buf[1024]; bool first = true;
+                while (fgets(buf, sizeof(buf), fp)) {
+                    std::string path(buf); path.pop_back();
+                    std::string rel = path.substr(dir.size() + 1);
+                    std::string md5cmd = "md5sum \"" + path + "\" | awk '{print $1}'";
+                    FILE *mf = popen(md5cmd.c_str(), "r");
+                    std::string md5; if (mf) { char m[64]={}; fgets(m,64,mf); pclose(mf); md5=m; md5.pop_back(); }
+                    struct stat st; stat(path.c_str(), &st);
+                    if (!first) resp << ","; first = false;
+                    resp << "{\"path\":\"" << rel << "\",\"md5\":\"" << md5
+                         << "\",\"size\":" << st.st_size
+                         << ",\"url\":\"/api/dl?file=latest/" << rel << "\"}";
+                }
+                pclose(fp);
+            }
+#endif
+            resp << "]";
+            return resp.str();
+        });
+
+    server.route("GET", "/api/admin/online-users",
+        [&](const std::string &, const std::string &, const std::string &headers) {
+            auto tp = auth.authenticate(headers);
+            if (!tp) return AuthService::jsonErr("UNAUTHORIZED", "请先登录");
+            if (tp->email != "admin@solohomie.top")
+                return AuthService::jsonErr("FORBIDDEN", "无管理员权限");
+            std::ostringstream resp;
+            resp << "{\"success\":true,\"users\":[";
+            int count = 0;
+            try {
+                auto &r = RedisClient::instance();
+                std::vector<std::string> keys;
+                r.keys("online:*", std::back_inserter(keys));
+                for (size_t i = 0; i < keys.size(); ++i) {
+                    auto email = r.get(keys[i]);
+                    if (!email) continue;
+                    if (count > 0) resp << ",";
+                    resp << "{\"uid\":\"" << keys[i].substr(7) << "\""
+                         << ",\"email\":\"" << *email << "\"}";
+                    count++;
+                }
+            } catch (...) {}
+            resp << "],\"count\":" << count << "}";
+            return resp.str();
+        });
+
+    // ── 管理: 踢人下线 ─────────────────────────────
+    server.route("POST", "/api/admin/kick-user",
+        [&](const std::string &body, const std::string &, const std::string &headers) {
+            auto tp = auth.authenticate(headers);
+            if (!tp) return AuthService::jsonErr("UNAUTHORIZED", "请先登录");
+            if (tp->email != "admin@solohomie.top")
+                return AuthService::jsonErr("FORBIDDEN", "无管理员权限");
+            std::string email = StringUtils::jsonVal(body, "email");
+            std::string uid   = StringUtils::jsonVal(body, "uid");
+            if (email.empty() && uid.empty())
+                return AuthService::jsonErr("FIELDS_REQUIRED", "email或uid必填");
+            try {
+                auto &r = RedisClient::instance();
+                if (!uid.empty()) {
+                    r.setex("kicked:" + uid, 60, "1");
+                } else {
+                    // 通过 email 找 uid
+                    auto user = auth.userStore().findByEmail(email);
+                    if (user) r.setex("kicked:" + std::to_string(user->id), 60, "1");
+                }
+            } catch (...) {}
+            return AuthService::jsonOk("已踢出，用户下次心跳将被强制下线");
+        });
+
     // ── 下载更新包 (零拷贝 + 大缓冲, 满带宽发送) ──
     server.routeStream("GET", "/api/download",
         [](socket_t sock, TlsConnection *tls, const std::string &) {
-            std::string path = Env::exeDir() + "/releases/Surety-latest.zip";
+            std::string path = Env::exeDir() + "/releases/BallsHackPro-latest.zip";
 
-#ifdef _WIN32
-            // Windows: TransmitFile 零拷贝, 最高速
-            HANDLE hFile = CreateFileA(path.c_str(), GENERIC_READ, FILE_SHARE_READ,
-                                       nullptr, OPEN_EXISTING,
-                                       FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
-            if (hFile == INVALID_HANDLE_VALUE) goto fallback_stream;
-
-            LARGE_INTEGER li;
-            GetFileSizeEx(hFile, &li);
-            size_t fileSize = (size_t)li.QuadPart;
-
-            // 发送 HTTP 头
-            {
-                std::ostringstream hdr;
-                hdr << "HTTP/1.1 200 OK\r\n"
-                    << "Content-Type: application/octet-stream\r\n"
-                    << "Content-Length: " << fileSize << "\r\n"
-                    << "Connection: close\r\n"
-                    << "Access-Control-Allow-Origin: *\r\n\r\n";
-                std::string h = hdr.str();
-                if (tls) tls->write(h.data(), (int)h.size());
-                else send(sock, h.data(), (int)h.size(), 0);
-            }
-
-            if (!tls) {
-                // HTTP: 直接用 TransmitFile
-                TransmitFile(sock, hFile, (DWORD)fileSize, 0, nullptr, nullptr,
-                             TF_DISCONNECT | TF_USE_SYSTEM_THREAD);
-                CloseHandle(hFile);
-                return;
-            }
-            // TLS: 需要应用层加密, 回退到分块
-            CloseHandle(hFile);
-#endif
-fallback_stream:
-            // 通用分块流式发送
-            std::ifstream f(path, std::ios::binary | std::ios::ate);
-            if (!f) {
+            // 获取文件大小
+            std::ifstream fs(path, std::ios::binary | std::ios::ate);
+            if (!fs) {
                 std::string err = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
                 if (tls) tls->write(err.data(), (int)err.size());
-#ifdef _WIN32
                 else send(sock, err.data(), (int)err.size(), 0);
-#else
-                else send(sock, err.data(), err.size(), 0);
-#endif
                 return;
             }
-            size_t fileSize = f.tellg();
-            f.seekg(0);
+            size_t fsize = fs.tellg();
+            fs.close();
 
             // 发送 HTTP 头
             {
                 std::ostringstream hdr;
                 hdr << "HTTP/1.1 200 OK\r\n"
                     << "Content-Type: application/octet-stream\r\n"
-                    << "Content-Length: " << fileSize << "\r\n"
-                    << "Content-Disposition: attachment; filename=\"Surety-latest.zip\"\r\n"
+                    << "Content-Length: " << fsize << "\r\n"
+                    << "Content-Disposition: attachment; filename=\"BallsHackPro-latest.zip\"\r\n"
+                    << "Cache-Control: public, max-age=86400\r\n"
                     << "Connection: close\r\n"
                     << "Access-Control-Allow-Origin: *\r\n\r\n";
                 std::string h = hdr.str();
                 if (tls) tls->write(h.data(), (int)h.size());
-#ifdef _WIN32
                 else send(sock, h.data(), (int)h.size(), 0);
-#else
-                else send(sock, h.data(), h.size(), 0);
-#endif
             }
-
-            // 256KB 大块发送, 减少 syscall 次数
+            // 分块流式发送
+            std::ifstream f(path, std::ios::binary);
             constexpr size_t CHUNK = 256 * 1024;
             std::vector<char> chunk(CHUNK);
             while (f.read(chunk.data(), CHUNK) || f.gcount() > 0) {

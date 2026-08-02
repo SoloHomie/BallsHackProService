@@ -47,12 +47,41 @@ static std::string buildOAuthUrl(AuthService &auth,
 
 void registerAuthRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
 
-    // ── 发送验证码 ──────────────────────────────────
+    // ── 发送验证码 (含频率限制: 同邮箱1次/分钟, 同IP 5次/小时) ──
     server.route("POST", "/api/auth/send-code",
-        [&](const std::string &body, const std::string &, const std::string &) {
+        [&](const std::string &body, const std::string &, const std::string &headers) {
+            std::string email   = StringUtils::jsonVal(body, "email");
             std::string purpose = StringUtils::jsonVal(body, "purpose");
             if (purpose.empty()) purpose = "register";
-            return auth.sendCode(StringUtils::jsonVal(body, "email"), purpose);
+            if (email.empty()) return AuthService::jsonErr("FIELDS_REQUIRED", "请输入邮箱");
+
+            try {
+                auto &r = RedisClient::instance();
+                // 同邮箱限制: 60秒内只能发1次
+                if (r.exists("rl:code:" + email))
+                    return AuthService::jsonErr("RATE_LIMIT", "验证码已发送，请60秒后再试");
+                r.setex("rl:code:" + email, 60, "1");
+
+                // 同IP限制: 每小时最多5次
+                auto getHdr = [&](const std::string &name) -> std::string {
+                    auto pos = headers.find(name + ": ");
+                    if (pos == std::string::npos) return {};
+                    pos += name.size() + 2;
+                    auto end = headers.find("\r\n", pos);
+                    return headers.substr(pos, end - pos);
+                };
+                std::string ip = getHdr("X-Real-IP");
+                if (ip.empty()) ip = getHdr("X-Forwarded-For");
+                if (!ip.empty()) {
+                    auto count = r.get("rl:ip:" + ip);
+                    int c = count ? std::stoi(*count) : 0;
+                    if (c >= 5) return AuthService::jsonErr("RATE_LIMIT", "请求过于频繁，请稍后再试");
+                    r.incr("rl:ip:" + ip);
+                    r.expire("rl:ip:" + ip, 3600);
+                }
+            } catch (...) {}
+
+            return auth.sendCode(email, purpose);
         });
 
     // ── 密码登录 ──────────────────────────────────
@@ -208,7 +237,7 @@ void registerAuthRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
             if (sub.empty())
                 return AuthService::jsonErr("INVALID_TOKEN", "会话数据损坏，请重新登录");
 
-            SessionManager::revokeRefresh(refreshToken);
+            SessionManager::revokeRefresh(refreshToken, &pool);
 
             TokenPayload tp;
             tp.sub      = sub;
@@ -216,6 +245,7 @@ void registerAuthRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
             tp.provider = provider;
             tp.jti      = SessionManager::generateJti();
             std::string newAccess = auth.tokenService().generateAccess(tp, 900);
+	    auth.bindSession(tp.sub, tp.jti);
 
             std::string newRefresh = TokenService::generateRefresh();
             SessionManager::storeRefresh(newRefresh, sub, email, provider, 30*24*3600, &pool);
@@ -242,7 +272,7 @@ void registerAuthRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
         [&](const std::string &body, const std::string &, const std::string &) {
             std::string refreshToken = StringUtils::jsonVal(body, "refresh_token");
             if (!refreshToken.empty())
-                SessionManager::revokeRefresh(refreshToken);
+                SessionManager::revokeRefresh(refreshToken, &pool);
             return AuthService::jsonOk("已退出登录");
         });
 
@@ -252,14 +282,15 @@ void registerAuthRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
             std::string clientVer = StringUtils::jsonVal(body, "client_version");
 
             // 读 version.json
-            std::string latestVer = "1.0.0", downloadUrl = "", releaseNotes = "";
+            std::string latestVer = "1.0.0", downloadUrl = "", directDownloadUrl = "", releaseNotes = "";
             std::ifstream fv("version.json");
             if (fv) {
                 std::ostringstream ss; ss << fv.rdbuf();
                 std::string json = ss.str();
-                latestVer   = StringUtils::jsonVal(json, "latest_version");
-                downloadUrl = StringUtils::jsonVal(json, "download_url");
-                releaseNotes = StringUtils::jsonVal(json, "release_notes");
+                latestVer       = StringUtils::jsonVal(json, "latest_version");
+                downloadUrl     = StringUtils::jsonVal(json, "download_url");
+                directDownloadUrl = StringUtils::jsonVal(json, "direct_download_url");
+                releaseNotes    = StringUtils::jsonVal(json, "release_notes");
                 if (latestVer.empty()) latestVer = "1.0.0";
             }
 
@@ -309,6 +340,19 @@ void registerAuthRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
                         } catch (...) {}
                     }
                 }
+
+                // ── 在线状态: 心跳刷新, 30s TTL ──
+                try {
+                    auto &r = RedisClient::instance();
+                    // 检查是否被踢
+                    if (r.exists("kicked:" + tp->sub)) {
+                        r.del("kicked:" + tp->sub);
+                        std::ostringstream kr;
+                        kr << "{\"success\":true,\"status\":\"kicked\",\"subscribed\":false}";
+                        return kr.str();
+                    }
+                    r.setex("online:" + tp->sub, 30, tp->email);
+                } catch (...) {}
             }
 
             std::ostringstream resp;
@@ -317,6 +361,7 @@ void registerAuthRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
                  << ",\"latest_version\":\"" << AuthService::jsonEscape(latestVer) << "\""
                  << ",\"update_available\":" << (updateAvailable ? "true" : "false")
                  << ",\"download_url\":\"" << AuthService::jsonEscape(downloadUrl) << "\""
+                 << ",\"direct_download_url\":\"" << AuthService::jsonEscape(directDownloadUrl) << "\""
                  << ",\"release_notes\":\"" << AuthService::jsonEscape(releaseNotes) << "\""
                  << ",\"subscribed\":" << (subscribed ? "true" : "false")
                  << ",\"subscription_expires\":\"" << AuthService::jsonEscape(subExpires) << "\""

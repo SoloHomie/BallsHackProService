@@ -240,23 +240,31 @@ void HttpServer::sendStreamHeader(socket_t sock, TlsConnection *tls,
 
 // ── Per-client handler ─────────────────────────────────
 void HttpServer::handleClient(socket_t sock) {
+    auto t0 = std::chrono::steady_clock::now();
+
     TlsConnection *tls = tlsHandshake(sock);
     if (m_useTls && m_tlsCtx && !tls) { sock_close(sock); return; }
 
     std::string raw = readRequest(sock, tls);
     Parsed req = parseRequest(raw);
 
+    // 请求日志
+    auto logReq = [&](int status) {
+        auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - t0).count();
+        std::cout << "[" << req.method << " " << req.path << "] " << status
+                  << " " << ms << "ms" << std::endl;
+    };
+
     if (req.method == "OPTIONS") {
         sendResponse(sock, tls, 204, "", "");
-        delete tls;
-        sock_close(sock);
-        return;
+        logReq(204);
+        delete tls; sock_close(sock); return;
     }
     if (req.method.empty()) {
         sendResponse(sock, tls, 400, "{\"success\":false,\"message\":\"Bad Request\"}", "");
-        delete tls;
-        sock_close(sock);
-        return;
+        logReq(400);
+        delete tls; sock_close(sock); return;
     }
 
     // Route matching — check stream handlers first
@@ -264,12 +272,13 @@ void HttpServer::handleClient(socket_t sock) {
         if (r.method != req.method || r.path != req.path) continue;
 
         if (r.isStream) {
-            // 流式 handler: 直接发文件, 不经过 string 拷贝
             try {
                 r.streamHandler(sock, tls, req.query);
+                logReq(200);
             } catch (...) {
                 sendResponse(sock, tls, 500,
                     "{\"success\":false,\"message\":\"Internal Server Error\"}", "");
+                logReq(500);
             }
             delete tls;
             sock_close(sock);
@@ -296,6 +305,7 @@ void HttpServer::handleClient(socket_t sock) {
         } else if (respBody.find("\"success\":false") != std::string::npos)
             status = 422;
         sendResponse(sock, tls, status, respBody, redirectUrl);
+        logReq(status);
         delete tls;
 
         // Graceful shutdown
@@ -319,6 +329,7 @@ void HttpServer::handleClient(socket_t sock) {
 
     // 404
     sendResponse(sock, tls, 404, "{\"success\":false,\"message\":\"not found\"}", "");
+    logReq(404);
     delete tls;
     sock_close(sock);
 }

@@ -87,6 +87,7 @@
     <ClCompile Include="src\route\SystemRoutes.cpp" />
     <ClCompile Include="src\route\WalletRoutes.cpp" />
     <ClCompile Include="src\route\SyncRoutes.cpp" />
+    <ClCompile Include="src\route\PeerRoutes.cpp" />
     <ClCompile Include="src\route\AssetRoutes.cpp" />
   </ItemGroup>
   <ItemGroup Label="view (source)">
@@ -148,6 +149,7 @@
     <ClInclude Include="src\route\WalletRoutes.h" />
     <ClInclude Include="src\route\WelfareRoutes.h" />
     <ClInclude Include="src\route\SyncRoutes.h" />
+    <ClInclude Include="src\route\PeerRoutes.h" />
   </ItemGroup>
   <ItemGroup Label="view (header)">
     <ClInclude Include="src\view\EmailPage.h" />

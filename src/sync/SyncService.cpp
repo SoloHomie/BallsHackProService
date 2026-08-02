@@ -12,7 +12,7 @@
 static std::string esc(MYSQL *db, const std::string &s) {
     if (s.empty()) return s;
     char *buf = new char[s.size() * 2 + 1];
-    mysql_real_escape_string(db, buf, s.c_str(), s.size());
+    mysql_real_escape_string(db, buf, s.c_str(), (unsigned long)s.size());
     std::string r(buf);
     delete[] buf;
     return r;
@@ -48,18 +48,23 @@ std::string SyncService::generateRoomCode() {
 // ═══════════════════════════════════════════════════════════
 
 std::shared_ptr<RoomSyncState> SyncService::getOrCreateState(const std::string &roomCode) {
-    // 先读锁查找
     {
         std::shared_lock<std::shared_mutex> lk(m_roomsMutex);
         auto it = m_rooms.find(roomCode);
-        if (it != m_rooms.end()) return it->second;
+        if (it != m_rooms.end()) {
+            it->second->touch();
+            return it->second;
+        }
     }
-    // 写锁创建
     {
         std::unique_lock<std::shared_mutex> lk(m_roomsMutex);
         auto it = m_rooms.find(roomCode);
-        if (it != m_rooms.end()) return it->second;
+        if (it != m_rooms.end()) {
+            it->second->touch();
+            return it->second;
+        }
         auto state = std::make_shared<RoomSyncState>();
+        state->touch();
         m_rooms[roomCode] = state;
         return state;
     }
@@ -69,13 +74,69 @@ void SyncService::removeState(const std::string &roomCode) {
     std::unique_lock<std::shared_mutex> lk(m_roomsMutex);
     auto it = m_rooms.find(roomCode);
     if (it != m_rooms.end()) {
-        // 唤醒所有等待者（它们会检测到 dirty=false 并返回空）
         {
             std::lock_guard<std::mutex> rlk(it->second->mtx);
             it->second->dirty = false;
         }
         it->second->cv.notify_all();
         m_rooms.erase(it);
+    }
+}
+
+// ── 服务重启后恢复房间内存状态 ──
+void SyncService::recoverFromDb() {
+    auto guard = m_pool.acquire(5000);
+    if (!guard) return;
+    MYSQL *db = guard->get();
+    if (mysql_query(db, "SELECT room_code, controller_email, controlled_email FROM rooms WHERE status != 2"))
+        return;
+    MYSQL_RES *res = mysql_store_result(db);
+    if (!res) return;
+    MYSQL_ROW row;
+    int recovered = 0;
+    while ((row = mysql_fetch_row(res))) {
+        std::string code(row[0] ? row[0] : "");
+        std::string ctrl(row[1] ? row[1] : "");
+        std::string ctrld(row[2] ? row[2] : "");
+        if (code.empty()) continue;
+        auto state = getOrCreateState(code);
+        state->controllerEmail = ctrl;
+        state->controlledEmail = ctrld;
+        recovered++;
+    }
+    mysql_free_result(res);
+    std::cout << "[Sync] Recovered " << recovered << " rooms from DB" << std::endl;
+}
+
+void SyncService::closeRoom(const std::string &roomCode) {
+    auto guard = m_pool.acquire(5000);
+    if (guard) {
+        MYSQL *db = guard->get();
+        char q[256];
+        snprintf(q, sizeof(q), "UPDATE rooms SET status=2 WHERE room_code='%s'",
+                 esc(db, roomCode).c_str());
+        mysql_query(db, q);
+    }
+    removeState(roomCode);
+}
+
+void SyncService::purgeIdleRooms(int idleSeconds) {
+    auto now = std::chrono::steady_clock::now();
+    std::unique_lock<std::shared_mutex> lk(m_roomsMutex);
+    auto it = m_rooms.begin();
+    while (it != m_rooms.end()) {
+        auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(
+            now - it->second->lastActive).count();
+        if (elapsed > idleSeconds) {
+            {
+                std::lock_guard<std::mutex> rlk(it->second->mtx);
+                it->second->dirty = false;
+            }
+            it->second->cv.notify_all();
+            it = m_rooms.erase(it);
+        } else {
+            ++it;
+        }
     }
 }
 
@@ -97,13 +158,42 @@ std::string SyncService::serializeCommand(const SyncCommand &cmd, uint64_t seq) 
 // ═══════════════════════════════════════════════════════════
 
 std::string SyncService::createRoom(const std::string &roomName, const std::string &email) {
-    if (roomName.empty() || email.empty())
-        return "{\"success\":false,\"errcode\":\"FIELDS_REQUIRED\",\"message\":\"房间名和邮箱不能为空\"}";
+    if (email.empty())
+        return "{\"success\":false,\"errcode\":\"FIELDS_REQUIRED\",\"message\":\"邮箱不能为空\"}";
 
     auto guard = m_pool.acquire(5000);
     if (!guard)
         return "{\"success\":false,\"errcode\":\"DB_ERROR\",\"message\":\"数据库繁忙\"}";
     MYSQL *db = guard->get();
+
+    // 检查用户是否已有活跃房间（status != 2），自动退出
+    {
+        std::string eEmail = esc(db, email);
+        char cq[512];
+        snprintf(cq, sizeof(cq),
+            "SELECT room_code FROM rooms WHERE (controller_email='%s' OR controlled_email='%s') AND status != 2 LIMIT 1",
+            eEmail.c_str(), eEmail.c_str());
+        if (mysql_query(db, cq) == 0) {
+            MYSQL_RES *res = mysql_store_result(db);
+            if (res) {
+                MYSQL_ROW row = mysql_fetch_row(res);
+                if (row && row[0]) {
+                    std::string oldRoom = row[0];
+                    mysql_free_result(res);
+                    // 自动退出旧房间
+                    char lq[512];
+                    snprintf(lq, sizeof(lq),
+                        "UPDATE rooms SET status=2 WHERE room_code='%s'",
+                        esc(db, oldRoom).c_str());
+                    mysql_query(db, lq);
+                    removeState(oldRoom);
+                    Logger::info("SyncService", std::string("Auto-left room ") + oldRoom + " for " + email);
+                } else {
+                    mysql_free_result(res);
+                }
+            }
+        }
+    }
 
     // 生成唯一 room code
     std::string code;
@@ -125,50 +215,51 @@ std::string SyncService::createRoom(const std::string &roomName, const std::stri
     if (code.empty())
         return "{\"success\":false,\"errcode\":\"ROOM_CREATE_FAILED\",\"message\":\"生成房间码失败，请重试\"}";
 
+    std::string roomLabel = roomName.empty() ? code : roomName;
     uint64_t id = Snowflake::generate();
     char ins[512];
     snprintf(ins, sizeof(ins),
-             "INSERT INTO rooms (id,room_code,room_name,creator_email,status) "
-             "VALUES (%llu,'%s','%s','%s',0)",
-             id, esc(db, code).c_str(), esc(db, roomName).c_str(), esc(db, email).c_str());
+             "INSERT INTO rooms (id,room_code,room_name,creator_email,controller_email,status) "
+             "VALUES (%llu,'%s','%s','%s','%s',0)",
+             id, esc(db, code).c_str(), esc(db, roomLabel).c_str(),
+             esc(db, email).c_str(), esc(db, email).c_str());
 
     if (mysql_query(db, ins) != 0) {
-        Logger::err("SyncService",
-                    std::string("createRoom insert failed: ") + mysql_error(db));
+        Logger::err("SyncService", std::string("createRoom insert: ") + mysql_error(db));
         return "{\"success\":false,\"errcode\":\"DB_ERROR\",\"message\":\"创建房间失败\"}";
     }
+
+    // 初始化房间同步状态
+    auto state = getOrCreateState(code);
+    state->controllerEmail = email;
 
     std::ostringstream resp;
     resp << "{\"success\":true"
          << ",\"room_code\":\"" << code << "\""
-         << ",\"room_name\":\"" << roomName << "\""
-         << ",\"creator_email\":\"" << email << "\""
-         << ",\"member_count\":1"
-         << ",\"member_max\":2"
-         << ",\"controller_email\":\"\""
-         << ",\"controlled_email\":\"\""
+         << ",\"room_name\":\"" << roomLabel << "\""
+         << ",\"your_role\":\"controller\""
+         << ",\"member_count\":1,\"member_max\":2"
          << "}";
-    Logger::info("SyncService",
-                 std::string("Room created: ") + code + " by " + email);
+    Logger::info("SyncService", std::string("Room ") + code + " created by " + email);
     return resp.str();
 }
 
-std::string SyncService::joinRoom(const std::string &roomCode, const std::string &email,
-                                   const std::string &role) {
-    if (roomCode.empty() || email.empty() || role.empty())
-        return "{\"success\":false,\"errcode\":\"FIELDS_REQUIRED\",\"message\":\"参数不完整\"}";
-    if (role != "controller" && role != "controlled")
-        return "{\"success\":false,\"errcode\":\"INVALID_ROLE\",\"message\":\"角色只能是 controller 或 controlled\"}";
+std::string SyncService::joinRoom(const std::string &roomCode, const std::string &email) {
+    if (roomCode.empty() || email.empty())
+        return "{\"success\":false,\"errcode\":\"FIELDS_REQUIRED\",\"message\":\"房间码和邮箱不能为空\"}";
 
     auto guard = m_pool.acquire(5000);
     if (!guard)
         return "{\"success\":false,\"errcode\":\"DB_ERROR\",\"message\":\"数据库繁忙\"}";
     MYSQL *db = guard->get();
 
+    std::string eCode = esc(db, roomCode);
+
+    // 查询房间
     char q[512];
     snprintf(q, sizeof(q),
-             "SELECT id,room_name,creator_email,controller_email,controlled_email,status "
-             "FROM rooms WHERE room_code='%s'", esc(db, roomCode).c_str());
+        "SELECT id,room_name,creator_email,controller_email,controlled_email,status "
+        "FROM rooms WHERE room_code='%s'", eCode.c_str());
     if (mysql_query(db, q) != 0)
         return "{\"success\":false,\"errcode\":\"DB_ERROR\",\"message\":\"查询房间失败\"}";
 
@@ -180,57 +271,83 @@ std::string SyncService::joinRoom(const std::string &roomCode, const std::string
 
     MYSQL_ROW row = mysql_fetch_row(res);
     std::string roomName   = row[1] ? row[1] : "";
-    std::string creator    = row[2] ? row[2] : "";
     std::string controller = row[3] ? row[3] : "";
     std::string controlled = row[4] ? row[4] : "";
+    int         status     = row[5] ? atoi(row[5]) : 0;
     mysql_free_result(res);
 
-    const std::string &targetField = (role == "controller") ? controller : controlled;
-    if (!targetField.empty() && targetField != email)
-        return "{\"success\":false,\"errcode\":\"ROLE_TAKEN\",\"message\":\"该角色已被其他人占用\"}";
+    // 边界检查
+    if (status == 2)
+        return "{\"success\":false,\"errcode\":\"ROOM_CLOSED\",\"message\":\"房间已关闭\"}";
+    if (email == controller)
+        return "{\"success\":false,\"errcode\":\"SELF_JOIN\",\"message\":\"不能加入自己创建的房间\"}";
+    if (!controlled.empty() && controlled != email)
+        return "{\"success\":false,\"errcode\":\"ROOM_FULL\",\"message\":\"房间已满\"}";
 
-    const char *col = (role == "controller") ? "controller_email" : "controlled_email";
-    char upd[512];
-    snprintf(upd, sizeof(upd),
-             "UPDATE rooms SET %s='%s', status=1 WHERE room_code='%s'",
-             col, email.c_str(), esc(db, roomCode).c_str());
-    mysql_query(db, upd);
-
-    // 重新统计
-    snprintf(q, sizeof(q),
-             "SELECT controller_email,controlled_email FROM rooms WHERE room_code='%s'",
-             esc(db, roomCode).c_str());
-    mysql_query(db, q);
-    res = mysql_store_result(db);
-    int memberCount = 0;
-    std::string curController, curControlled;
-    if (res) {
-        MYSQL_ROW r = mysql_fetch_row(res);
-        if (r) {
-            curController = r[0] ? r[0] : "";
-            curControlled = r[1] ? r[1] : "";
-            if (!curController.empty()) memberCount++;
-            if (!curControlled.empty()) memberCount++;
+    // 检查加入者是否已在其他房间
+    {
+        std::string eEmail = esc(db, email);
+        char cq[512];
+        snprintf(cq, sizeof(cq),
+            "SELECT COUNT(*) FROM rooms WHERE (controller_email='%s' OR controlled_email='%s') AND status != 2",
+            eEmail.c_str(), eEmail.c_str());
+        if (mysql_query(db, cq) == 0) {
+            MYSQL_RES *cr = mysql_store_result(db);
+            if (cr) {
+                MYSQL_ROW rr = mysql_fetch_row(cr);
+                if (rr && atoi(rr[0]) > 0) {
+                    mysql_free_result(cr);
+                    // 自动退出旧房间
+                    char lq[512];
+                    snprintf(lq, sizeof(lq),
+                        "SELECT room_code FROM rooms WHERE (controller_email='%s' OR controlled_email='%s') AND status != 2 LIMIT 1",
+                        eEmail.c_str(), eEmail.c_str());
+                    if (mysql_query(db, lq) == 0) {
+                        MYSQL_RES *or2 = mysql_store_result(db);
+                        if (or2) {
+                            MYSQL_ROW r2 = mysql_fetch_row(or2);
+                            if (r2 && r2[0]) {
+                                std::string oldRoom = r2[0];
+                                char xq[256];
+                                snprintf(xq, sizeof(xq), "UPDATE rooms SET status=2 WHERE room_code='%s'", esc(db, oldRoom).c_str());
+                                mysql_query(db, xq);
+                                removeState(oldRoom);
+                            }
+                            mysql_free_result(or2);
+                        }
+                    }
+                } else {
+                    mysql_free_result(cr);
+                }
+            }
         }
-        mysql_free_result(res);
     }
 
-    // 初始化房间的同步状态
-    getOrCreateState(roomCode);
+    // 原子加入（WHERE controlled_email IS NULL → 防竞态）
+    std::string eEmail = esc(db, email);
+    char upd[512];
+    snprintf(upd, sizeof(upd),
+        "UPDATE rooms SET controlled_email='%s', status=1 "
+        "WHERE room_code='%s' AND controlled_email IS NULL AND status=0",
+        eEmail.c_str(), eCode.c_str());
+    mysql_query(db, upd);
+    if (mysql_affected_rows(db) == 0) {
+        return "{\"success\":false,\"errcode\":\"ROOM_FULL\",\"message\":\"房间已被占用\"}";
+    }
+
+    // 更新内存状态
+    auto state = getOrCreateState(roomCode);
+    state->controlledEmail = email;
 
     std::ostringstream resp;
     resp << "{\"success\":true"
          << ",\"room_code\":\"" << roomCode << "\""
          << ",\"room_name\":\"" << roomName << "\""
-         << ",\"creator_email\":\"" << creator << "\""
-         << ",\"controller_email\":\"" << curController << "\""
-         << ",\"controlled_email\":\"" << curControlled << "\""
-         << ",\"member_count\":" << memberCount
-         << ",\"member_max\":2"
-         << ",\"your_role\":\"" << role << "\""
+         << ",\"your_role\":\"controlled\""
+         << ",\"controller_email\":\"" << controller << "\""
+         << ",\"member_count\":2,\"member_max\":2"
          << "}";
-    Logger::info("SyncService",
-                 std::string("Room ") + roomCode + ": " + email + " joined as " + role);
+    Logger::info("SyncService", std::string("Room ") + roomCode + ": " + email + " joined");
     return resp.str();
 }
 
@@ -243,41 +360,56 @@ std::string SyncService::leaveRoom(const std::string &roomCode, const std::strin
         return "{\"success\":false,\"errcode\":\"DB_ERROR\",\"message\":\"数据库繁忙\"}";
     MYSQL *db = guard->get();
 
-    char upd[512];
-    snprintf(upd, sizeof(upd),
-             "UPDATE rooms SET "
-             "controller_email = IF(controller_email='%s', NULL, controller_email), "
-             "controlled_email = IF(controlled_email='%s', NULL, controlled_email) "
-             "WHERE room_code='%s'",
-             email.c_str(), email.c_str(), esc(db, roomCode).c_str());
-    mysql_query(db, upd);
-
-    char q[256];
+    // 查房间
+    char q[512];
     snprintf(q, sizeof(q),
-             "SELECT controller_email,controlled_email FROM rooms WHERE room_code='%s'",
-             esc(db, roomCode).c_str());
-    mysql_query(db, q);
+        "SELECT controller_email,controlled_email,status FROM rooms WHERE room_code='%s'",
+        esc(db, roomCode).c_str());
+    if (mysql_query(db, q) != 0)
+        return "{\"success\":false,\"errcode\":\"DB_ERROR\",\"message\":\"查询房间失败\"}";
+
     MYSQL_RES *res = mysql_store_result(db);
-    bool empty = true;
-    if (res) {
-        MYSQL_ROW row = mysql_fetch_row(res);
-        if (row) {
-            empty = !(row[0] && strlen(row[0]) > 0) && !(row[1] && strlen(row[1]) > 0);
-        }
-        mysql_free_result(res);
+    if (!res || mysql_num_rows(res) == 0) {
+        if (res) mysql_free_result(res);
+        return "{\"success\":false,\"errcode\":\"ROOM_NOT_FOUND\",\"message\":\"房间不存在\"}";
     }
-    if (empty) {
-        snprintf(q, sizeof(q), "UPDATE rooms SET status=2 WHERE room_code='%s'", esc(db, roomCode).c_str());
+
+    MYSQL_ROW row = mysql_fetch_row(res);
+    std::string controller = row[0] ? row[0] : "";
+    std::string controlled = row[1] ? row[1] : "";
+    int status = row[2] ? atoi(row[2]) : 0;
+    mysql_free_result(res);
+
+    if (status == 2)
+        return "{\"success\":false,\"errcode\":\"ROOM_CLOSED\",\"message\":\"房间已关闭\"}";
+
+    // 验证用户是房间成员
+    bool isController = (email == controller);
+    bool isControlled = (email == controlled);
+    if (!isController && !isControlled)
+        return "{\"success\":false,\"errcode\":\"NOT_MEMBER\",\"message\":\"你不在该房间中\"}";
+
+    // 控制方退出 → 关闭房间
+    if (isController) {
+        snprintf(q, sizeof(q), "UPDATE rooms SET status=2 WHERE room_code='%s'",
+                 esc(db, roomCode).c_str());
         mysql_query(db, q);
         removeState(roomCode);
-    } else {
-        // 通知房间内另一个客户端（唤醒长轮询 → 触发人数刷新）
-        auto state = getOrCreateState(roomCode);
-        state->cv.notify_all();
+        return "{\"success\":true,\"message\":\"房间已关闭\"}";
     }
 
-    Logger::info("SyncService",
-                 std::string("Room ") + roomCode + ": " + email + " left" + (empty ? " (closed)" : ""));
+    // 受控方退出
+    char upd[512];
+    snprintf(upd, sizeof(upd),
+        "UPDATE rooms SET controlled_email=NULL,status=0 WHERE room_code='%s'",
+        esc(db, roomCode).c_str());
+    mysql_query(db, upd);
+
+    // 通知房间内的另一方
+    auto state = getOrCreateState(roomCode);
+    state->controlledEmail.clear();
+    state->cv.notify_all();
+
     return "{\"success\":true,\"message\":\"已退出房间\"}";
 }
 
@@ -292,8 +424,8 @@ std::string SyncService::roomStatus(const std::string &roomCode) {
 
     char q[512];
     snprintf(q, sizeof(q),
-             "SELECT room_code,room_name,creator_email,controller_email,controlled_email,status "
-             "FROM rooms WHERE room_code='%s'", esc(db, roomCode).c_str());
+        "SELECT room_code,room_name,creator_email,controller_email,controlled_email,status "
+        "FROM rooms WHERE room_code='%s'", esc(db, roomCode).c_str());
     if (mysql_query(db, q) != 0)
         return "{\"success\":false,\"errcode\":\"DB_ERROR\",\"message\":\"查询失败\"}";
 
@@ -331,12 +463,17 @@ std::string SyncService::roomStatus(const std::string &roomCode) {
 }
 
 // ═══════════════════════════════════════════════════════════
-//  坐标中转（条件变量通知）
+//  坐标中转（含授权检查）
 // ═══════════════════════════════════════════════════════════
 
-void SyncService::pushCommand(const std::string &roomCode, const std::string &opType,
-                               double x, double y, const std::string &extra) {
+std::string SyncService::pushCommand(const std::string &roomCode, const std::string &email,
+                                      const std::string &opType, double x, double y,
+                                      const std::string &extra) {
     auto state = getOrCreateState(roomCode);
+
+    // 授权：必须是该房间的控制方
+    if (state->controllerEmail.empty() || state->controllerEmail != email)
+        return "{\"success\":false,\"errcode\":\"FORBIDDEN\",\"message\":\"只有控制方能推送坐标\"}";
 
     {
         std::lock_guard<std::mutex> lk(state->mtx);
@@ -350,29 +487,32 @@ void SyncService::pushCommand(const std::string &roomCode, const std::string &op
         state->dirty = true;
     }
 
-    // 唤醒所有等待中的 pull 请求
     state->cv.notify_all();
+    return "{\"success\":true,\"message\":\"坐标已同步\"}";
 }
 
-std::string SyncService::pullCommand(const std::string &roomCode, uint64_t lastSeq, int waitMs) {
+std::string SyncService::pullCommand(const std::string &roomCode, const std::string &email,
+                                      uint64_t lastSeq, int waitMs) {
     auto state = getOrCreateState(roomCode);
+
+    // 授权：必须是该房间的受控方（且已有人加入）
+    if (state->controlledEmail.empty() || state->controlledEmail != email)
+        return "{\"success\":false,\"errcode\":\"FORBIDDEN\",\"message\":\"只有受控方能拉取坐标\"}";
+
     std::string result;
 
     {
         std::unique_lock<std::mutex> lk(state->mtx);
 
-        // 检查是否有新数据
         if (state->dirty && state->seq > lastSeq) {
             state->dirty = false;
             result = serializeCommand(state->cmd, state->seq);
             return result;
         }
 
-        // 不需要等待
         if (waitMs <= 0)
             return "";
 
-        // 阻塞等待通知或超时
         bool gotNew = state->cv.wait_for(lk, std::chrono::milliseconds(waitMs), [&]() {
             return state->dirty && state->seq > lastSeq;
         });

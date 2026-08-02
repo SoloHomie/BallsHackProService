@@ -14,9 +14,12 @@
 static bool checkSubscribed(AuthService &auth, DbPool &pool, const std::string &headers,
                             std::string &subExpires) {
     auto tp = auth.authenticate(headers);
-    if (!tp) return false;
+    if (!tp) { std::cerr << "[checkSubscribed] auth failed" << std::endl; return false; }
+    std::cerr << "[checkSubscribed] email=" << tp->email << " sub=" << tp->sub << std::endl;
     auto user = auth.userStore().findByEmail(tp->email);
-    if (!user || user->subscription_expires.empty()) return false;
+    if (!user) { std::cerr << "[checkSubscribed] user not found" << std::endl; return false; }
+    std::cerr << "[checkSubscribed] subExpires=" << user->subscription_expires << std::endl;
+    if (user->subscription_expires.empty()) { std::cerr << "[checkSubscribed] subExpires empty" << std::endl; return false; }
     subExpires = user->subscription_expires;
     auto now = std::chrono::system_clock::now();
     auto nowT = std::chrono::system_clock::to_time_t(now);
@@ -24,6 +27,7 @@ static bool checkSubscribed(AuthService &auth, DbPool &pool, const std::string &
     std::istringstream ss(subExpires);
     ss >> std::get_time(&expireTm, "%Y-%m-%d %H:%M:%S");
     auto expireT = std::mktime(&expireTm);
+    std::cerr << "[checkSubscribed] nowT=" << nowT << " expireT=" << expireT << " result=" << (expireT > nowT) << std::endl;
     return (expireT > nowT);
 }
 

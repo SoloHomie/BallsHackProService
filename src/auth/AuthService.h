@@ -37,10 +37,10 @@ public:
     TokenService &tokenService() { return m_token; }
 
     // ── 鉴权 ──────────────────────────────────────
-    // 从 HTTP headers 提取 Authorization: Bearer <token> 并验证 JWT
     std::optional<TokenPayload> authenticate(const std::string &headers) const;
-    // 从 headers 裸字符串中提取 Bearer token
     static std::string extractBearerToken(const std::string &headers);
+    // 绑定会话: 新登录时调用, 使旧设备 token 失效
+    void bindSession(const std::string &uid, const std::string &jti);
 
     // ── JSON response builders ─────────────────────
     static std::string jsonOk(const std::string &msg);

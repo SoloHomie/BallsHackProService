@@ -14,10 +14,12 @@
 #include <openssl/pem.h>
 #include <openssl/bio.h>
 #include "../core/cache/RedisClient.h"
+#include "../core/config/Env.h"
 #include <sstream>
 #include <cstring>
 #include <cstdio>
 #include <fstream>
+#include <ctime>
 #include <algorithm>
 
 static std::string b64enc(const unsigned char *d, int n) {
@@ -29,10 +31,64 @@ static std::string b64enc(const unsigned char *d, int n) {
 }
 
 const std::vector<PricePlan>& VPayService::plans(){
-    static const std::vector<PricePlan> s={
-    {"1","日卡",500,1},{"2","周卡",2500,7},{"3","月卡",8800,30},
-    {"4","季卡",19800,90},{"5","年卡",28800,365}
-};
+    static std::vector<PricePlan> s;
+    static time_t lastLoad = 0;
+    time_t now = time(nullptr);
+    if (now - lastLoad < 5) return s;  // 5s cache
+    lastLoad = now;
+
+    s.clear();
+    std::string dir = Env::exeDir();
+    std::ifstream f(dir + "/pricing.json");
+    if (!f) {
+        s = {{"1","日卡",500,1},{"2","周卡",2500,7},{"3","月卡",8800,30},
+             {"4","季卡",19800,90},{"5","年卡",28800,365}};
+        return s;
+    }
+    std::ostringstream ss; ss << f.rdbuf();
+    std::string raw = ss.str();
+
+    // Simple manual JSON array parser (avoids Qt dependency)
+    auto extractStr = [](const std::string &src, const std::string &key) -> std::string {
+        auto pos = src.find("\"" + key + "\"");
+        if (pos == std::string::npos) return "";
+        pos = src.find(':', pos + key.size() + 2);
+        if (pos == std::string::npos) return "";
+        pos = src.find('"', pos + 1);
+        if (pos == std::string::npos) return "";
+        size_t end = src.find('"', pos + 1);
+        if (end == std::string::npos) return "";
+        return src.substr(pos + 1, end - pos - 1);
+    };
+    auto extractInt = [](const std::string &src, const std::string &key) -> int64_t {
+        auto pos = src.find("\"" + key + "\"");
+        if (pos == std::string::npos) return 0;
+        pos = src.find(':', pos + key.size() + 2);
+        if (pos == std::string::npos) return 0;
+        pos++; // skip ':'
+        while (pos < src.size() && (src[pos] == ' ' || src[pos] == '\t' || src[pos] == '\n')) pos++;
+        size_t end = pos;
+        while (end < src.size() && (isdigit(src[end]) || src[end] == '-')) end++;
+        if (end == pos) return 0;
+        return std::stoll(src.substr(pos, end - pos));
+    };
+
+    // Find each {...} object in the array
+    size_t p = raw.find('[');
+    if (p == std::string::npos) { s = {{"1","fallback",500,1}}; return s; }
+    while (true) {
+        size_t objStart = raw.find('{', p);
+        if (objStart == std::string::npos) break;
+        size_t objEnd = raw.find('}', objStart);
+        if (objEnd == std::string::npos) break;
+        std::string obj = raw.substr(objStart, objEnd - objStart + 1);
+        s.push_back({extractStr(obj, "id"),
+                     extractStr(obj, "name"),
+                     (uint64_t)extractInt(obj, "amount"),
+                     (uint32_t)extractInt(obj, "days")});
+        p = objEnd + 1;
+    }
+    if (s.empty()) s = {{"1","fallback",500,1}};
     return s;
 }
 
@@ -63,8 +119,8 @@ std::string VPayService::buildSignStr(const std::vector<std::pair<std::string,st
 static std::string httpPost(const std::string &url, const std::string &data){
     std::string r;
     std::string cmd="curl -s -X POST \""+url+"\" -d \""+data+"\" --max-time 15";
-    FILE*fp=_popen(cmd.c_str(),"r");
-    if(fp){char bf[4096];while(fgets(bf,sizeof(bf),fp))r+=bf;_pclose(fp);}
+    FILE*fp=popen(cmd.c_str(),"r");
+    if(fp){char bf[4096];while(fgets(bf,sizeof(bf),fp))r+=bf;pclose(fp);}
     return r;
 }
 

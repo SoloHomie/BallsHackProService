@@ -25,6 +25,7 @@ public:
 
         // key checks
         bool exists(const std::string&) { return false; }
+        bool setnx(const std::string&, const std::string&) { return true; }
         long long ttl(const std::string&) { return -2; }
 
         // set operations

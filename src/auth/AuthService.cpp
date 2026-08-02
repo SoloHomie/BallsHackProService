@@ -113,9 +113,10 @@ std::string AuthService::login(const std::string &email, const std::string &pass
     tp.provider = "password";
     tp.jti      = SessionManager::generateJti();
     std::string accessToken = m_token.generateAccess(tp, 900);
+    bindSession(tp.sub, tp.jti);  // 单设备登录
 
     // 清除旧 refresh token，只保留最新一个
-    SessionManager::revokeAllForUser(user->id);
+    SessionManager::revokeAllForUser(user->id, &m_pool);
     std::string refreshToken = TokenService::generateRefresh();
     SessionManager::storeRefresh(refreshToken, tp.sub, email, "password", 30*24*3600, &m_pool);
 
@@ -153,8 +154,9 @@ std::string AuthService::loginWithCode(const std::string &email,
     tp.provider = "password";
     tp.jti      = SessionManager::generateJti();
     std::string accessToken  = m_token.generateAccess(tp, 900);
+    bindSession(tp.sub, tp.jti);
     std::string refreshToken = TokenService::generateRefresh();
-    SessionManager::revokeAllForUser(user->id);
+    SessionManager::revokeAllForUser(user->id, &m_pool);
     SessionManager::storeRefresh(refreshToken, tp.sub, email, "password", 30*24*3600, &m_pool);
 
     std::ostringstream resp;
@@ -214,7 +216,7 @@ std::string AuthService::resetPassword(const std::string &email, const std::stri
     }
 
     auto user = m_users.findByEmail(email);
-    if (user) SessionManager::revokeAllForUser(user->id);
+    if (user) SessionManager::revokeAllForUser(user->id, &m_pool);
 
     return jsonOk("哈哒帮你把密码锁修好啦，这次可别再弄丢了哦~");
 }
@@ -267,8 +269,9 @@ std::string AuthService::oauthCallback(const std::string &provider,
     tp.provider = ou.provider;
     tp.jti      = SessionManager::generateJti();
     std::string accessToken  = m_token.generateAccess(tp, 900);
+    bindSession(tp.sub, tp.jti);
     std::string refreshToken = TokenService::generateRefresh();
-    SessionManager::revokeAllForUser(user->id);
+    SessionManager::revokeAllForUser(user->id, &m_pool);
     SessionManager::storeRefresh(refreshToken, tp.sub, email, ou.provider, 30*24*3600, &m_pool);
 
     std::ostringstream resp;
@@ -314,6 +317,7 @@ std::string AuthService::oauthCallbackBind(const std::string &provider,
     tp.provider = ou.provider;
     tp.jti      = SessionManager::generateJti();
     std::string accessToken  = m_token.generateAccess(tp, 900);
+    bindSession(tp.sub, tp.jti);
     std::string refreshToken = TokenService::generateRefresh();
     SessionManager::storeRefresh(refreshToken, tp.sub, tp.email, ou.provider, 30*24*3600, &m_pool);
 
@@ -375,7 +379,26 @@ std::optional<TokenPayload> AuthService::authenticate(
     const std::string &headers) const {
     std::string token = extractBearerToken(headers);
     if (token.empty()) return std::nullopt;
-    return m_token.verify(token);
+    auto tp = m_token.verify(token);
+    if (!tp) return std::nullopt;
+
+    // ── 单设备登录: 检查 JTI ──
+    try {
+        auto &r = RedisClient::instance();
+        auto stored = r.get("session:" + tp->sub);
+        if (stored && *stored != tp->jti) {
+            // 另一设备已登录, 此 token 作废
+            return std::nullopt;
+        }
+    } catch (...) {}
+
+    return tp;
+}
+
+void AuthService::bindSession(const std::string &uid, const std::string &jti) {
+    try {
+        RedisClient::instance().setex("session:" + uid, 900, jti);
+    } catch (...) {}
 }
 
 // ── validators ──────────────────────────────────────

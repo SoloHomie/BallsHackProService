@@ -84,6 +84,7 @@ set(SOURCES
     src/route/WelfareRoutes.cpp
     src/route/SyncRoutes.cpp
     src/route/AssetRoutes.cpp
+    src/route/PeerRoutes.cpp
     src/payment/VPayService.cpp
     src/sync/SyncService.cpp
 )
@@ -123,6 +124,7 @@ set(HEADERS
     src/route/WelfareRoutes.h
     src/route/SyncRoutes.h
     src/route/AssetRoutes.h
+    src/route/PeerRoutes.h
     src/payment/VPayService.h
     src/sync/SyncService.h
 )
