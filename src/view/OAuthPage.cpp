@@ -157,7 +157,7 @@ std::string desktopRedirect(const OAuthCallbackData &d,
            << "&provider=" << d.provider
            << "&avatar=" << StringUtils::urlEncode(d.avatar)
            << "&mode=" << (d.mode.empty() ? "login" : d.mode);
-    return "surety://auth?" + params.str();
+    return "ballshackpro://auth?" + params.str();
 }
 
 // ── Render ───────────────────────────────────────────

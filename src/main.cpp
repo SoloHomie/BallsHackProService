@@ -68,15 +68,6 @@ int main() {
             return ss.str();
         });
 
-    // 4.5 公开下载页 & 二进制
-    server.route("GET", "/api/download",
-        [&](const std::string &, const std::string &, const std::string &) {
-            std::ifstream f("assets/download.html");
-            if (!f) return std::string("{\"success\":false,\"message\":\"download page not found\"}");
-            std::ostringstream ss; ss << f.rdbuf();
-            return ss.str();  // <!DOCTYPE → text/html
-        });
-
     server.route("GET", "/api/mxelf",
         [&](const std::string &, const std::string &, const std::string &) {
             std::ifstream f("assets/mxelf", std::ios::binary);

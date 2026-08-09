@@ -11,6 +11,7 @@
 #include "../core/config/Env.h"
 #include <mysql/mysql.h>
 #include <string>
+#include <thread>
 
 static std::string JWT_SECRET = Env::required("BH_JWT_SECRET");
 
@@ -87,9 +88,10 @@ std::string AuthService::sendCode(const std::string &email,
         return "{\"success\":true,\"message\":\"验证码: " + code + "\",\"code\":\"" + code + "\"}";
     }
 
-    if (!m_email->sendVerifyCode(email, code, ServerConfig::CODE_TTL_SEC, purpose)) {
-        return jsonErr("SEND_FAILED", "验证码发送失败: " + m_email->lastError());
-    }
+    // Async send — SMTP blocks for seconds, don't make client wait
+    std::thread([this, email, code, purpose]() {
+        m_email->sendVerifyCode(email, code, ServerConfig::CODE_TTL_SEC, purpose);
+    }).detach();
 
     return jsonOk("希哩哩蹦蹦跳跳地把验证码送出去啦，快去邮箱查收~");
 }

@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS welfare_events (
     name            VARCHAR(128) NOT NULL,
     description     VARCHAR(512) NOT NULL DEFAULT '',
     event_type      VARCHAR(32)  NOT NULL DEFAULT 'general' COMMENT 'new_user|holiday|general',
-    reward_amount   INT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'Surety 数量',
+    reward_amount   INT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'BallsHackPro 数量',
     starts_at       DATETIME     NOT NULL,
     expires_at      DATETIME     NOT NULL,
     is_active       TINYINT(1)   NOT NULL DEFAULT 1,
