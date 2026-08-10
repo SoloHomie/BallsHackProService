@@ -195,7 +195,15 @@ bool VPayService::handleCallback(const std::string &q){
             int ok=EVP_VerifyFinal(c2,(unsigned char*)sd.data(),(unsigned int)sd.size(),ppk);EVP_MD_CTX_free(c2);EVP_PKEY_free(ppk);
             if(ok!=1){printf("[VPay] RSA verify FAILED\n");return false;}
         } else { printf("[VPay] RSA verify: bad pubkey\n"); return false; }
+    } else {
+        // MD5 验签兜底（与 createOrder 的 sign_type=MD5 对应）
+        std::string expected = md5(ss + m_md5Key);
+        if (cs != expected) {
+            printf("[VPay] MD5 verify FAILED (got=%s, expected=%s)\n", cs.c_str(), expected.c_str());
+            return false;
+        }
     }
+    if(on.find_first_not_of("0123456789")!=std::string::npos)return false;
     uint64_t oid=std::stoull(on);
     // 检查 Redis 订单是否过期
     try{auto v=RedisClient::instance().get("pay:order:"+on);if(!v)return false;}catch(...){}

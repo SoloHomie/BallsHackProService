@@ -34,6 +34,9 @@ struct RoomSyncState {
     // 最后活跃时间（用于清理僵尸房间）
     std::chrono::steady_clock::time_point lastActive;
 
+    // 房间关闭标记（创建者退出时设为 true，拉取方可感知）
+    bool roomClosed = false;
+
     // 等待新数据，timeoutMs 超时返回 false
     bool waitForNew(uint64_t lastSeq, int timeoutMs);
 
@@ -67,6 +70,11 @@ public:
     // 服务重启后恢复房间内存状态
     void recoverFromDb();
 
+    // 获取或创建房间状态（供清理循环同步内存状态）
+    std::shared_ptr<RoomSyncState> getOrCreateState(const std::string &roomCode);
+    // 只读查找（不创建），用于避免无效请求污染 m_rooms
+    std::shared_ptr<RoomSyncState> findState(const std::string &roomCode);
+
 private:
     DbPool &m_pool;
 
@@ -74,8 +82,7 @@ private:
     std::shared_mutex m_roomsMutex;
     std::unordered_map<std::string, std::shared_ptr<RoomSyncState>> m_rooms;
 
-    std::shared_ptr<RoomSyncState> getOrCreateState(const std::string &roomCode);
-    void removeState(const std::string &roomCode);
+    void removeState(const std::string &roomCode, bool notifyClosed = false);
 
     static std::string generateRoomCode();
     static std::string serializeCommand(const SyncCommand &cmd, uint64_t seq);

@@ -1,6 +1,7 @@
 #include "SyncService.h"
 #include "../common/Snowflake.h"
 #include "../common/Logger.h"
+#include "../core/cache/RedisClient.h"
 #include <mysql/mysql.h>
 #include <sstream>
 #include <cstdlib>
@@ -70,13 +71,21 @@ std::shared_ptr<RoomSyncState> SyncService::getOrCreateState(const std::string &
     }
 }
 
-void SyncService::removeState(const std::string &roomCode) {
+std::shared_ptr<RoomSyncState> SyncService::findState(const std::string &roomCode) {
+    std::shared_lock<std::shared_mutex> lk(m_roomsMutex);
+    auto it = m_rooms.find(roomCode);
+    return (it != m_rooms.end()) ? it->second : nullptr;
+}
+
+void SyncService::removeState(const std::string &roomCode, bool notifyClosed) {
     std::unique_lock<std::shared_mutex> lk(m_roomsMutex);
     auto it = m_rooms.find(roomCode);
     if (it != m_rooms.end()) {
         {
             std::lock_guard<std::mutex> rlk(it->second->mtx);
             it->second->dirty = false;
+            if (notifyClosed)
+                it->second->roomClosed = true;
         }
         it->second->cv.notify_all();
         m_rooms.erase(it);
@@ -109,6 +118,20 @@ void SyncService::recoverFromDb() {
 }
 
 void SyncService::closeRoom(const std::string &roomCode) {
+    // 清理 Redis 缓存（在 removeState 之前，因为需要读取成员邮箱）
+    {
+        std::shared_lock<std::shared_mutex> lk(m_roomsMutex);
+        auto it = m_rooms.find(roomCode);
+        if (it != m_rooms.end()) {
+            try {
+                if (!it->second->controllerEmail.empty())
+                    RedisClient::instance().del("user_room:" + it->second->controllerEmail);
+                if (!it->second->controlledEmail.empty())
+                    RedisClient::instance().del("user_room:" + it->second->controlledEmail);
+            } catch (...) {}
+        }
+    }
+
     auto guard = m_pool.acquire(5000);
     if (guard) {
         MYSQL *db = guard->get();
@@ -117,7 +140,7 @@ void SyncService::closeRoom(const std::string &roomCode) {
                  esc(db, roomCode).c_str());
         mysql_query(db, q);
     }
-    removeState(roomCode);
+    removeState(roomCode, true);
 }
 
 void SyncService::purgeIdleRooms(int idleSeconds) {
@@ -161,41 +184,97 @@ std::string SyncService::createRoom(const std::string &roomName, const std::stri
     if (email.empty())
         return "{\"success\":false,\"errcode\":\"FIELDS_REQUIRED\",\"message\":\"邮箱不能为空\"}";
 
+    // ── 1. 先查 Redis 缓存 ──
+    try {
+        auto opt = RedisClient::instance().get("user_room:" + email);
+        if (opt) {
+            std::string cachedCode = *opt;
+            auto guard = m_pool.acquire(5000);
+            if (guard) {
+                MYSQL *db = guard->get();
+                char cq[512];
+                snprintf(cq, sizeof(cq),
+                    "SELECT room_code,room_name,controller_email,controlled_email,status "
+                    "FROM rooms WHERE room_code='%s' AND status != 2",
+                    esc(db, cachedCode).c_str());
+                if (mysql_query(db, cq) == 0) {
+                    MYSQL_RES *res = mysql_store_result(db);
+                    if (res && mysql_num_rows(res) > 0) {
+                        MYSQL_ROW row = mysql_fetch_row(res);
+                        std::string code = row[0] ? row[0] : "";
+                        std::string name = row[1] ? row[1] : "";
+                        std::string ctrl = row[3] ? row[3] : "";
+                        std::string ctrld = row[4] ? row[4] : "";
+                        int mc = 1 + (ctrld.empty() ? 0 : 1);
+                        mysql_free_result(res);
+                        // 确保内存状态存在
+                        auto state = getOrCreateState(code);
+                        if (state->controllerEmail.empty()) state->controllerEmail = ctrl;
+                        if (state->controlledEmail.empty()) state->controlledEmail = ctrld;
+                        std::ostringstream resp;
+                        resp << "{\"success\":true"
+                             << ",\"already_exists\":true"
+                             << ",\"room_code\":\"" << code << "\""
+                             << ",\"room_name\":\"" << name << "\""
+                             << ",\"your_role\":\"controller\""
+                             << ",\"member_count\":" << mc << ",\"member_max\":2"
+                             << "}";
+                        return resp.str();
+                    }
+                    if (res) mysql_free_result(res);
+                }
+            }
+            // Redis 缓存过期/脏数据，删掉后继续查 MySQL
+            try { RedisClient::instance().del("user_room:" + email); } catch (...) {}
+        }
+    } catch (...) {}
+
     auto guard = m_pool.acquire(5000);
     if (!guard)
         return "{\"success\":false,\"errcode\":\"DB_ERROR\",\"message\":\"数据库繁忙\"}";
     MYSQL *db = guard->get();
 
-    // 检查用户是否已有活跃房间（status != 2），自动退出
+    // ── 2. 查 MySQL 是否有活跃房间 → 有则返回已有房间 ──
     {
         std::string eEmail = esc(db, email);
         char cq[512];
         snprintf(cq, sizeof(cq),
-            "SELECT room_code FROM rooms WHERE (controller_email='%s' OR controlled_email='%s') AND status != 2 LIMIT 1",
+            "SELECT room_code,room_name,controller_email,controlled_email,status "
+            "FROM rooms WHERE (controller_email='%s' OR controlled_email='%s') AND status != 2 LIMIT 1",
             eEmail.c_str(), eEmail.c_str());
         if (mysql_query(db, cq) == 0) {
             MYSQL_RES *res = mysql_store_result(db);
-            if (res) {
+            if (res && mysql_num_rows(res) > 0) {
                 MYSQL_ROW row = mysql_fetch_row(res);
-                if (row && row[0]) {
-                    std::string oldRoom = row[0];
-                    mysql_free_result(res);
-                    // 自动退出旧房间
-                    char lq[512];
-                    snprintf(lq, sizeof(lq),
-                        "UPDATE rooms SET status=2 WHERE room_code='%s'",
-                        esc(db, oldRoom).c_str());
-                    mysql_query(db, lq);
-                    removeState(oldRoom);
-                    Logger::info("SyncService", std::string("Auto-left room ") + oldRoom + " for " + email);
-                } else {
-                    mysql_free_result(res);
-                }
+                std::string code = row[0] ? row[0] : "";
+                std::string name = row[1] ? row[1] : "";
+                std::string ctrl = row[3] ? row[3] : "";
+                std::string ctrld = row[4] ? row[4] : "";
+                int mc = 1 + (ctrld.empty() ? 0 : 1);
+                mysql_free_result(res);
+                // 回种 Redis
+                try { RedisClient::instance().setex("user_room:" + email, 3600, code); } catch (...) {}
+                // 确保内存状态存在
+                auto state = getOrCreateState(code);
+                if (state->controllerEmail.empty()) state->controllerEmail = ctrl;
+                if (state->controlledEmail.empty()) state->controlledEmail = ctrld;
+                bool isCtrl = (email == ctrl);
+                std::ostringstream resp;
+                resp << "{\"success\":true"
+                     << ",\"already_exists\":true"
+                     << ",\"room_code\":\"" << code << "\""
+                     << ",\"room_name\":\"" << name << "\""
+                     << ",\"your_role\":\"" << (isCtrl ? "controller" : "controlled") << "\""
+                     << ",\"member_count\":" << mc << ",\"member_max\":2"
+                     << "}";
+                Logger::info("SyncService", std::string("Room ") + code + " already exists for " + email + ", returned existing");
+                return resp.str();
             }
+            if (res) mysql_free_result(res);
         }
     }
 
-    // 生成唯一 room code
+    // ── 3. 生成唯一 room code ──
     std::string code;
     for (int retry = 0; retry < 10; ++retry) {
         code = generateRoomCode();
@@ -206,8 +285,9 @@ std::string SyncService::createRoom(const std::string &roomName, const std::stri
             MYSQL_RES *res = mysql_store_result(db);
             if (res) {
                 MYSQL_ROW row = mysql_fetch_row(res);
-                if (row && atoi(row[0]) == 0) break;
+                bool unique = (row && atoi(row[0]) == 0);
                 mysql_free_result(res);
+                if (unique) break;
             }
         }
         code.clear();
@@ -232,6 +312,11 @@ std::string SyncService::createRoom(const std::string &roomName, const std::stri
     // 初始化房间同步状态
     auto state = getOrCreateState(code);
     state->controllerEmail = email;
+
+    // ── 4. 缓存到 Redis（1 小时 TTL）──
+    try {
+        RedisClient::instance().setex("user_room:" + email, 3600, code);
+    } catch (...) {}
 
     std::ostringstream resp;
     resp << "{\"success\":true"
@@ -311,7 +396,9 @@ std::string SyncService::joinRoom(const std::string &roomCode, const std::string
                                 char xq[256];
                                 snprintf(xq, sizeof(xq), "UPDATE rooms SET status=2 WHERE room_code='%s'", esc(db, oldRoom).c_str());
                                 mysql_query(db, xq);
-                                removeState(oldRoom);
+                                removeState(oldRoom, true);
+                                // 清理旧房间 Redis 缓存
+                                try { RedisClient::instance().del("user_room:" + email); } catch (...) {}
                             }
                             mysql_free_result(or2);
                         }
@@ -338,6 +425,11 @@ std::string SyncService::joinRoom(const std::string &roomCode, const std::string
     // 更新内存状态
     auto state = getOrCreateState(roomCode);
     state->controlledEmail = email;
+
+    // 加入者也缓存到 Redis（防止重复创建房间）
+    try {
+        RedisClient::instance().setex("user_room:" + email, 3600, roomCode);
+    } catch (...) {}
 
     std::ostringstream resp;
     resp << "{\"success\":true"
@@ -389,12 +481,20 @@ std::string SyncService::leaveRoom(const std::string &roomCode, const std::strin
     if (!isController && !isControlled)
         return "{\"success\":false,\"errcode\":\"NOT_MEMBER\",\"message\":\"你不在该房间中\"}";
 
-    // 控制方退出 → 关闭房间
+    // 控制方退出 → 关闭房间，通知受控方
     if (isController) {
         snprintf(q, sizeof(q), "UPDATE rooms SET status=2 WHERE room_code='%s'",
                  esc(db, roomCode).c_str());
         mysql_query(db, q);
-        removeState(roomCode);
+        // notifyClosed=true → 正在 pull 的受控方会收到 room_closed 信号
+        removeState(roomCode, true);
+        // 清理双方 Redis 缓存
+        try {
+            RedisClient::instance().del("user_room:" + controller);
+            if (!controlled.empty())
+                RedisClient::instance().del("user_room:" + controlled);
+        } catch (...) {}
+        Logger::info("SyncService", std::string("Room ") + roomCode + " closed by controller " + email);
         return "{\"success\":true,\"message\":\"房间已关闭\"}";
     }
 
@@ -405,10 +505,15 @@ std::string SyncService::leaveRoom(const std::string &roomCode, const std::strin
         esc(db, roomCode).c_str());
     mysql_query(db, upd);
 
-    // 通知房间内的另一方
-    auto state = getOrCreateState(roomCode);
-    state->controlledEmail.clear();
-    state->cv.notify_all();
+    // 清理受控方 Redis 缓存
+    try { RedisClient::instance().del("user_room:" + email); } catch (...) {}
+
+    // 通知控制方（受控方已离开）
+    auto state = findState(roomCode);
+    if (state) {
+        state->controlledEmail.clear();
+        state->cv.notify_all();
+    }
 
     return "{\"success\":true,\"message\":\"已退出房间\"}";
 }
@@ -469,7 +574,9 @@ std::string SyncService::roomStatus(const std::string &roomCode) {
 std::string SyncService::pushCommand(const std::string &roomCode, const std::string &email,
                                       const std::string &opType, double x, double y,
                                       const std::string &extra) {
-    auto state = getOrCreateState(roomCode);
+    auto state = findState(roomCode);
+    if (!state)
+        return "{\"success\":false,\"errcode\":\"ROOM_NOT_FOUND\",\"message\":\"房间不存在\"}";
 
     // 授权：必须是该房间的控制方
     if (state->controllerEmail.empty() || state->controllerEmail != email)
@@ -493,7 +600,9 @@ std::string SyncService::pushCommand(const std::string &roomCode, const std::str
 
 std::string SyncService::pullCommand(const std::string &roomCode, const std::string &email,
                                       uint64_t lastSeq, int waitMs) {
-    auto state = getOrCreateState(roomCode);
+    auto state = findState(roomCode);
+    if (!state)
+        return "{\"success\":false,\"errcode\":\"ROOM_NOT_FOUND\",\"message\":\"房间不存在\"}";
 
     // 授权：必须是该房间的受控方（且已有人加入）
     if (state->controlledEmail.empty() || state->controlledEmail != email)
@@ -503,6 +612,10 @@ std::string SyncService::pullCommand(const std::string &roomCode, const std::str
 
     {
         std::unique_lock<std::mutex> lk(state->mtx);
+
+        // 检查房间是否已被关闭
+        if (state->roomClosed)
+            return "{\"room_closed\":true}";
 
         if (state->dirty && state->seq > lastSeq) {
             state->dirty = false;
@@ -520,6 +633,8 @@ std::string SyncService::pullCommand(const std::string &roomCode, const std::str
         if (gotNew) {
             state->dirty = false;
             result = serializeCommand(state->cmd, state->seq);
+        } else if (state->roomClosed) {
+            return "{\"room_closed\":true}";
         }
     }
 

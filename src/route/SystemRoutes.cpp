@@ -8,6 +8,7 @@
 #include "../core/database/DbPool.h"
 #include "../core/config/ServerConfig.h"
 #include "../core/config/Env.h"
+#include "../auth/SessionManager.h"
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -463,16 +464,31 @@ void registerSystemRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
             std::string uid   = StringUtils::jsonVal(body, "uid");
             if (email.empty() && uid.empty())
                 return AuthService::jsonErr("FIELDS_REQUIRED", "email或uid必填");
+            std::string targetUid = uid;
             try {
                 auto &r = RedisClient::instance();
                 if (!uid.empty()) {
-                    r.setex("kicked:" + uid, 60, "1");
+                    r.setex("kicked:" + uid, 900, "1");
                 } else {
                     // 通过 email 找 uid
                     auto user = auth.userStore().findByEmail(email);
-                    if (user) r.setex("kicked:" + std::to_string(user->id), 60, "1");
+                    if (user) {
+                        targetUid = std::to_string(user->id);
+                        r.setex("kicked:" + targetUid, 900, "1");
+                    }
+                }
+                // 同时失效 session，让 access token 立即不可用
+                if (!targetUid.empty()) {
+                    r.del("session:" + targetUid);
                 }
             } catch (...) {}
+            // 撤销所有 refresh token，阻止客户端刷新
+            if (!targetUid.empty()) {
+                try {
+                    uint64_t uidNum = std::stoull(targetUid);
+                    SessionManager::revokeAllForUser(uidNum, &pool);
+                } catch (...) {}
+            }
             return AuthService::jsonOk("已踢出，用户下次心跳将被强制下线");
         });
 

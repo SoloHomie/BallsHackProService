@@ -49,6 +49,10 @@ public:
     static std::string jsonErr(const std::string &errcode, const std::string &msg);
     static std::string jsonEscape(const std::string &s);
 
+    // 将订阅状态注入 JSON 响应流
+    static void appendSubscription(std::ostringstream &resp,
+                                    const UserStore::UserInfo *user);
+
 private:
     bool validEmail(const std::string &email) const;
     bool validPassword(const std::string &pw) const;

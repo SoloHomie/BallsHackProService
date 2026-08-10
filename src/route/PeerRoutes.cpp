@@ -2,11 +2,77 @@
 #include "../core/server/HttpServer.h"
 #include "../auth/AuthService.h"
 #include "../core/cache/RedisClient.h"
+#include "../core/database/DbPool.h"
 #include "../common/StringUtils.h"
 #include <string>
 #include <sstream>
 #include <cstdlib>
 #include <ctime>
+#include <iomanip>
+#include <shared_mutex>
+#include <unordered_map>
+#include <memory>
+#include <mutex>
+#include <condition_variable>
+
+// ═══════════════════════════════════════════════════════════════
+//  Relay 中转状态 — P2P 不通时服务端兜底转发
+// ═══════════════════════════════════════════════════════════════
+struct PeerRelayState {
+    std::string opType;
+    double      x = 0.0, y = 0.0;
+    bool        split = false;
+    uint64_t    seq   = 0;
+    bool        dirty = false;
+    bool        closed = false;
+    std::mutex  mtx;
+    std::condition_variable cv;
+};
+
+static std::shared_mutex                g_relayMutex;
+static std::unordered_map<std::string, std::shared_ptr<PeerRelayState>> g_relays;
+
+static std::shared_ptr<PeerRelayState> getRelayState(const std::string &code) {
+    {
+        std::shared_lock<std::shared_mutex> lk(g_relayMutex);
+        auto it = g_relays.find(code);
+        if (it != g_relays.end()) return it->second;
+    }
+    {
+        std::unique_lock<std::shared_mutex> lk(g_relayMutex);
+        auto it = g_relays.find(code);
+        if (it != g_relays.end()) return it->second;
+        auto st = std::make_shared<PeerRelayState>();
+        g_relays[code] = st;
+        return st;
+    }
+}
+
+static void removeRelayState(const std::string &code) {
+    std::unique_lock<std::shared_mutex> lk(g_relayMutex);
+    auto it = g_relays.find(code);
+    if (it != g_relays.end()) {
+        {
+            std::lock_guard<std::mutex> rlk(it->second->mtx);
+            it->second->closed = true;
+        }
+        it->second->cv.notify_all();
+        g_relays.erase(it);
+    }
+}
+
+// ── 检查用户订阅状态 ──
+static bool checkSubscribed(AuthService &auth, const std::string &headers) {
+    auto tp = auth.authenticate(headers);
+    if (!tp) return false;
+    auto user = auth.userStore().findByEmail(tp->email);
+    if (!user || user->subscription_expires.empty()) return false;
+    struct tm expireTm = {};
+    std::istringstream ss(user->subscription_expires);
+    ss >> std::get_time(&expireTm, "%Y-%m-%d %H:%M:%S");
+    auto expireT = std::mktime(&expireTm);
+    return (expireT > std::time(nullptr));
+}
 
 // ═══════════════════════════════════════════════════════════════
 //  P2P 信令服务器 — Redis 房间管理
@@ -110,7 +176,7 @@ static std::string _portOf(const std::string &addr) {
     return pos != std::string::npos ? addr.substr(pos) : "";
 }
 
-void registerPeerRoutes(HttpServer &server, AuthService &auth, DbPool &) {
+void registerPeerRoutes(HttpServer &server, AuthService &auth, DbPool &dbPool) {
 
     // ═══════════════════════════════════════════════════════
     //  POST /api/peer/create
@@ -121,6 +187,8 @@ void registerPeerRoutes(HttpServer &server, AuthService &auth, DbPool &) {
         [&](const std::string &body, const std::string &, const std::string &headers) {
             auto tp = auth.authenticate(headers);
             if (!tp) return AuthService::jsonErr("UNAUTHORIZED", "请先登录");
+            if (!checkSubscribed(auth, headers))
+                return AuthService::jsonErr("FORBIDDEN", "需要 Pro 订阅才能使用联机功能");
 
             std::string portStr = StringUtils::jsonVal(body, "port");
             int port = 0;
@@ -135,15 +203,33 @@ void registerPeerRoutes(HttpServer &server, AuthService &auth, DbPool &) {
 
             auto &r = RedisClient::instance();
 
-            // 如果用户已有活跃房间，先清理旧房间
+            // ── 一个账号只能有一个房间 → 已有则直接返回 ──
             {
                 auto existing = r.get("peer:user:" + email);
                 if (existing) {
                     std::string oldCode = *existing;
+                    // 检查旧房间是否仍存活（slot 0 存在）
+                    auto oldV0 = r.get("peer:" + oldCode + ":0");
+                    if (oldV0) {
+                        // 更新 slot 0 地址（用户可能换了 IP）并续期
+                        r.setex("peer:" + oldCode + ":0", ROOM_TTL, val);
+                        r.expire("peer:" + oldCode + ":email", ROOM_TTL);
+                        r.setex("peer:user:" + email, ROOM_TTL, oldCode);
+                        int mc = r.get("peer:" + oldCode + ":1") ? 2 : 1;
+                        std::ostringstream resp;
+                        resp << "{\"success\":true"
+                             << ",\"already_exists\":true"
+                             << ",\"room_code\":\"" << oldCode << "\""
+                             << ",\"member_count\":" << mc
+                             << ",\"member_max\":2"
+                             << ",\"role\":\"controller\""
+                             << "}";
+                        return resp.str();
+                    }
+                    // 旧房间已过期 → 清理残留 key
                     r.del("peer:" + oldCode + ":0");
                     r.del("peer:" + oldCode + ":1");
                     r.del("peer:" + oldCode + ":email");
-                    r.setex("peer:" + oldCode + ":notify", NOTIFY_TTL, "room_closed");
                     r.del("peer:user:" + email);
                 }
             }
@@ -186,6 +272,8 @@ void registerPeerRoutes(HttpServer &server, AuthService &auth, DbPool &) {
         [&](const std::string &body, const std::string &, const std::string &headers) {
             auto tp = auth.authenticate(headers);
             if (!tp) return AuthService::jsonErr("UNAUTHORIZED", "请先登录");
+            if (!checkSubscribed(auth, headers))
+                return AuthService::jsonErr("FORBIDDEN", "需要 Pro 订阅才能使用联机功能");
 
             std::string code = StringUtils::jsonVal(body, "room_code");
             std::string portStr = StringUtils::jsonVal(body, "port");
@@ -200,6 +288,23 @@ void registerPeerRoutes(HttpServer &server, AuthService &auth, DbPool &) {
             std::string email = tp->email;
 
             auto &r = RedisClient::instance();
+
+            // ── 加入者如果在其他房间，先退出旧房间 ──
+            {
+                auto oldRoom = r.get("peer:user:" + email);
+                if (oldRoom && *oldRoom != code) {
+                    std::string oc = *oldRoom;
+                    // 通过 email 判断是不是旧房间的控制方
+                    auto oldOwner = r.get("peer:" + oc + ":email");
+                    bool wasController = (oldOwner && *oldOwner == email);
+                    r.del("peer:" + oc + (wasController ? ":0" : ":1"));
+                    if (wasController) {
+                        r.del("peer:" + oc + ":email");
+                        r.setex("peer:" + oc + ":notify", NOTIFY_TTL, "room_closed");
+                    }
+                    r.del("peer:user:" + email);
+                }
+            }
 
             // 检查房间是否存在
             auto v0 = r.get("peer:" + code + ":0");
@@ -219,6 +324,7 @@ void registerPeerRoutes(HttpServer &server, AuthService &auth, DbPool &) {
                     // 重连：更新 TTL
                     r.setex("peer:" + code + ":1", ROOM_TTL, val);
                     r.setex("peer:" + code + ":0", ROOM_TTL, *v0);
+                    r.setex("peer:user:" + email, ROOM_TTL, code);
                     std::string peerIp; int peerPort;
                     if (parseAddr(*v0, peerIp, peerPort)) {
                         std::ostringstream resp;
@@ -239,6 +345,8 @@ void registerPeerRoutes(HttpServer &server, AuthService &auth, DbPool &) {
             // 续期 slot 0
             r.expire("peer:" + code + ":0", ROOM_TTL);
             r.expire("peer:" + code + ":email", ROOM_TTL);
+            // 加入者也缓存房间映射（防止重复创建）
+            r.setex("peer:user:" + email, ROOM_TTL, code);
 
             // 返回对方（控制方）地址
             std::string peerIp; int peerPort;
@@ -309,6 +417,8 @@ void registerPeerRoutes(HttpServer &server, AuthService &auth, DbPool &) {
         [&](const std::string &, const std::string &query, const std::string &headers) {
             auto tp = auth.authenticate(headers);
             if (!tp) return AuthService::jsonErr("UNAUTHORIZED", "请先登录");
+            if (!checkSubscribed(auth, headers))
+                return AuthService::jsonErr("FORBIDDEN", "需要 Pro 订阅才能使用联机功能");
 
             std::string code = StringUtils::queryVal(query, "room");
             std::string myAddr = StringUtils::queryVal(query, "self");
@@ -317,7 +427,35 @@ void registerPeerRoutes(HttpServer &server, AuthService &auth, DbPool &) {
 
             auto &r = RedisClient::instance();
 
-            // 检查对方是否离开了
+            auto v0 = r.get("peer:" + code + ":0");
+            auto v1 = r.get("peer:" + code + ":1");
+
+            if (!v0 && !v1)
+                return AuthService::jsonErr("ROOM_NOT_FOUND", "房间不存在或已过期");
+
+            // ── 监控连接状态：对方 slot 过期 → 直接返回状态 ──
+            {
+                bool isCtrl = (v0 && _portOf(*v0) == _portOf(myAddr));
+                bool isCtrld = (v1 && _portOf(*v1) == _portOf(myAddr));
+                if (isCtrl && !v1) {
+                    // 控制方还在，受控方掉线 → 房间保留，通知控制方
+                    removeRelayState(code);  // 清理中转状态，避免 stale data
+                    return std::string("{\"success\":true,\"status\":\"peer_left\",\"message\":\"对方已断开连接\"}");
+                }
+                if (isCtrld && !v0) {
+                    // 受控方还在，控制方掉线 → 关闭房间，通知受控方
+                    auto ctrlEmail = r.get("peer:" + code + ":email");
+                    r.del("peer:" + code + ":0");
+                    r.del("peer:" + code + ":1");
+                    r.del("peer:" + code + ":email");
+                    r.del("peer:user:" + tp->email);
+                    if (ctrlEmail) r.del("peer:user:" + *ctrlEmail);
+                    removeRelayState(code);  // 通知正在 pull 等待的对方
+                    return std::string("{\"success\":true,\"status\":\"room_closed\",\"message\":\"创建者已断开连接\"}");
+                }
+            }
+
+            // 检查对方是否主动离开（unregister 设置的 notify）
             auto notify = r.get("peer:" + code + ":notify");
             if (notify) {
                 std::string msg = *notify;
@@ -327,12 +465,6 @@ void registerPeerRoutes(HttpServer &server, AuthService &auth, DbPool &) {
                 if (msg == "room_closed")
                     return std::string("{\"success\":true,\"status\":\"room_closed\",\"message\":\"房间已关闭\"}");
             }
-
-            auto v0 = r.get("peer:" + code + ":0");
-            auto v1 = r.get("peer:" + code + ":1");
-
-            if (!v0 && !v1)
-                return AuthService::jsonErr("ROOM_NOT_FOUND", "房间不存在或已过期");
 
             // 续期自己所在的槽位
             if (!myAddr.empty()) {
@@ -382,6 +514,128 @@ void registerPeerRoutes(HttpServer &server, AuthService &auth, DbPool &) {
         });
 
     // ═══════════════════════════════════════════════════════
+    //  POST /api/peer/push
+    //  控制方推送坐标（服务端转发兜底，P2P 不通时用）
+    //  Body: {room_code, op, x, y, split}
+    //  ═══════════════════════════════════════════════════════
+    server.route("POST", "/api/peer/push",
+        [&](const std::string &body, const std::string &, const std::string &headers) {
+            auto tp = auth.authenticate(headers);
+            if (!tp) return AuthService::jsonErr("UNAUTHORIZED", "请先登录");
+
+            std::string code = StringUtils::jsonVal(body, "room_code");
+            std::string op   = StringUtils::jsonVal(body, "op");
+            std::string xs   = StringUtils::jsonVal(body, "x");
+            std::string ys   = StringUtils::jsonVal(body, "y");
+            std::string sp   = StringUtils::jsonVal(body, "split");
+
+            if (code.empty())
+                return AuthService::jsonErr("FIELDS_REQUIRED", "需要 room_code");
+
+            // 验证请求者是控制方（通过 email 匹配）
+            auto &r = RedisClient::instance();
+            auto ctrlEmail = r.get("peer:" + code + ":email");
+            if (!ctrlEmail || *ctrlEmail != tp->email)
+                return AuthService::jsonErr("FORBIDDEN", "只有创建者才能推送");
+
+            auto st = getRelayState(code);
+            {
+                std::lock_guard<std::mutex> lk(st->mtx);
+                st->opType = op;
+                st->x      = xs.empty() ? 0.0 : std::stod(xs);
+                st->y      = ys.empty() ? 0.0 : std::stod(ys);
+                st->split  = (sp == "true" || sp == "1");
+                st->seq++;
+                st->dirty  = true;
+            }
+            st->cv.notify_all();
+
+            return AuthService::jsonOk("已推送");
+        });
+
+    // ═══════════════════════════════════════════════════════
+    //  GET /api/peer/pull
+    //  被控制方拉取坐标（长轮询，P2P 不通时用）
+    //  Query: ?room=ABC123&seq=0&wait=5000
+    //  ═══════════════════════════════════════════════════════
+    server.route("GET", "/api/peer/pull",
+        [&](const std::string &, const std::string &query, const std::string &headers) {
+            auto tp = auth.authenticate(headers);
+            if (!tp) return AuthService::jsonErr("UNAUTHORIZED", "请先登录");
+
+            std::string code    = StringUtils::queryVal(query, "room");
+            std::string seqStr  = StringUtils::queryVal(query, "seq");
+            std::string waitStr = StringUtils::queryVal(query, "wait");
+
+            if (code.empty())
+                return AuthService::jsonErr("FIELDS_REQUIRED", "需要 room 参数");
+
+            uint64_t lastSeq = seqStr.empty() ? 0 : std::stoull(seqStr);
+            int waitMs = waitStr.empty() ? 5000 : std::stoi(waitStr);
+            if (waitMs > 30000) waitMs = 30000;
+
+            auto &r = RedisClient::instance();
+            auto v1 = r.get("peer:" + code + ":1");
+            if (!v1)
+                return AuthService::jsonErr("ROOM_NOT_FOUND", "房间不存在或已过期");
+
+            auto st = getRelayState(code);
+            std::unique_lock<std::mutex> lk(st->mtx);
+
+            // 有新数据直接返回
+            if (st->dirty && st->seq > lastSeq) {
+                uint64_t s = st->seq;
+                std::string op = st->opType;
+                double x = st->x, y = st->y;
+                bool split = st->split;
+                lk.unlock();
+
+                std::ostringstream resp;
+                resp << "{\"success\":true,\"has_data\":true"
+                     << ",\"data\":{\"seq\":" << s
+                     << ",\"op\":\"" << op << "\""
+                     << ",\"x\":" << x
+                     << ",\"y\":" << y
+                     << ",\"split\":" << (split ? "true" : "false")
+                     << "}}";
+                return resp.str();
+            }
+
+            // 等待新数据或超时
+            auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(waitMs);
+            while (true) {
+                if (st->cv.wait_for(lk, std::chrono::milliseconds(waitMs),
+                    [&]{ return (st->dirty && st->seq > lastSeq) || st->closed; }))
+                {
+                    if (st->closed) {
+                        lk.unlock();
+                        return std::string("{\"success\":true,\"has_data\":false,\"room_closed\":true,\"message\":\"房间已关闭\"}");
+                    }
+                    // 新数据到达
+                    uint64_t s = st->seq;
+                    std::string op = st->opType;
+                    double x = st->x, y = st->y;
+                    bool split = st->split;
+                    lk.unlock();
+
+                    std::ostringstream resp;
+                    resp << "{\"success\":true,\"has_data\":true"
+                         << ",\"data\":{\"seq\":" << s
+                         << ",\"op\":\"" << op << "\""
+                         << ",\"x\":" << x
+                         << ",\"y\":" << y
+                         << ",\"split\":" << (split ? "true" : "false")
+                         << "}}";
+                    return resp.str();
+                }
+                // 超时（spurious wakeup 防御用 deadline 也检查一下）
+                if (std::chrono::steady_clock::now() >= deadline) break;
+            }
+            lk.unlock();
+            return std::string("{\"success\":true,\"has_data\":false}");
+        });
+
+    // ═══════════════════════════════════════════════════════
     //  POST /api/peer/unregister
     //  退出房间 / 取消注册
     //  Body: {room_code: "ABC123", addr: "ip:port"}
@@ -411,10 +665,12 @@ void registerPeerRoutes(HttpServer &server, AuthService &auth, DbPool &) {
                 // 控制器退出 → 关闭房间，通知被控制方
                 r.setex("peer:" + code + ":notify", NOTIFY_TTL, "room_closed");
                 if (v1) r.del(k1);
+                removeRelayState(code);  // 通知正在 pull 等待的对方
             } else if (v1 && _portOf(*v1) == _portOf(myAddr)) {
                 r.del(k1);
                 // 被控制方退出 → 通知控制方
                 r.setex("peer:" + code + ":notify", NOTIFY_TTL, "peer_left");
+                removeRelayState(code);  // 清理转发状态
             }
 
             // 清理用户→房间映射

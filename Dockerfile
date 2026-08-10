@@ -12,11 +12,11 @@ COPY . /src
 WORKDIR /src/third_party/redis-plus-plus
 RUN mkdir -p build && cd build && \
     cmake .. -DREDIS_PLUS_PLUS_BUILD_TEST=OFF -DCMAKE_BUILD_TYPE=Release && \
-    make -j$(nproc) && make install && ldconfig
+    make -j1 && make install && ldconfig
 
 # Build main project
 WORKDIR /src/build
-RUN cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/usr/local && make -j$(nproc)
+RUN cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/usr/local && make -j1
 
 FROM ubuntu:24.04
 
