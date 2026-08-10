@@ -350,8 +350,21 @@ void registerSystemRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
                 return AuthService::jsonErr("DB_ERROR", mysql_error(db));
             if (mysql_affected_rows(db) == 0)
                 return AuthService::jsonErr("NOT_FOUND", "用户不存在或未订阅");
-            try { auto u = auth.userStore().findByEmail(email);
-                if (u) RedisClient::instance().del("sub:" + std::to_string(u->id)); } catch(...) {}
+            // 读出新过期时间，直接写回 Redis（避免 DEL+GET 竞态）
+            {
+                auto u = auth.userStore().findByEmail(email);
+                if (u && !u->subscription_expires.empty()) {
+                    struct tm et = {};
+                    std::istringstream iss(u->subscription_expires);
+                    iss >> std::get_time(&et, "%Y-%m-%d %H:%M:%S");
+                    int ttl = (int)(std::mktime(&et) - std::time(nullptr));
+                    if (ttl < 60) ttl = 60;
+                    try {
+                        RedisClient::instance().setex(
+                            "sub:" + std::to_string(u->id), ttl, u->subscription_expires);
+                    } catch(...) {}
+                }
+            }
             return AuthService::jsonOk(days > 0
                 ? "已添加 " + std::to_string(days) + " 天"
                 : "已减少 " + std::to_string(-days) + " 天");

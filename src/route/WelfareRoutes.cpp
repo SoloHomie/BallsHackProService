@@ -118,8 +118,33 @@ void registerWelfareRoutes(HttpServer &server, AuthService &auth, DbPool &pool) 
                 "DATE_ADD(GREATEST(COALESCE(subscription_expires, NOW()), NOW()), INTERVAL %llu DAY) "
                 "WHERE id=%llu", days, uid);
             mysql_query(db, q);
-            // 清除 Redis 缓存
-            try { auto &r = RedisClient::instance(); r.del("sub:" + tp->sub); } catch(...) {}
+
+            // 读出新过期时间，写回 Redis（用 SETEX 而非 DEL，避免竞态）
+            {
+                std::string newExp;
+                snprintf(q, sizeof(q),
+                    "SELECT subscription_expires FROM users WHERE id=%llu", uid);
+                mysql_query(db, q);
+                MYSQL_RES *res2 = mysql_store_result(db);
+                if (res2) {
+                    MYSQL_ROW row2 = mysql_fetch_row(res2);
+                    if (row2 && row2[0]) newExp = row2[0];
+                    mysql_free_result(res2);
+                }
+                if (!newExp.empty()) {
+                    // 计算 TTL
+                    struct tm et = {};
+                    std::istringstream iss(newExp);
+                    iss >> std::get_time(&et, "%Y-%m-%d %H:%M:%S");
+                    auto tt = std::mktime(&et);
+                    int ttl = (int)(tt - std::time(nullptr));
+                    if (ttl < 60) ttl = 60;
+                    try {
+                        auto &r = RedisClient::instance();
+                        r.setex("sub:" + tp->sub, ttl, newExp);
+                    } catch(...) {}
+                }
+            }
 
             return AuthService::jsonOk("领取成功！获得 " + std::to_string(days) + " 天 Pro 会员~",
                                         "days", std::to_string(days));
