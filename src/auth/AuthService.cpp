@@ -8,10 +8,10 @@
 #include "../email/EmailService.h"
 #include "../auth/OAuthService.h"
 #include "../core/config/ServerConfig.h"
+#include <thread>
 #include "../core/config/Env.h"
 #include <mysql/mysql.h>
 #include <string>
-#include <thread>
 
 static std::string JWT_SECRET = Env::required("BH_JWT_SECRET");
 
@@ -47,23 +47,6 @@ std::string AuthService::jsonOk(const std::string &msg,
                                 const std::string &k, const std::string &v) {
     return "{\"success\":true,\"message\":\"" + jsonEscape(msg) +
            "\",\"" + jsonEscape(k) + "\":\"" + jsonEscape(v) + "\"}";
-}
-
-// ── 订阅状态注入（登录/刷新/OAuth 响应公用）──
-void AuthService::appendSubscription(std::ostringstream &resp,
-                                      const UserStore::UserInfo *user) {
-    bool sub = false;
-    std::string exp;
-    if (user && !user->subscription_expires.empty()) {
-        exp = user->subscription_expires;
-        struct tm et = {};
-        std::istringstream iss(exp);
-        iss >> std::get_time(&et, "%Y-%m-%d %H:%M:%S");
-        auto expireT = std::mktime(&et);
-        sub = (expireT > std::time(nullptr));
-    }
-    resp << ",\"subscribed\":" << (sub ? "true" : "false")
-         << ",\"subscription_expires\":\"" << AuthService::jsonEscape(exp) << "\"";
 }
 std::string AuthService::jsonErr(const std::string &code, const std::string &msg) {
     return "{\"success\":false,\"errcode\":\"" + jsonEscape(code) +
@@ -105,12 +88,19 @@ std::string AuthService::sendCode(const std::string &email,
         return "{\"success\":true,\"message\":\"验证码: " + code + "\",\"code\":\"" + code + "\"}";
     }
 
-    // Async send — SMTP blocks for seconds, don't make client wait
-    std::thread([this, email, code, purpose]() {
-        m_email->sendVerifyCode(email, code, ServerConfig::CODE_TTL_SEC, purpose);
+    // SMTP 异步发送 — 国内用户到海外邮件服务器延迟高,
+    // 同步等待会导致客户端超时断开, 改为后台发送立即返回
+    std::string codeCopy = code;
+    std::string emailCopy = email;
+    std::string purposeCopy = purpose;
+    int ttlCopy = ServerConfig::CODE_TTL_SEC;
+    // EmailService::sendVerifyCode 每次新建 CURL handle, 线程安全
+    EmailService *emailPtr = m_email.get();
+    std::thread([emailPtr, emailCopy, codeCopy, ttlCopy, purposeCopy]() {
+        emailPtr->sendVerifyCode(emailCopy, codeCopy, ttlCopy, purposeCopy);
     }).detach();
 
-    return jsonOk("希哩哩蹦蹦跳跳地把验证码送出去啦，快去邮箱查收~");
+    return jsonOk("验证码已发送，请查收邮箱");
 }
 
 // ── login (password) ────────────────────────────────
@@ -132,9 +122,7 @@ std::string AuthService::login(const std::string &email, const std::string &pass
     tp.provider = "password";
     tp.jti      = SessionManager::generateJti();
     std::string accessToken = m_token.generateAccess(tp, 900);
-    bindSession(tp.sub, tp.jti);  // 单设备登录（旧设备 JTI 失效）
-    // 新登录立即清除 kicked，防止首条心跳竞态触发误踢
-    try { RedisClient::instance().del("kicked:" + tp.sub); } catch (...) {}
+    bindSession(tp.sub, tp.jti);  // 单设备登录
 
     // 清除旧 refresh token，只保留最新一个
     SessionManager::revokeAllForUser(user->id, &m_pool);
@@ -150,9 +138,7 @@ std::string AuthService::login(const std::string &email, const std::string &pass
          << ",\"uid\":\"" << std::to_string(user->id) << "\""
          << ",\"email\":\"" << jsonEscape(email) << "\""
          << ",\"username\":\"" << jsonEscape(user->username) << "\""
-         << ",\"provider\":\"password\"";
-    appendSubscription(resp, &*user);
-    resp << "}";
+         << "}";
     return resp.str();
 }
 
@@ -178,8 +164,6 @@ std::string AuthService::loginWithCode(const std::string &email,
     tp.jti      = SessionManager::generateJti();
     std::string accessToken  = m_token.generateAccess(tp, 900);
     bindSession(tp.sub, tp.jti);
-    // 新登录立即清除 kicked，防止首条心跳竞态触发误踢
-    try { RedisClient::instance().del("kicked:" + tp.sub); } catch (...) {}
     std::string refreshToken = TokenService::generateRefresh();
     SessionManager::revokeAllForUser(user->id, &m_pool);
     SessionManager::storeRefresh(refreshToken, tp.sub, email, "password", 30*24*3600, &m_pool);
@@ -193,9 +177,7 @@ std::string AuthService::loginWithCode(const std::string &email,
          << ",\"uid\":\"" << std::to_string(user->id) << "\""
          << ",\"email\":\"" << jsonEscape(email) << "\""
          << ",\"username\":\"" << jsonEscape(user->username) << "\""
-         << ",\"provider\":\"password\"";
-    appendSubscription(resp, &*user);
-    resp << "}";
+         << "}";
     return resp.str();
 }
 
@@ -243,16 +225,7 @@ std::string AuthService::resetPassword(const std::string &email, const std::stri
     }
 
     auto user = m_users.findByEmail(email);
-    if (user) {
-        SessionManager::revokeAllForUser(user->id, &m_pool);
-        // 立即踢出所有活跃 session（密码已变更，旧凭证必须失效）
-        try {
-            auto &r = RedisClient::instance();
-            std::string uidStr = std::to_string(user->id);
-            r.setex("kicked:" + uidStr, 900, "1");
-            r.del("session:" + uidStr);
-        } catch (...) {}
-    }
+    if (user) SessionManager::revokeAllForUser(user->id, &m_pool);
 
     return jsonOk("哈哒帮你把密码锁修好啦，这次可别再弄丢了哦~");
 }
@@ -306,8 +279,6 @@ std::string AuthService::oauthCallback(const std::string &provider,
     tp.jti      = SessionManager::generateJti();
     std::string accessToken  = m_token.generateAccess(tp, 900);
     bindSession(tp.sub, tp.jti);
-    // 新登录立即清除 kicked，防止首条心跳竞态触发误踢
-    try { RedisClient::instance().del("kicked:" + tp.sub); } catch (...) {}
     std::string refreshToken = TokenService::generateRefresh();
     SessionManager::revokeAllForUser(user->id, &m_pool);
     SessionManager::storeRefresh(refreshToken, tp.sub, email, ou.provider, 30*24*3600, &m_pool);
@@ -323,9 +294,8 @@ std::string AuthService::oauthCallback(const std::string &provider,
          << ",\"username\":\"" << jsonEscape(user->username) << "\""
          << ",\"provider\":\"" << jsonEscape(ou.provider) << "\""
          << ",\"name\":\"" << jsonEscape(ou.name) << "\""
-         << ",\"avatar\":\"" << jsonEscape(ou.avatarUrl) << "\"";
-    appendSubscription(resp, &*user);
-    resp << "}";
+         << ",\"avatar\":\"" << jsonEscape(ou.avatarUrl) << "\""
+         << "}";
     return resp.str();
 }
 
@@ -357,8 +327,6 @@ std::string AuthService::oauthCallbackBind(const std::string &provider,
     tp.jti      = SessionManager::generateJti();
     std::string accessToken  = m_token.generateAccess(tp, 900);
     bindSession(tp.sub, tp.jti);
-    // 新登录立即清除 kicked，防止首条心跳竞态触发误踢
-    try { RedisClient::instance().del("kicked:" + tp.sub); } catch (...) {}
     std::string refreshToken = TokenService::generateRefresh();
     SessionManager::storeRefresh(refreshToken, tp.sub, tp.email, ou.provider, 30*24*3600, &m_pool);
 
@@ -438,16 +406,7 @@ std::optional<TokenPayload> AuthService::authenticate(
 
 void AuthService::bindSession(const std::string &uid, const std::string &jti) {
     try {
-        auto &r = RedisClient::instance();
-        auto old = r.get("session:" + uid);
-        r.setex("session:" + uid, 900, jti);
-        if (old && !old->empty()) {
-            // 已有其他设备登录 → 通知旧设备被踢下线
-            r.setex("kicked:" + uid, 900, "1");
-        } else {
-            // 首次登录 / 被踢后重新登录 → 清除残留踢出标记
-            r.del("kicked:" + uid);
-        }
+        RedisClient::instance().setex("session:" + uid, 900, jti);
     } catch (...) {}
 }
 

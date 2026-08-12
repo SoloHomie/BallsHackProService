@@ -47,7 +47,7 @@ bool HttpServer::start(uint16_t port, bool useTls) {
     sockaddr_in addr{};
     addr.sin_family      = AF_INET;
     addr.sin_port        = htons(port);
-    addr.sin_addr.s_addr = INADDR_ANY;
+    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);  // bind 127.0.0.1 only
 
     if (bind(m_listenSock, (sockaddr*)&addr, sizeof(addr)) == SOCK_ERR) {
         sock_close(m_listenSock);
@@ -60,46 +60,21 @@ bool HttpServer::start(uint16_t port, bool useTls) {
         return false;
     }
     m_running = true;
-    m_poolRunning = true;
-
-    // 启动线程池（固定 worker 数，避免 per-connection thread 内存膨胀）
-    for (int i = 0; i < POOL_SIZE; ++i)
-        m_workers.emplace_back(&HttpServer::workerLoop, this, i);
-
     m_acceptThread = std::thread(&HttpServer::acceptLoop, this);
 
     Logger::info("Server", std::string("[BallsHackProService] listening on port ") + std::to_string(port)
-              + (m_useTls ? " (TLS 1.2+)" : " (HTTP)")
-              + " pool=" + std::to_string(POOL_SIZE));
+              + (m_useTls ? " (TLS 1.2+)" : " (HTTP)"));
     return true;
 }
 
 void HttpServer::stop() {
     m_running = false;
-    m_poolRunning = false;
-
-    // 唤醒所有 worker
-    m_queueCv.notify_all();
-
     if (m_listenSock != INVALID_SOCK) {
         sock_close(m_listenSock);
         m_listenSock = INVALID_SOCK;
     }
     if (m_acceptThread.joinable())
         m_acceptThread.join();
-
-    // 关闭队列中残留的 client socket
-    {
-        std::lock_guard<std::mutex> lk(m_queueMutex);
-        while (!m_taskQueue.empty()) {
-            sock_close(m_taskQueue.front());
-            m_taskQueue.pop();
-        }
-    }
-
-    for (auto &t : m_workers)
-        if (t.joinable()) t.join();
-    m_workers.clear();
 }
 
 void HttpServer::route(const std::string &method, const std::string &path, Handler h) {
@@ -110,7 +85,7 @@ void HttpServer::routeStream(const std::string &method, const std::string &path,
     m_routes.push_back({method, path, nullptr, true, std::move(h)});
 }
 
-// ── Accept loop: 投入线程池队列 ─────────────────────────
+// ── Accept loop: 无上限并发 ─────────────────────────────
 void HttpServer::acceptLoop() {
     while (m_running) {
         sockaddr_in clientAddr{};
@@ -122,30 +97,10 @@ void HttpServer::acceptLoop() {
         socket_t client = accept(m_listenSock, (sockaddr*)&clientAddr, &addrLen);
         if (client == INVALID_SOCK) continue;
 
-        {
-            std::lock_guard<std::mutex> lk(m_queueMutex);
-            m_taskQueue.push(client);
-        }
-        m_queueCv.notify_one();
-    }
-}
-
-// ── Worker 线程（固定数量，复用栈内存）───────────────────
-void HttpServer::workerLoop(int id) {
-    (void)id;
-    while (m_poolRunning) {
-        socket_t client;
-        {
-            std::unique_lock<std::mutex> lk(m_queueMutex);
-            m_queueCv.wait(lk, [this]() {
-                return !m_taskQueue.empty() || !m_poolRunning;
-            });
-            if (!m_poolRunning) return;
-            if (m_taskQueue.empty()) continue;
-            client = m_taskQueue.front();
-            m_taskQueue.pop();
-        }
-        handleClient(client);
+        // 无上限: 每个连接直接起独立线程
+        std::thread([this, client]() {
+            handleClient(client);
+        }).detach();
     }
 }
 

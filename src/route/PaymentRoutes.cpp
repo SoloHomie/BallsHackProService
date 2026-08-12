@@ -61,28 +61,17 @@ void registerPaymentRoutes(HttpServer &server, AuthService &auth, DbPool &pool) 
             if (!tp) return AuthService::jsonErr("UNAUTHORIZED", "请先登录");
             std::string oid = StringUtils::queryVal(query, "order_id");
             if (oid.empty()) return AuthService::jsonErr("ID_REQUIRED", "请提供订单ID");
-            // 校验 oid 为纯数字，防止 std::stoull 异常
-            if (oid.find_first_not_of("0123456789") != std::string::npos)
-                return AuthService::jsonErr("ID_REQUIRED", "无效的订单ID");
-            uint64_t oidNum = std::stoull(oid);
-            // 先查 Redis 是否过期（回调成功后 key 会被删除，此时需查 DB 确认）
-            bool redisMissing = true;
-            try { auto v = RedisClient::instance().get("pay:order:" + oid); redisMissing = !v; } catch(...) {}
-            if (redisMissing) {
-                // Redis key 已过期或被回调删除 → 查 DB 确认实际状态
-                auto o = payService.queryOrder(oidNum);
+            // 先查 Redis — 过期则回退查 DB 真实状态, 不让用户承担后果
+            bool expired = true;
+            try { auto v = RedisClient::instance().get("pay:order:" + oid); expired = !v; } catch(...) {}
+            if (expired) {
+                auto o = payService.queryOrder(std::stoull(oid));
                 if (!o) return std::string("{\"success\":true,\"status\":\"expired\"}");
-                if (o->status == "paid") {
-                    // 回调已处理完成但 Redis key 被删除了
-                    std::ostringstream j;
-                    j<<"{\"success\":true,\"status\":\"paid\""
-                     <<",\"id\":"<<o->orderId<<",\"amount\":"<<o->amount
-                     <<",\"duration_days\":"<<o->durationDays<<"}";
-                    return j.str();
-                }
+                if (o->status == "paid")
+                    return std::string("{\"success\":true,\"status\":\"paid\"}");
                 return std::string("{\"success\":true,\"status\":\"expired\"}");
             }
-            auto o = payService.queryOrder(oidNum);
+            auto o = payService.queryOrder(std::stoull(oid));
             if (!o) return AuthService::jsonErr("NOT_FOUND", "订单不存在");
             std::ostringstream j;
             j<<"{\"success\":true,\"status\":\""<<AuthService::jsonEscape(o->status)<<"\""

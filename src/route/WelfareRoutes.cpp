@@ -44,7 +44,6 @@ void registerWelfareRoutes(HttpServer &server, AuthService &auth, DbPool &pool) 
                 uid);
             mysql_query(db, q);
             MYSQL_RES *res = mysql_store_result(db);
-            if (!res) return AuthService::jsonErr("DB_ERROR", "数据库繁忙");
             std::string json = "{\"success\":true,\"events\":[";
             bool first = true;
             MYSQL_ROW row;
@@ -121,8 +120,8 @@ void registerWelfareRoutes(HttpServer &server, AuthService &auth, DbPool &pool) 
             mysql_query(db, q);
 
             // 读出新过期时间，写回 Redis（用 SETEX 而非 DEL，避免竞态）
-            std::string newExp;
             {
+                std::string newExp;
                 snprintf(q, sizeof(q),
                     "SELECT subscription_expires FROM users WHERE id=%llu", uid);
                 mysql_query(db, q);
@@ -147,19 +146,7 @@ void registerWelfareRoutes(HttpServer &server, AuthService &auth, DbPool &pool) 
                 }
             }
 
-            // 拼装响应（含最新订阅状态，客户端可立即更新）
-            {
-                std::ostringstream resp;
-                resp << "{\"success\":true"
-                     << ",\"message\":\"领取成功！获得 " << days << " 天 Pro 会员~\""
-                     << ",\"days\":" << days
-                     << ",\"subscribed\":true";
-                if (!newExp.empty())
-                    resp << ",\"subscription_expires\":\"" << AuthService::jsonEscape(newExp) << "\"";
-                else
-                    resp << ",\"subscription_expires\":\"\"";
-                resp << "}";
-                return resp.str();
-            }
+            return AuthService::jsonOk("领取成功！获得 " + std::to_string(days) + " 天 Pro 会员~",
+                                        "days", std::to_string(days));
         });
 }

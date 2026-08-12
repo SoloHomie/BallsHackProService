@@ -12,11 +12,11 @@ COPY . /src
 WORKDIR /src/third_party/redis-plus-plus
 RUN mkdir -p build && cd build && \
     cmake .. -DREDIS_PLUS_PLUS_BUILD_TEST=OFF -DCMAKE_BUILD_TYPE=Release && \
-    make -j1 && make install && ldconfig
+    make -j$(nproc) && make install && ldconfig
 
 # Build main project
 WORKDIR /src/build
-RUN cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/usr/local && make -j1
+RUN cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/usr/local && make -j$(nproc)
 
 FROM ubuntu:24.04
 
@@ -30,11 +30,11 @@ RUN apt-get update && apt-get install -y \
 COPY --from=builder /usr/local/lib/libredis++.so.1.3.11 /usr/local/lib/libredis++.so.1
 RUN ln -sf /usr/local/lib/libredis++.so.1 /usr/local/lib/libredis++.so && ldconfig
 
-COPY --from=builder /src/build/BallsHackProService /app/BallsHackProService
+COPY --from=builder /src/build/SuretyService /app/SuretyService
 COPY --from=builder /src/assets/ /app/assets/
 COPY --from=builder /src/version.json /src/announcement.json /src/rsa_private.pem /src/rsa_plat_pub.pem /app/
 COPY --from=builder /src/html/ /app/html/
 
 WORKDIR /app
 EXPOSE 8920
-CMD ["./BallsHackProService"]
+CMD ["./SuretyService"]

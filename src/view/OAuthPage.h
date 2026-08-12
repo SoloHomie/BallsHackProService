@@ -23,7 +23,7 @@ struct OAuthCallbackData {
 
 /// Render the OAuth callback HTML page.
 /// @param cbport  If >0, redirect to http://localhost:<cbport>/callback?...
-///                instead of ballshackpro:// (avoids Smart App Control).
+///                instead of surety:// (avoids Smart App Control).
 std::string render(const OAuthCallbackData &data,
                    const std::string &tmplPath = "html/OAuthCallback.html",
                    const std::string &cbport = "");

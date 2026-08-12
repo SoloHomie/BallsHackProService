@@ -85,8 +85,6 @@ void registerSyncRoutes(HttpServer &server, AuthService &auth, SyncService &sync
                 return std::string("{\"success\":true,\"has_data\":false}");
             if (cmd[0] == '{' && cmd.find("\"errcode\"") != std::string::npos)
                 return cmd;  // 错误响应直接返回
-            if (cmd[0] == '{' && cmd.find("\"room_closed\"") != std::string::npos)
-                return std::string("{\"success\":true,\"has_data\":false,\"room_closed\":true,\"message\":\"创建者已退出房间\"}");
 
             return "{\"success\":true,\"has_data\":true,\"data\":" + cmd + "}";
         });

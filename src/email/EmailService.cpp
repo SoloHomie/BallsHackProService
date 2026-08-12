@@ -33,7 +33,6 @@ static std::string mimeEncode(const std::string &utf8) {
 
 bool EmailService::sendVerifyCode(const std::string &to, const std::string &code,
                                    int ttlSeconds, const std::string &purpose) {
-    std::lock_guard<std::mutex> lock(m_smtpMutex);
     int ttlMin = ttlSeconds / 60;
     const char *label = "Verification";
     if (purpose == "register") label = "注册";

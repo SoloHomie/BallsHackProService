@@ -116,6 +116,7 @@ bool SmtpClient::sendMail(const std::string &to,
     // ── Configure curl (store strings locally; passing std::string
     //     directly to curl C variadic function is undefined behavior)
     std::string senderEmail = EmailConfig::SENDER_EMAIL();
+    std::string authUser    = EmailConfig::AUTH_USER();
     std::string authCode    = EmailConfig::AUTH_CODE();
     std::string mailFrom    = "<" + senderEmail + ">";
 
@@ -127,9 +128,9 @@ bool SmtpClient::sendMail(const std::string &to,
         curl_easy_setopt(curl, CURLOPT_PROXYTYPE,        CURLPROXY_HTTP);
         curl_easy_setopt(curl, CURLOPT_HTTPPROXYTUNNEL,  1L);
     }
-    curl_easy_setopt(curl, CURLOPT_USERNAME,         EmailConfig::AUTH_USER().c_str());
+    curl_easy_setopt(curl, CURLOPT_USERNAME,         authUser.c_str());
     curl_easy_setopt(curl, CURLOPT_PASSWORD,         authCode.c_str());
-    curl_easy_setopt(curl, CURLOPT_USE_SSL,          CURLUSESSL_TRY);
+    curl_easy_setopt(curl, CURLOPT_USE_SSL,          CURLUSESSL_ALL);
     curl_easy_setopt(curl, CURLOPT_MAIL_FROM,        mailFrom.c_str());
     curl_easy_setopt(curl, CURLOPT_MAIL_RCPT,        recipients);
     curl_easy_setopt(curl, CURLOPT_READFUNCTION,     readCallback);

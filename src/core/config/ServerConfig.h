@@ -2,7 +2,7 @@
 #include <cstdint>
 
 namespace ServerConfig {
-    constexpr uint16_t PORT          = 8920;
+    constexpr uint16_t PORT          = 9443;
     constexpr int      MAX_CONN      = 256;
     constexpr int      CODE_LENGTH   = 6;
     constexpr int      CODE_TTL_SEC  = 300;

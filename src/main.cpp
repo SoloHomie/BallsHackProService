@@ -7,7 +7,6 @@
 
 #include "core/server/HttpServer.h"
 #include "auth/AuthService.h"
-#include "auth/SessionManager.h"
 #include "core/config/ServerConfig.h"
 #include "core/config/DbConfig.h"
 #include "core/config/Env.h"
@@ -30,43 +29,6 @@
 #include <sstream>
 #include <thread>
 #include <chrono>
-#include <cstring>
-
-// ── STUN-like UDP 地址发现 ─────────────────────────────
-// 客户端发 UDP 包 → 服务端回复真实 NAT 后的公网 ip:port
-static void stunUdpLoop() {
-    int sock = (int)socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    if (sock < 0) {
-        std::cerr << "[STUN] socket() failed" << std::endl;
-        return;
-    }
-    int opt = 1;
-    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (const char*)&opt, sizeof(opt));
-    sockaddr_in addr{};
-    addr.sin_family = AF_INET;
-    addr.sin_port   = htons(8921);
-    addr.sin_addr.s_addr = INADDR_ANY;
-    if (bind(sock, (sockaddr*)&addr, sizeof(addr)) < 0) {
-        std::cerr << "[STUN] bind(:8921) failed" << std::endl;
-        close(sock);
-        return;
-    }
-    std::cout << "[STUN] UDP discovery listening on :8921" << std::endl;
-    char buf[64];
-    while (true) {
-        sockaddr_in from{};
-        socklen_t fromLen = sizeof(from);
-        int n = (int)recvfrom(sock, buf, sizeof(buf) - 1, 0, (sockaddr*)&from, &fromLen);
-        if (n <= 0) continue;
-        char ipStr[INET_ADDRSTRLEN];
-        inet_ntop(AF_INET, &from.sin_addr, ipStr, sizeof(ipStr));
-        int port = ntohs(from.sin_port);
-        char resp[128];
-        int respLen = snprintf(resp, sizeof(resp),
-            "{\"public_ip\":\"%s\",\"public_port\":%d}", ipStr, port);
-        sendto(sock, resp, respLen, 0, (sockaddr*)&from, fromLen);
-    }
-}
 
 int main() {
     Env::loadDotEnv();
@@ -135,10 +97,7 @@ int main() {
     registerSyncRoutes(server, auth, syncSvc);
     registerAssetRoutes(server, auth, pool);
 
-    // 7. STUN UDP 地址发现（端口 8921）
-    std::thread(stunUdpLoop).detach();
-
-    // 8. 启动 HTTP
+    // 7. 启动
     bool useTls = Env::get("BH_TLS_DISABLE").empty();  // set to disable
     if (!server.start(ServerConfig::PORT, useTls)) {
         std::cerr << "Failed to start server" << std::endl;
@@ -153,8 +112,6 @@ int main() {
     while (true) {
         std::this_thread::sleep_for(std::chrono::seconds(60));
         auth.codeManager().purgeExpired();
-        SessionManager::purgeExpired(&pool);       // 清理过期 refresh token
-        syncSvc.purgeIdleRooms(600);               // 清理 10min 未活跃房间
 
         // 清理断线用户的房间成员
         {
@@ -191,19 +148,13 @@ int main() {
                                 std::cout << "[Cleanup] Room " << code
                                           << " closed (controller offline)" << std::endl;
                             } else if (ctrldOffline) {
-                                // 受控方离线 → 清掉 controlled_email，房间仍可用
+                                // 受控方离线 → 只清掉 controlled_email，房间仍可用
                                 char q[256];
                                 snprintf(q, sizeof(q),
                                     "UPDATE rooms SET controlled_email=NULL,status=0 "
                                     "WHERE room_code='%s'",
                                     code.c_str());
                                 mysql_query(db, q);
-                                // 同步清理内存状态，避免 m_rooms 积压
-                                auto state = syncSvc.getOrCreateState(code);
-                                if (!state->controlledEmail.empty()) {
-                                    state->controlledEmail.clear();
-                                    state->cv.notify_all();
-                                }
                                 std::cout << "[Cleanup] Room " << code
                                           << " (controlled left)" << std::endl;
                             }

@@ -8,7 +8,6 @@
 #include "../core/database/DbPool.h"
 #include "../core/config/ServerConfig.h"
 #include "../core/config/Env.h"
-#include "../auth/SessionManager.h"
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -157,12 +156,50 @@ void registerSystemRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
                 if (!cl.empty()) changelog = cl;
             }
 
-            std::string directDl = "http://38.92.9.178:8920/api/download";
-            std::string cloudDl = "https://api.solohomie.top/api/download";
+            
+            // JSON string escape helper
+            auto jsonEscape = [](const std::string &s) -> std::string {
+                std::string r;
+                r.reserve(s.size() + 16);
+                for (char c : s) {
+                    switch (c) {
+                        case '"':  r += "\\\""; break;
+                        case '\\': r += "\\\\"; break;
+                        case '\n': r += "\\n";  break;
+                        case '\r': r += "\\r";  break;
+                        case '\t': r += "\\t";  break;
+                        default:   r += c;
+                    }
+                }
+                return r;
+            };
 
-            bool force = false;
-            if (!clientVer.empty() && !minVer.empty()) {
-                auto splitVer = [](const std::string &v) -> std::vector<int> {
+            // 下载地址: 从 version.json 读取, 否则用默认
+            std::string directDl, cloudDl;
+            if (vf) {
+                vf.clear(); vf.seekg(0);
+                std::string content2((std::istreambuf_iterator<char>(vf)), std::istreambuf_iterator<char>());
+                auto ext = [&](const std::string &key) -> std::string {
+                    auto pos = content2.find("\"" + key + "\"");
+                    if (pos == std::string::npos) return "";
+                    pos = content2.find(':', pos + key.size() + 2);
+                    if (pos == std::string::npos) return "";
+                    pos = content2.find('"', pos + 1);
+                    if (pos == std::string::npos) return "";
+                    pos++;
+                    auto end = content2.find('"', pos);
+                    if (end == std::string::npos) return "";
+                    return content2.substr(pos, end - pos);
+                };
+                directDl = ext("direct_download_url");
+                cloudDl  = ext("download_url");
+            }
+            if (directDl.empty()) directDl = "https://38.92.9.178/api/download";
+            if (cloudDl.empty()) cloudDl  = "https://api.solohomie.top/api/download";
+
+            // 语义化版本比较 (缺失段视为0)
+            auto cmpSemVer = [](const std::string &a, const std::string &b) -> int {
+                auto split = [](const std::string &v) -> std::vector<int> {
                     std::vector<int> parts;
                     std::stringstream ss(v);
                     std::string part;
@@ -172,13 +209,19 @@ void registerSystemRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
                     }
                     return parts;
                 };
-                auto cv = splitVer(clientVer), mv = splitVer(minVer);
-                size_t n = (std::min)(cv.size(), mv.size());
-                for (size_t i = 0; i < n; ++i) {
-                    if (cv[i] < mv[i]) { force = true; break; }
-                    if (cv[i] > mv[i]) break;
+                auto av = split(a), bv = split(b);
+                size_t maxLen = std::max(av.size(), bv.size());
+                av.resize(maxLen, 0);
+                bv.resize(maxLen, 0);
+                for (size_t i = 0; i < maxLen; ++i) {
+                    if (av[i] < bv[i]) return -1;
+                    if (av[i] > bv[i]) return 1;
                 }
-            }
+                return 0;
+            };
+            bool force = false;
+            if (!clientVer.empty() && !minVer.empty())
+                force = (cmpSemVer(clientVer, minVer) < 0);
             return std::string("{\"success\":true")
                 + ",\"latest_version\":\"" + latestVer + "\""
                 + ",\"min_version\":\"" + minVer + "\""
@@ -186,7 +229,7 @@ void registerSystemRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
                 + ",\"update_type\":\"" + (force ? "force" : "recommended") + "\""
                 + ",\"download_url\":\"" + cloudDl + "\""
                 + ",\"direct_download_url\":\"" + directDl + "\""
-                + ",\"changelog\":\"" + changelog + "\""
+                + ",\"changelog\":\"" + jsonEscape(changelog) + "\""
                 + "}";
         });
 
@@ -218,41 +261,52 @@ void registerSystemRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
                 return;
             }
             std::string fullPath = Env::exeDir() + "/releases/" + file;
-            std::ifstream fst(fullPath, std::ios::binary | std::ios::ate);
-            if (!fst) {
-                std::string err = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+            // 读取整个文件到内存，避免 TOCTOU 竞态
+            std::ifstream fs(fullPath, std::ios::binary | std::ios::ate);
+            if (!fs) {
+                std::string err = "HTTP/1.1 404 Not Found\r\n"
+                    "Access-Control-Allow-Origin: *\r\n"
+                    "Content-Length: 0\r\nConnection: close\r\n\r\n";
                 if (tls) tls->write(err.data(), (int)err.size());
-                else send(sock, err.data(), (int)err.size(), 0);
+                else { const char *p = err.data(); size_t left = err.size(); while (left > 0) { auto sent = send(sock, p, (int)left, 0); if (sent <= 0) break; left -= sent; p += sent; } }
                 return;
             }
-            size_t fsize = fst.tellg(); fst.close();
+            size_t fsize = fs.tellg();
+            fs.seekg(0, std::ios::beg);
+            std::vector<char> fileBuf(fsize);
+            fs.read(fileBuf.data(), fsize);
+            fs.close();
             std::ostringstream hdr;
             hdr << "HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\n"
-                << "Content-Length: " << fsize << "\r\nConnection: close\r\n\r\n";
+                << "Content-Length: " << fsize << "\r\n"
+                << "Access-Control-Allow-Origin: *\r\n"
+                << "Connection: close\r\n\r\n";
             std::string h = hdr.str();
-            if (tls) tls->write(h.data(), (int)h.size());
-            else send(sock, h.data(), (int)h.size(), 0);
-            std::ifstream fs(fullPath, std::ios::binary);
-            char buf[65536];
-            while (fs.read(buf, sizeof(buf)) || fs.gcount() > 0) {
-                size_t n = fs.gcount();
-                if (tls) tls->write(buf, (int)n);
-                else send(sock, buf, (int)n, 0);
-            }
+            // 发送 header（检查返回值）
+            { const char *p = h.data(); size_t left = h.size(); while (left > 0) { auto sent = tls ? tls->write(p, (int)left) : send(sock, p, (int)left, 0); if (sent <= 0) return; left -= sent; p += sent; } }
+            // 发送 body
+            { const char *p = fileBuf.data(); size_t left = fsize; while (left > 0) { auto sent = tls ? tls->write(p, (int)left) : send(sock, p, (int)left, 0); if (sent <= 0) break; left -= sent; p += sent; } }
         });
 
     // ── 下载更新包 (满带宽发送) ──
     server.routeStream("GET", "/api/download",
         [](socket_t sock, TlsConnection *tls, const std::string &) {
             std::string path = Env::exeDir() + "/releases/BallsHackPro-setup-latest.exe";
+            // 读取整个文件到内存，避免 TOCTOU 竞态
             std::ifstream fs(path, std::ios::binary | std::ios::ate);
             if (!fs) {
-                std::string err = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+                std::string err = "HTTP/1.1 404 Not Found\r\n"
+                    "Access-Control-Allow-Origin: *\r\n"
+                    "Content-Length: 0\r\nConnection: close\r\n\r\n";
                 if (tls) tls->write(err.data(), (int)err.size());
-                else send(sock, err.data(), (int)err.size(), 0);
+                else { const char *p = err.data(); size_t left = err.size(); while (left > 0) { auto sent = send(sock, p, (int)left, 0); if (sent <= 0) break; left -= sent; p += sent; } }
                 return;
             }
-            size_t fsize = fs.tellg(); fs.close();
+            size_t fsize = fs.tellg();
+            fs.seekg(0, std::ios::beg);
+            std::vector<char> fileBuf(fsize);
+            fs.read(fileBuf.data(), fsize);
+            fs.close();
             // 从 version.json 读取版本号来生成下载文件名
             std::string ver = "";
             {
@@ -285,18 +339,8 @@ void registerSystemRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
                 if (tls) tls->write(h.data(), (int)h.size());
                 else send(sock, h.data(), (int)h.size(), 0);
             }
-            std::ifstream f(path, std::ios::binary);
-            constexpr size_t CHUNK = 256 * 1024;
-            std::vector<char> chunk(CHUNK);
-            while (f.read(chunk.data(), CHUNK) || f.gcount() > 0) {
-                size_t n = f.gcount();
-                if (tls) tls->write(chunk.data(), (int)n);
-#ifdef _WIN32
-                else send(sock, chunk.data(), (int)n, 0);
-#else
-                else send(sock, chunk.data(), n, 0);
-#endif
-            }
+            // 发送 body（检查返回值避免静默丢数据）
+            { const char *p = fileBuf.data(); size_t left = fsize; while (left > 0) { auto sent = tls ? tls->write(p, (int)left) : send(sock, p, (int)left, 0); if (sent <= 0) break; left -= sent; p += sent; } }
         });
 
     // ── 下载页 ────────────────────────────────────
@@ -405,7 +449,7 @@ void registerSystemRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
     server.route("GET", "/api/update/manifest",
         [](const std::string &, const std::string &, const std::string &) {
             namespace fs = std::filesystem;
-            std::string dir = Env::exeDir() + "/releases/latest";
+            std::string dir = Env::exeDir() + "/releases/latest_full";
             std::ostringstream resp; resp << "[";
             bool first = true;
             try {
@@ -420,12 +464,47 @@ void registerSystemRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
                     if (!first) resp << ","; first = false;
                     resp << "{\"path\":\"" << rel << "\",\"md5\":\"" << md5
                          << "\",\"size\":" << entry.file_size()
-                         << ",\"url\":\"/api/dl?file=latest/" << rel << "\"}";
+                         << ",\"url\":\"/api/dl?file=latest_full/" << rel << "\"}";
                 }
             } catch (...) {}
             resp << "]";
             return resp.str();
         });
+    // ── 全量更新: zip 下载 ──────────────────────────
+    server.routeStream("GET", "/api/update/download",
+        [](socket_t sock, TlsConnection *tls, const std::string &) {
+            std::string path = Env::exeDir() + "/releases/BallsHackPro-latest.zip";
+            // 读取整个文件到内存，避免 TOCTOU 竞态
+            std::ifstream fs(path, std::ios::binary | std::ios::ate);
+            if (!fs) {
+                std::string err = "HTTP/1.1 404 Not Found\r\n"
+                    "Access-Control-Allow-Origin: *\r\n"
+                    "Content-Length: 0\r\nConnection: close\r\n\r\n";
+                if (tls) tls->write(err.data(), (int)err.size());
+                else { const char *p = err.data(); size_t left = err.size(); while (left > 0) { auto sent = send(sock, p, (int)left, 0); if (sent <= 0) break; left -= sent; p += sent; } }
+                return;
+            }
+            size_t fsize = fs.tellg();
+            fs.seekg(0, std::ios::beg);
+            std::vector<char> fileBuf(fsize);
+            fs.read(fileBuf.data(), fsize);
+            fs.close();
+            std::ostringstream hdr;
+            hdr << "HTTP/1.1 200 OK\r\n"
+                << "Content-Type: application/zip\r\n"
+                << "Content-Length: " << fsize << "\r\n"
+                << "Content-Disposition: attachment; filename=\"BallsHackPro-update.zip\"\r\n"
+                << "Cache-Control: public, max-age=86400\r\n"
+                << "Connection: close\r\n"
+                << "Access-Control-Allow-Origin: *\r\n\r\n";
+            std::string h = hdr.str();
+            // 发送 header（检查返回值）
+            { const char *p = h.data(); size_t left = h.size(); while (left > 0) { auto sent = tls ? tls->write(p, (int)left) : send(sock, p, (int)left, 0); if (sent <= 0) return; left -= sent; p += sent; } }
+            // 发送 body
+            { const char *p = fileBuf.data(); size_t left = fsize; while (left > 0) { auto sent = tls ? tls->write(p, (int)left) : send(sock, p, (int)left, 0); if (sent <= 0) break; left -= sent; p += sent; } }
+        });
+
+
 
     server.route("GET", "/api/admin/online-users",
         [&](const std::string &, const std::string &, const std::string &headers) {
@@ -464,31 +543,16 @@ void registerSystemRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
             std::string uid   = StringUtils::jsonVal(body, "uid");
             if (email.empty() && uid.empty())
                 return AuthService::jsonErr("FIELDS_REQUIRED", "email或uid必填");
-            std::string targetUid = uid;
             try {
                 auto &r = RedisClient::instance();
                 if (!uid.empty()) {
-                    r.setex("kicked:" + uid, 900, "1");
+                    r.setex("kicked:" + uid, 60, "1");
                 } else {
                     // 通过 email 找 uid
                     auto user = auth.userStore().findByEmail(email);
-                    if (user) {
-                        targetUid = std::to_string(user->id);
-                        r.setex("kicked:" + targetUid, 900, "1");
-                    }
-                }
-                // 同时失效 session，让 access token 立即不可用
-                if (!targetUid.empty()) {
-                    r.del("session:" + targetUid);
+                    if (user) r.setex("kicked:" + std::to_string(user->id), 60, "1");
                 }
             } catch (...) {}
-            // 撤销所有 refresh token，阻止客户端刷新
-            if (!targetUid.empty()) {
-                try {
-                    uint64_t uidNum = std::stoull(targetUid);
-                    SessionManager::revokeAllForUser(uidNum, &pool);
-                } catch (...) {}
-            }
             return AuthService::jsonOk("已踢出，用户下次心跳将被强制下线");
         });
 

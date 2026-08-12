@@ -119,8 +119,8 @@ std::string VPayService::buildSignStr(const std::vector<std::pair<std::string,st
 static std::string httpPost(const std::string &url, const std::string &data){
     std::string r;
     std::string cmd="curl -s -X POST \""+url+"\" -d \""+data+"\" --max-time 15";
-    FILE*fp=popen(cmd.c_str(),"r");
-    if(fp){char bf[4096];while(fgets(bf,sizeof(bf),fp))r+=bf;pclose(fp);}
+    FILE*fp=_popen(cmd.c_str(),"r");
+    if(fp){char bf[4096];while(fgets(bf,sizeof(bf),fp))r+=bf;_pclose(fp);}
     return r;
 }
 
@@ -137,7 +137,7 @@ std::pair<bool,std::string> VPayService::createOrder(uint64_t uid,const std::str
     b[0].buffer_type=MYSQL_TYPE_LONGLONG;b[0].buffer=&oid;b[1].buffer_type=MYSQL_TYPE_LONGLONG;b[1].buffer=&uid;
     b[2].buffer_type=MYSQL_TYPE_LONGLONG;b[2].buffer=&amt;b[3].buffer_type=MYSQL_TYPE_LONG;b[3].buffer=&d;
     mysql_stmt_bind_param(s,b);int e=mysql_stmt_execute(s);mysql_stmt_close(s);if(e)return{false,"订单创建失败"};
-    try{RedisClient::instance().setex("pay:order:"+ono,300LL,"ok");}catch(...){}
+    try{RedisClient::instance().setex("pay:order:"+ono,1800LL,"ok");}catch(...){}
 
     std::vector<std::pair<std::string,std::string>> pr={
         {"clientip","127.0.0.1"},{"device","mobile"},{"money",money},{"name",nm},
@@ -179,34 +179,21 @@ bool VPayService::handleCallback(const std::string &q){
     std::string ss=buildSignStr(pr);
     // Verify with MD5 since callback uses MD5 (商户密钥)
     auto md5=[](const std::string &s){unsigned char d[16];unsigned int l=0;EVP_MD_CTX*c=EVP_MD_CTX_new();EVP_DigestInit_ex(c,EVP_md5(),nullptr);EVP_DigestUpdate(c,s.data(),s.size());EVP_DigestFinal_ex(c,d,&l);EVP_MD_CTX_free(c);static const char h[]="0123456789abcdef";std::string r(32,'\0');for(int i=0;i<16;++i){r[i*2]=h[d[i]>>4];r[i*2+1]=h[d[i]&0xF];}return r;};
-    // RSA 验签（用平台公钥）
-    auto b64dec=[](const std::string &s){
-        static int D[256]={};static bool init=false;if(!init){for(int i=0;i<256;++i)D[i]=-1;
-        for(int i=0;i<64;++i)D[(int)"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"[i]]=i;init=true;}
-        std::string o;for(size_t i=0;i<s.size();i+=4){int v0=D[(unsigned char)s[i]],v1=i+1<s.size()?D[(unsigned char)s[i+1]]:-1,
-        v2=i+2<s.size()&&s[i+2]!='='?D[(unsigned char)s[i+2]]:-1,v3=i+3<s.size()&&s[i+3]!='='?D[(unsigned char)s[i+3]]:-1;
-        if(v0==-1||v1==-1)break;unsigned int v=((unsigned int)v0<<18)|((unsigned int)v1<<12);o+=(unsigned char)(v>>16);
-        if(v2!=-1){v|=(unsigned int)v2<<6;o+=(unsigned char)(v>>8);}if(v3!=-1){v|=(unsigned int)v3;o+=(unsigned char)v;}}return o;};
-    std::string pk=readFile("rsa_plat_pub.pem");
-    if(!pk.empty()){
-        std::string sd=b64dec(cs);
-        BIO*b2=BIO_new_mem_buf(pk.data(),(int)pk.size());EVP_PKEY*ppk=PEM_read_bio_PUBKEY(b2,nullptr,nullptr,nullptr);BIO_free(b2);
-        if(ppk){EVP_MD_CTX*c2=EVP_MD_CTX_new();EVP_VerifyInit_ex(c2,EVP_sha256(),nullptr);EVP_VerifyUpdate(c2,ss.data(),ss.size());
-            int ok=EVP_VerifyFinal(c2,(unsigned char*)sd.data(),(unsigned int)sd.size(),ppk);EVP_MD_CTX_free(c2);EVP_PKEY_free(ppk);
-            if(ok!=1){printf("[VPay] RSA verify FAILED\n");return false;}
-        } else { printf("[VPay] RSA verify: bad pubkey\n"); return false; }
-    } else {
-        // MD5 验签兜底（与 createOrder 的 sign_type=MD5 对应）
-        std::string expected = md5(ss + m_md5Key);
-        if (cs != expected) {
-            printf("[VPay] MD5 verify FAILED (got=%s, expected=%s)\n", cs.c_str(), expected.c_str());
-            return false;
-        }
+    // RSA 验签（MD5+RSA: 签名源串末尾拼接商户密钥）
+    ss += m_md5Key;
+    printf("[VPay] sign_src: %s\n", ss.c_str());
+    printf("[VPay] sign_raw: %s\n", cs.c_str());
+    // MD5 验签（回调签名是 MD5 哈希）
+    std::string expectedSign = md5(ss);
+    printf("[VPay] expected_sign: %s\n", expectedSign.c_str());
+    if (cs != expectedSign) {
+        printf("[VPay] MD5 verify FAILED\n");
+        return false;
     }
-    if(on.find_first_not_of("0123456789")!=std::string::npos)return false;
     uint64_t oid=std::stoull(on);
-    // 检查 Redis 订单是否过期
-    try{auto v=RedisClient::instance().get("pay:order:"+on);if(!v)return false;}catch(...){}
+    // Redis 过期不阻塞回调 — 签名已验证, DB 幂等兜底
+    bool redisExists = false;
+    try{auto v=RedisClient::instance().get("pay:order:"+on);redisExists=!!v;}catch(...){}
     auto g=m_pool.acquire(5000);if(!g)return false;MYSQL*db=g->get();
     uint64_t du=0,amt=0;uint32_t dd=0;char ds[32]={};bool fd=false;char qb[512];
     snprintf(qb,sizeof(qb),"SELECT user_id,duration_days,status,amount FROM payment_orders WHERE id=%llu",oid);

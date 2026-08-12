@@ -10,16 +10,13 @@
 #include <ctime>
 #include <iomanip>
 
-// ── 检查用户订阅状态 ──
-static bool checkSubscribed(AuthService &auth, DbPool &pool, const std::string &headers,
+// ── 检查用户订阅状态 (接受已认证的 TokenPayload，避免重复认证) ──
+static bool checkSubscribed(AuthService &auth, const std::optional<TokenPayload> &tp,
                             std::string &subExpires) {
-    auto tp = auth.authenticate(headers);
-    if (!tp) { std::cerr << "[checkSubscribed] auth failed" << std::endl; return false; }
-    std::cerr << "[checkSubscribed] email=" << tp->email << " sub=" << tp->sub << std::endl;
+    if (!tp) return false;
     auto user = auth.userStore().findByEmail(tp->email);
-    if (!user) { std::cerr << "[checkSubscribed] user not found" << std::endl; return false; }
-    std::cerr << "[checkSubscribed] subExpires=" << user->subscription_expires << std::endl;
-    if (user->subscription_expires.empty()) { std::cerr << "[checkSubscribed] subExpires empty" << std::endl; return false; }
+    if (!user) return false;
+    if (user->subscription_expires.empty()) return false;
     subExpires = user->subscription_expires;
     auto now = std::chrono::system_clock::now();
     auto nowT = std::chrono::system_clock::to_time_t(now);
@@ -27,7 +24,6 @@ static bool checkSubscribed(AuthService &auth, DbPool &pool, const std::string &
     std::istringstream ss(subExpires);
     ss >> std::get_time(&expireTm, "%Y-%m-%d %H:%M:%S");
     auto expireT = std::mktime(&expireTm);
-    std::cerr << "[checkSubscribed] nowT=" << nowT << " expireT=" << expireT << " result=" << (expireT > nowT) << std::endl;
     return (expireT > nowT);
 }
 
@@ -46,8 +42,8 @@ void registerAssetRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
             auto tp = auth.authenticate(headers);
             if (!tp) return AuthService::jsonErr("UNAUTHORIZED", "请先登录");
 
-            bool sub = false;
-            { std::string dummy; sub = checkSubscribed(auth, pool, headers, dummy); }
+            std::string dummy;
+            bool sub = checkSubscribed(auth, tp, dummy);
 
             std::ifstream f("assets/signatures.json");
             if (!f) return AuthService::jsonErr("NOT_FOUND", "特征码资源未部署");
@@ -75,8 +71,8 @@ void registerAssetRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
             auto tp = auth.authenticate(headers);
             if (!tp) return AuthService::jsonErr("UNAUTHORIZED", "请先登录");
 
-            bool sub = false;
-            { std::string dummy; sub = checkSubscribed(auth, pool, headers, dummy); }
+            std::string dummy;
+            bool sub = checkSubscribed(auth, tp, dummy);
 
             std::ifstream f("assets/offsets.json");
             if (!f) return AuthService::jsonErr("NOT_FOUND", "偏移资源未部署");
@@ -101,7 +97,7 @@ void registerAssetRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
             if (!tp) return AuthService::jsonErr("UNAUTHORIZED", "请先登录");
 
             std::string subExpires;
-            if (!checkSubscribed(auth, pool, headers, subExpires)) {
+            if (!checkSubscribed(auth, tp, subExpires)) {
                 return AuthService::jsonErr("FORBIDDEN",
                     "此功能需要Pro订阅。如需订阅请联系开发者。");
             }

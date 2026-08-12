@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
-project(BallsHackProService
+project(SuretyService
     VERSION 1.0.0
-    DESCRIPTION "BallsHackPro backend service"
+    DESCRIPTION "Surety backend service"
     LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -131,7 +131,6 @@ set(HEADERS
 
 # ── Executable ────────────────────────────────────────
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
-set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME BallsHackProService)
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src)

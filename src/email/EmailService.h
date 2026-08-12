@@ -1,7 +1,6 @@
 #pragma once
 #include <string>
 #include <memory>
-#include <mutex>
 
 class SmtpClient;
 
@@ -22,6 +21,5 @@ private:
                           const char *label, const char *desc) const;
 
     std::unique_ptr<SmtpClient> m_smtp;
-    std::mutex m_smtpMutex;
     std::string m_lastError;
 };

@@ -3,80 +3,281 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BallsHackPro - 下载</title>
+<title>BallsHackPro</title>
 <style>
   :root {
-    --bg: #0a0a0f; --card: #13131f; --border: #1e1e33;
-    --accent: #7c3aed; --accent2: #06b6d4; --text: #e2e8f0; --muted: #8b949e;
+    --bg: #0a0a14;
+    --surface: #111122;
+    --primary: #7C3AED;
+    --primary-soft: rgba(124, 58, 237, 0.15);
+    --accent: #F43F5E;
+    --text: #e8e8f0;
+    --muted: #8b8ba0;
+    --muted-2: #5a5a72;
+    --border: rgba(255,255,255,0.05);
+    --radius: 10px;
   }
   * { margin:0; padding:0; box-sizing:border-box; }
+  html { scroll-behavior: smooth; }
   body {
-    background: var(--bg); color: var(--text);
-    font-family: 'Inter', 'Microsoft YaHei UI', sans-serif;
-    min-height:100vh; display:flex; align-items:center; justify-content:center;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, 'Microsoft YaHei UI', 'PingFang SC', sans-serif;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    background-image:
+      radial-gradient(ellipse 600px 300px at 50% 0%, rgba(124, 58, 237, 0.06), transparent),
+      radial-gradient(ellipse 400px 200px at 50% 100%, rgba(244, 63, 94, 0.03), transparent);
   }
-  .main {
-    width:100%; max-width:560px; padding:40px 24px; text-align:center;
+
+  .page {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 0 24px;
   }
-  h1 {
-    font-size:48px; font-weight:800; margin-bottom:8px;
-    background:linear-gradient(135deg,var(--accent),var(--accent2));
-    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+
+  /* ── Hero ── */
+  .hero {
+    text-align: center;
+    padding: 100px 0 64px;
   }
-  .subtitle { color:var(--muted); font-size:17px; margin-bottom:32px; }
-  .btns { display:flex; gap:14px; justify-content:center; flex-wrap:wrap; margin-bottom:40px; }
+  .hero .icon {
+    width: 72px; height: 72px;
+    border-radius: 18px;
+    margin: 0 auto 28px;
+    display: block;
+    filter: drop-shadow(0 8px 24px rgba(124, 58, 237, 0.3));
+  }
+  .hero h1 {
+    font-size: 36px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, #e8e8f0 0%, #c4b5fd 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero .tagline {
+    font-size: 15px;
+    color: var(--muted);
+    margin-bottom: 32px;
+  }
+
+  .meta-row {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 32px;
+  }
+  .meta-item {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 14px;
+    border-radius: 99px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    letter-spacing: 0.3px;
+  }
+  .meta-item.live {
+    background: rgba(34, 197, 94, 0.07);
+    border-color: rgba(34, 197, 94, 0.18);
+    color: #4ade80;
+  }
+  .meta-item.live::before {
+    content: "";
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #4ade80;
+    margin-right: 6px;
+    vertical-align: middle;
+    box-shadow: 0 0 6px rgba(74, 222, 128, 0.5);
+  }
+
+  .btns {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
   .btn {
-    display:inline-flex; align-items:center; gap:8px;
-    padding:14px 28px; border-radius:10px; font-size:16px; font-weight:700;
-    text-decoration:none; transition:all .25s; border:1px solid transparent;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 32px;
+    border-radius: var(--radius);
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
   }
-  .btn-server { background: var(--accent); color:#fff; }
-  .btn-server:hover { background:#6d28d9; transform:translateY(-2px); box-shadow:0 8px 30px rgba(124,58,237,0.3); }
-  .btn-gh { border-color:var(--border); color:var(--text); background:var(--card); }
-  .btn-gh:hover { border-color:var(--accent); background:rgba(124,58,237,0.08); }
-  .features { text-align:left; max-width:420px; margin:0 auto 36px; }
-  .features h2 { font-size:20px; font-weight:700; margin-bottom:16px; color:var(--text); }
-  .features ul { list-style:none; }
-  .features li {
-    padding:10px 0; border-bottom:1px solid var(--border); color:var(--muted); font-size:15px;
+  .btn:hover { transform: translateY(-1px); }
+  .btn:active { transform: translateY(0); }
+
+  .btn-primary {
+    background: var(--primary);
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(124, 58, 237, 0.35);
   }
-  .features li:last-child { border:none; }
-  .features li::before { content:""; display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--accent); margin-right:10px; vertical-align:middle; }
-  .footer { color:var(--muted); font-size:13px; }
-  .footer a { color:var(--accent); text-decoration:none; }
-  .footer a:hover { text-decoration:underline; }
+  .btn-primary:hover {
+    background: #8b5cf6;
+    box-shadow: 0 6px 28px rgba(124, 58, 237, 0.45);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.08);
+    color: var(--muted);
+  }
+  .btn-ghost:hover {
+    border-color: rgba(255,255,255,0.15);
+    color: var(--text);
+    background: rgba(255,255,255,0.03);
+  }
+
+  .file-info {
+    margin-top: 16px;
+    font-size: 12px;
+    color: var(--muted-2);
+  }
+
+  /* ── Features ── */
+  .features {
+    padding: 0 0 64px;
+  }
+  .features .section-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--primary);
+    margin-bottom: 24px;
+  }
+  .feature-item {
+    display: flex;
+    gap: 16px;
+    padding: 10px 0;
+    align-items: flex-start;
+  }
+  .feature-item .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--primary);
+    margin-top: 7px;
+    flex-shrink: 0;
+    opacity: 0.5;
+  }
+  .feature-item .body {
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .feature-item .name {
+    color: var(--text);
+    font-weight: 600;
+  }
+  .feature-item .desc {
+    color: var(--muted);
+  }
+
+  /* ── Footer ── */
+  .footer {
+    text-align: center;
+    padding: 40px 0 56px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--muted-2);
+  }
+  .footer a {
+    color: var(--muted);
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+  .footer a:hover { color: var(--primary); }
+  .footer .sep {
+    display: inline-block;
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.1);
+    margin: 0 10px;
+    vertical-align: middle;
+  }
 </style>
 </head>
 <body>
-<div class="main">
-  <h1>BallsHackPro</h1>
-  <p class="subtitle">球球大作战 · 球宝の秘密武器</p>
 
-  <div class="btns">
-    <a href="/api/mxelf" class="btn btn-server" download="BallsHackPro.exe">点我下载 (服务器)</a>
-    <a href="https://github.com/SoloHomie/BallsHackPro-Public/releases" class="btn btn-gh" target="_blank">从 GitHub 下载</a>
-  </div>
+<div class="page">
 
-  <div class="features">
-    <h2>这东西能干啥</h2>
-    <ul>
-      <li>自动追着目标咬 — 锁就完了</li>
-      <li>目标被扎刺？一秒分身糊脸</li>
-      <li>三角/冲球/四分/中分/后仰/旋转/半旋/蛇手 — 花式合球</li>
-      <li>黑屏了？自动帮你分身出来</li>
-      <li>调视野/改速度/拉摇杆 — 内存级调参，爽就完事了</li>
-      <li>开个房间，两个人互相看对方视角</li>
-      <li>暂时弃坑；下次更新增相关功能</li>
-      <li>深色浅色随便换，Win11毛玻璃特效</li>
-    </ul>
-  </div>
+  <!-- Hero -->
+  <section class="hero">
+    <img class="icon" src="/logo.png" alt="">
+    <h1>BallsHackPro</h1>
+    <p class="tagline">球球大作战 · 球宝の秘密武器</p>
 
-  <p class="footer">
-    用爱发电 by <a href="https://github.com/SoloHomie">SoloHomie</a> |
-    给颗Star球宝~  <a href="https://github.com/SoloHomie/BallsHackPro-Public">GitHub</a> |
+    <div class="meta-row">
+      <span class="meta-item live">服务在线</span>
+      <span class="meta-item">v1.2.1</span>
+      <span class="meta-item">Windows 10 / 11</span>
+    </div>
+
+    <div class="btns">
+      <a href="/api/installer" class="btn btn-primary" download="BallsHackPro-setup.exe">下载安装包</a>
+      <a href="https://github.com/SoloHomie/BallsHackPro-Public/releases" class="btn btn-ghost" target="_blank">GitHub 下载</a>
+    </div>
+    <p class="file-info">~76 MB · 支持 Windows 10 及以上</p>
+  </section>
+
+  <!-- Features -->
+  <section class="features">
+    <p class="section-label">功能</p>
+
+    <div class="feature-item">
+      <span class="dot"></span>
+      <span class="body"><span class="name">锁定</span> <span class="desc">— 自动追着目标咬，锁就完了</span></span>
+    </div>
+    <div class="feature-item">
+      <span class="dot"></span>
+      <span class="body"><span class="name">分身</span> <span class="desc">— 目标被扎刺，一秒分身糊脸</span></span>
+    </div>
+    <div class="feature-item">
+      <span class="dot"></span>
+      <span class="body"><span class="name">合球</span> <span class="desc">— 三角 · 冲球 · 四分 · 中分 · 后仰 · 旋转 · 半旋 · 蛇手</span></span>
+    </div>
+    <div class="feature-item">
+      <span class="dot"></span>
+      <span class="body"><span class="name">救球</span> <span class="desc">— 黑屏了自动帮你分身出来</span></span>
+    </div>
+    <div class="feature-item">
+      <span class="dot"></span>
+      <span class="body"><span class="name">调控</span> <span class="desc">— 调视野 · 改速度 · 拉摇杆，内存级调参</span></span>
+    </div>
+    <div class="feature-item">
+      <span class="dot"></span>
+      <span class="body"><span class="name">同步</span> <span class="desc">— 开个房间，两个人互相看对方视角</span></span>
+    </div>
+    <div class="feature-item">
+      <span class="dot"></span>
+      <span class="body"><span class="name">界面</span> <span class="desc">— 深色浅色随便换，Win11 毛玻璃特效</span></span>
+    </div>
+    <div class="feature-item">
+      <span class="dot"></span>
+      <span class="body"><span class="name">更新</span> <span class="desc">— 暂时弃坑，下次更新增相关功能</span></span>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <div class="footer">
+    <a href="https://github.com/SoloHomie">SoloHomie</a>
+    <span class="sep"></span>
+    <a href="https://github.com/SoloHomie/BallsHackPro-Public">GitHub</a>
+    <span class="sep"></span>
     <a href="https://discord.gg/YtvJrFvcC5">Discord</a>
-  </p>
-  <p class="footer" style="margin-top:6px;">由 Cloudflare 提供内容分发服务</p>
+  </div>
+
 </div>
+
 </body>
 </html>

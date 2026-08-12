@@ -5,4 +5,9 @@ services:
     network_mode: host
     env_file:
       - .env
+    volumes:
+      - ./releases:/app/releases
+      - ./pricing.json:/app/pricing.json
+      - ./announcement.json:/app/announcement.json
+      - ./version.json:/app/version.json
     restart: unless-stopped

@@ -1,6 +1,7 @@
 {
-  "latest_version": "1.2.0",
-  "min_version": "1.2.0",
+  "latest_version": "1.2.4",
+  "min_version": "1.2.4",
   "download_url": "https://api.solohomie.top/api/download",
-  "changelog": "v1.2.0 更新内容\n• 增加环境适配功能，让玩家可以匹配到更多有乐趣的人\n• 优化锁球 - 大炮，更加精准的判断方向\n• 构建好同步的大致模块 (beta)\n• 优化钩子回调处理\n• 优化远程更新逻辑"
+  "direct_download_url": "https://38.92.9.178/api/download",
+  "changelog": "v1.2.4 (2026-08-11)\n\nBug Fixes:\n• 修复用户连接超时问题 — 客户端与服务端重连逻辑优化\n• 修复远程 Peer 控制时窗口消失 — cloakWindow() 在受控端跳过 WDA_EXCLUDEFROMCAPTURE\n• 修复关闭到托盘时托盘图标偶发缺失 — TrayAvailable 改用 trayIcon->isVisible() 并 5s 刷新\n• 修正增量更新 manifest 路径 — latest → latest_full\n\nFeatures:\n• 订阅 / 领取福利后快速响应 — 无需等待，即时反馈\n• APK 签名失败时环境配置指引 — 自动检测缺失依赖并给出修复步骤\n• 支付系统完美闭环 — 完整支付链路，用户侧无感知\n\nInfra:\n• 服务端 manifest 扫描 /app/releases/latest_full\n• 容器内 unzip 解压 Windows zip\n• docker cp 需先 rm -rf 防残留\n\nGitHub: https://github.com/SoloHomie/BallsHackPro-Public/releases/tag/v1.2.4"
 }

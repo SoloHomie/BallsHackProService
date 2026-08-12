@@ -35,7 +35,6 @@
 #include <memory>
 #include <mutex>
 #include <condition_variable>
-#include <queue>
 
 class TlsContext;
 class TlsConnection;
@@ -62,7 +61,6 @@ public:
 
 private:
     void acceptLoop();
-    void workerLoop(int id);
     void handleClient(socket_t clientSock);
 
     TlsConnection* tlsHandshake(socket_t sock);
@@ -86,14 +84,6 @@ private:
     std::atomic<bool> m_running{false};
     std::thread m_acceptThread;
     bool m_useTls = false;
-
-    // ── 线程池 ──
-    std::vector<std::thread> m_workers;
-    std::queue<socket_t> m_taskQueue;
-    std::mutex m_queueMutex;
-    std::condition_variable m_queueCv;
-    std::atomic<bool> m_poolRunning{false};
-    static constexpr int POOL_SIZE = 8;
 
     std::unique_ptr<TlsContext> m_tlsCtx;
 

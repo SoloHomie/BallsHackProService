@@ -245,8 +245,7 @@ void registerAuthRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
             tp.provider = provider;
             tp.jti      = SessionManager::generateJti();
             std::string newAccess = auth.tokenService().generateAccess(tp, 900);
-            // 静默更新 session JTI，不触发踢下线（refresh 不是新设备登录）
-            try { RedisClient::instance().setex("session:" + tp.sub, 900, tp.jti); } catch (...) {}
+	    auth.bindSession(tp.sub, tp.jti);
 
             std::string newRefresh = TokenService::generateRefresh();
             SessionManager::storeRefresh(newRefresh, sub, email, provider, 30*24*3600, &pool);
@@ -264,11 +263,6 @@ void registerAuthRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
                 resp << ",\"username\":\"" << AuthService::jsonEscape(refUser->username) << "\"";
             }
             resp << ",\"provider\":\"" << AuthService::jsonEscape(provider) << "\"";
-            if (refUser) {
-                AuthService::appendSubscription(resp, &*refUser);
-            } else {
-                AuthService::appendSubscription(resp, nullptr);
-            }
             resp << "}";
             return resp.str();
         });
@@ -305,11 +299,8 @@ void registerAuthRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
             // 订阅状态（需登录）—— Redis 缓存 + MySQL 兜底
             bool subscribed = false;
             std::string subExpires = "";
-            std::string userName = "";
-            std::string userEmail = "";
             auto tp = auth.authenticate(headers);
             if (tp) {
-                userEmail = tp->email;
                 // 1. 先查 Redis 缓存
                 bool cached = false;
                 try {
@@ -332,9 +323,7 @@ void registerAuthRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
                 // 2. 缓存未命中 → 查 MySQL 并回写 Redis
                 if (!cached) {
                     auto user = auth.userStore().findByEmail(tp->email);
-                    if (user) {
-                        userName = user->username;
-                        if (!user->subscription_expires.empty()) {
+                    if (user && !user->subscription_expires.empty()) {
                         subExpires = user->subscription_expires;
                         auto now = std::chrono::system_clock::now();
                         auto nowT = std::chrono::system_clock::to_time_t(now);
@@ -349,48 +338,21 @@ void registerAuthRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
                             int ttl = subscribed ? (d > 60 ? d : 60) : 60;
                             RedisClient::instance().setex("sub:" + tp->sub, ttl, subExpires);
                         } catch (...) {}
-                        }
-                    }  // if (user)
-                }  // if (!cached)
+                    }
+                }
 
                 // ── 在线状态: 心跳刷新, 30s TTL ──
                 try {
                     auto &r = RedisClient::instance();
+                    // 检查是否被踢
                     if (r.exists("kicked:" + tp->sub)) {
-                        auto stored = r.get("session:" + tp->sub);
-                        if (stored && *stored == tp->jti) {
-                            // JTI 匹配 → 被踢后重新登录，kicked 是残留，清理掉
-                            r.del("kicked:" + tp->sub);
-                        } else {
-                            // session 不存在（管理员删了）→ 真正被踢
-                            r.del("kicked:" + tp->sub);
-                            std::ostringstream kr;
-                            kr << "{\"success\":true,\"status\":\"kicked\",\"subscribed\":false}";
-                            return kr.str();
-                        }
+                        r.del("kicked:" + tp->sub);
+                        std::ostringstream kr;
+                        kr << "{\"success\":true,\"status\":\"kicked\",\"subscribed\":false}";
+                        return kr.str();
                     }
                     r.setex("online:" + tp->sub, 30, tp->email);
                 } catch (...) {}
-            }
-
-            // 认证失败时，尝试检测踢下线（异地登录/管理员强踢导致 JTI 失效）
-            if (!tp) {
-                std::string token = AuthService::extractBearerToken(headers);
-                if (!token.empty()) {
-                    auto payload = auth.tokenService().verify(token);
-                    if (payload) {
-                        try {
-                            auto &r = RedisClient::instance();
-                            if (r.exists("kicked:" + payload->sub)) {
-                                r.del("kicked:" + payload->sub);
-                                std::ostringstream kr;
-                                kr << "{\"success\":true,\"status\":\"kicked\",\"subscribed\":false}";
-                                return kr.str();
-                            }
-                        } catch(...) {}
-                    }
-                }
-                return AuthService::jsonErr("UNAUTHORIZED", "token 已过期，请重新登录");
             }
 
             std::ostringstream resp;
@@ -403,30 +365,43 @@ void registerAuthRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
                  << ",\"release_notes\":\"" << AuthService::jsonEscape(releaseNotes) << "\""
                  << ",\"subscribed\":" << (subscribed ? "true" : "false")
                  << ",\"subscription_expires\":\"" << AuthService::jsonEscape(subExpires) << "\""
-                 << ",\"username\":\"" << AuthService::jsonEscape(userName) << "\""
-                 << ",\"email\":\"" << AuthService::jsonEscape(userEmail) << "\""
                  << "}";
             return resp.str();
         });
-    // ── 用户完整档案 ──────────────────────────
+    // username update
+    // ── 获取用户信息 ────────────────────────────────
     server.route("GET", "/api/user/profile",
-        [&](const std::string &, const std::string &, const std::string &headers) {
-            auto tp = auth.authenticate(headers);
-            if (!tp) return AuthService::jsonErr("UNAUTHORIZED", "请先登录");
-            auto user = auth.userStore().findByEmail(tp->email);
-            if (!user) return AuthService::jsonErr("NOT_FOUND", "用户不存在");
-
-            std::ostringstream resp;
-            resp << "{\"success\":true"
-                 << ",\"uid\":\"" << AuthService::jsonEscape(tp->sub) << "\""
-                 << ",\"email\":\"" << AuthService::jsonEscape(user->email) << "\""
-                 << ",\"username\":\"" << AuthService::jsonEscape(user->username) << "\"";
-            AuthService::appendSubscription(resp, &*user);
-            resp << "}";
-            return resp.str();
+        [&](const std::string &, const std::string &, const std::string &h) {
+            auto tp = auth.authenticate(h);
+            if (!tp) return AuthService::jsonErr("UNAUTHORIZED", "login required");
+            uint64_t uid = std::stoull(tp->sub);
+            auto g = pool.acquire(5000);
+            if (!g) return AuthService::jsonErr("DB_ERROR", "db busy");
+            char qb[512];
+            snprintf(qb, sizeof(qb),
+                "SELECT email, username, COALESCE(avatar_url,'') AS av, provider, "
+                "UNIX_TIMESTAMP(GREATEST(COALESCE(subscription_expires, NOW()), NOW())) AS sub_exp, "
+                "balance FROM users WHERE id=%llu", uid);
+            mysql_query(g->get(), qb);
+            MYSQL_RES *res = mysql_store_result(g->get());
+            if (!res || mysql_num_rows(res) == 0) {
+                if (res) mysql_free_result(res);
+                return AuthService::jsonErr("NOT_FOUND", "user not found");
+            }
+            MYSQL_ROW r = mysql_fetch_row(res);
+            std::ostringstream j;
+            j << "{\"success\":true,\"user\":{"
+              << "\"email\":\"" << AuthService::jsonEscape(r[0]?r[0]:"") << "\""
+              << ",\"username\":\"" << AuthService::jsonEscape(r[1]?r[1]:"") << "\""
+              << ",\"avatar_url\":\"" << AuthService::jsonEscape(r[2]?r[2]:"") << "\""
+              << ",\"provider\":\"" << AuthService::jsonEscape(r[3]?r[3]:"local") << "\""
+              << ",\"subscription_expires\":" << (r[4]?r[4]:"0")
+              << ",\"balance\":" << (r[5]?r[5]:"0")
+              << "}}";
+            mysql_free_result(res);
+            return j.str();
         });
 
-    // username update
     server.route("POST", "/api/user/update-profile",
         [&](const std::string &body, const std::string &, const std::string &h) {
             auto tp = auth.authenticate(h);
