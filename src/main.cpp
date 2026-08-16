@@ -29,6 +29,13 @@
 #include <sstream>
 #include <thread>
 #include <chrono>
+#include <csignal>
+#include <atomic>
+
+// graceful shutdown: docker stop sends SIGTERM, exit immediately instead
+// of being SIGKILLed after 10s (that window = login Connection refused)
+static std::atomic<bool> g_shutdown{false};
+static void onShutdownSignal(int) { g_shutdown.store(true, std::memory_order_relaxed); }
 
 int main() {
     Env::loadDotEnv();
@@ -39,6 +46,8 @@ int main() {
     }
 
     SmtpClient::init();
+    std::signal(SIGTERM, onShutdownSignal);
+    std::signal(SIGINT,  onShutdownSignal);
 
 #ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);
@@ -109,9 +118,16 @@ int main() {
     std::cout << "  MySQL: " << DbConfig::HOST << ":" << DbConfig::PORT
               << "/" << DbConfig::DATABASE << std::endl;
 
-    while (true) {
-        std::this_thread::sleep_for(std::chrono::seconds(60));
+    int tick = 0;
+    while (!g_shutdown.load(std::memory_order_relaxed)) {
+        // 1s slices so a signal exits within ~1s (not up to 60s)
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+        if (++tick < 60) continue;
+        tick = 0;
         auth.codeManager().purgeExpired();
+
+        // 支付对账: 扫描未支付订单向平台查单补账 (付了钱必发货)
+        paymentReconcileSweep();
 
         // 清理断线用户的房间成员
         {
@@ -165,4 +181,8 @@ int main() {
             }
         }
     }
+
+    server.stop();
+    std::cout << "Shutting down cleanly" << std::endl;
+    return 0;
 }

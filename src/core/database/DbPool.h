@@ -1,14 +1,14 @@
 #pragma once
-// â”€â”€ MySQL å›ºå®šå¤§å°è¿æ¥æ± ï¼ˆheader-onlyï¼ŒRAII å®ˆå«ï¼‰â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// çº¿ç¨‹å®‰å…¨ã€‚æ¯ä¸ªçº¿ç¨‹ acquire() æ‹¿åˆ°ç‹¬å è¿æ¥ï¼Œç”¨å®Œåè‡ªåŠ¨å½’è¿˜ã€‚
+// ©¤©¤ MySQL ¹Ì¶¨´óĞ¡Á¬½Ó³Ø£¨header-only£¬RAII ÊØÎÀ£©©¤©¤©¤©¤©¤©¤©¤©¤©¤
+// Ïß³Ì°²È«¡£Ã¿¸öÏß³Ì acquire() ÄÃµ½¶ÀÕ¼Á¬½Ó£¬ÓÃÍêºó×Ô¶¯¹é»¹¡£
 //
-// ç”¨æ³•:
+// ÓÃ·¨:
 //   DbPool pool(host, user, pass, db, port, 10);
 //   auto guard = pool.acquire(5000);
 //   if (guard) {
 //       MYSQL* db = guard->get();
-//       // ... æ‰§è¡ŒæŸ¥è¯¢ ...
-//   }  // guard ææ„ï¼Œè¿æ¥å½’è¿˜æ± 
+//       // ... Ö´ĞĞ²éÑ¯ ...
+//   }  // guard Îö¹¹£¬Á¬½Ó¹é»¹³Ø
 
 #include <mysql/mysql.h>
 #include <string>
@@ -24,7 +24,7 @@
 
 class DbPool {
 public:
-    // â”€â”€ RAII è¿æ¥å®ˆå« â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ©¤©¤ RAII Á¬½ÓÊØÎÀ ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
     class ConnGuard {
     public:
         ConnGuard(MYSQL* conn, DbPool* pool)
@@ -61,7 +61,7 @@ public:
         DbPool* m_pool;
     };
 
-    // â”€â”€ æ„é€ å‡½æ•° â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ©¤©¤ ¹¹Ôìº¯Êı ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
     DbPool(const std::string& host,
            const std::string& user,
            const std::string& password,
@@ -96,7 +96,7 @@ public:
     DbPool(const DbPool&)            = delete;
     DbPool& operator=(const DbPool&) = delete;
 
-    // â”€â”€ è·å–è¿æ¥ï¼ˆè¶…æ—¶æ¯«ç§’ï¼Œè¿”å› nullopt è¡¨ç¤ºè¶…æ—¶ï¼‰â”€â”€â”€â”€â”€â”€â”€
+    // ©¤©¤ »ñÈ¡Á¬½Ó£¨³¬Ê±ºÁÃë£¬·µ»Ø nullopt ±íÊ¾³¬Ê±£©©¤©¤©¤©¤©¤©¤©¤
     std::optional<ConnGuard> acquire(int timeoutMs) {
         std::unique_lock<std::mutex> lock(m_mutex);
         if (!m_cv.wait_for(lock, std::chrono::milliseconds(timeoutMs),
@@ -137,7 +137,13 @@ private:
         MYSQL* conn = mysql_init(nullptr);
         if (!conn) return nullptr;
 
-        // è¿æ¥ï¼ˆé‡è¯• 3 æ¬¡ï¼Œé—´éš” 2 ç§’ï¼Œç­‰ MySQL å°±ç»ªï¼‰
+        // 3 Ãë³¬Ê±: ¹²ÏíÔÆÅÌ¿¨¶ÙÊ±²»ÎŞÏŞµÈ´ı, ¿ìËÙÊ§°Ü½»¸øÉÏ²ã/¿Í»§¶ËÖØÊÔ
+        unsigned int timeoutSec = 3;
+        mysql_options(conn, MYSQL_OPT_CONNECT_TIMEOUT, &timeoutSec);
+        mysql_options(conn, MYSQL_OPT_READ_TIMEOUT, &timeoutSec);
+        mysql_options(conn, MYSQL_OPT_WRITE_TIMEOUT, &timeoutSec);
+
+        // Á¬½Ó£¨ÖØÊÔ 3 ´Î£¬¼ä¸ô 2 Ãë£¬µÈ MySQL ¾ÍĞ÷£©
         for (int retry = 0; retry < 3; ++retry) {
             if (mysql_real_connect(conn, host.c_str(), user.c_str(),
                                    password.c_str(), database.c_str(),
@@ -146,14 +152,14 @@ private:
                 return conn;
             }
             if (retry < 2) {
-                std::cerr << "[DbPool] è¿æ¥å¤±è´¥ (å°è¯• " << (retry + 1)
+                std::cerr << "[DbPool] Á¬½ÓÊ§°Ü (³¢ÊÔ " << (retry + 1)
                           << "/3): " << mysql_error(conn)
-                          << " â€” 2ç§’åé‡è¯•..." << std::endl;
+                          << " ¡ª 2ÃëºóÖØÊÔ..." << std::endl;
                 std::this_thread::sleep_for(std::chrono::seconds(2));
             }
         }
 
-        std::cerr << "[DbPool] è¿æ¥å¤±è´¥: " << mysql_error(conn) << std::endl;
+        std::cerr << "[DbPool] Á¬½ÓÊ§°Ü: " << mysql_error(conn) << std::endl;
         mysql_close(conn);
         return nullptr;
     }

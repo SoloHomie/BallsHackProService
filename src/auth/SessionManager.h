@@ -1,23 +1,27 @@
 #pragma once
-// â”€â”€ Session / Token ç®¡ç†ï¼ˆå¤§å‚æ ‡å‡†åŒä»¤ç‰Œæ¨¡å¼ï¼‰â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ©¤©¤ Session / Token ¹ÜÀí£¨´ó³§±ê×¼Ë«ÁîÅÆÄ£Ê½£©©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
 //
 // Access Token (JWT, 15 min):
-//   æ— çŠ¶æ€ï¼Œç­¾åè‡ªéªŒè¯ï¼Œä¸æŸ¥ä»»ä½•å­˜å‚¨ã€‚
+//   ÎŞ×´Ì¬£¬Ç©Ãû×ÔÑéÖ¤£¬²»²éÈÎºÎ´æ´¢¡£
 //   Authorization: Bearer <token>
 //
-// Refresh Token (éšæœº hex, 30 å¤©):
-//   MySQL æ˜¯å”¯ä¸€æ•°æ®æºï¼ˆå¸¦ç´¢å¼•ï¼‰ã€‚
-//   æ”¯æŒè½®æ¢ï¼šæ¯æ¬¡åˆ·æ–°æ—¶æ—§ token å¤±æ•ˆï¼Œå‘æ–° tokenã€‚
-//   æ’¤é”€ï¼šæŒ‰ token å•æ¡æ’¤é”€ / æŒ‰ç”¨æˆ·æ‰¹é‡æ’¤é”€ã€‚
+// Refresh Token (Ëæ»ú hex, 30 Ìì):
+//   Redis Ö÷´æ´¢ (×Ô¶¯µÇÂ¼/Ë¢ĞÂ 1-2ms, ÔÆÅÌ¿¨¶ÙÃâÒß), MySQL Ğ´±¸·İ¶µµ×¡£
+//   Ö§³ÖÂÖ»»£ºÃ¿´ÎË¢ĞÂÊ±¾É token Ê§Ğ§£¬·¢ĞÂ token¡£
+//   ³·Ïú£º°´ token µ¥Ìõ³·Ïú / °´ÓÃ»§ÅúÁ¿³·Ïú¡£
 //
 // OAuth Token:
-//   Redis ç¼“å­˜ï¼ˆçƒ­æŸ¥è¯¢ï¼ŒTTL = ä»¤ç‰Œè¿‡æœŸæ—¶é—´ï¼‰ã€‚
+//   Redis »º´æ£¨ÈÈ²éÑ¯£¬TTL = ÁîÅÆ¹ıÆÚÊ±¼ä£©¡£
 
 #include <string>
 #include <string_view>
 #include <optional>
 #include <cstdint>
 #include <sstream>
+#include <ctime>
+#include <iomanip>
+#include <iterator>
+#include <unordered_set>
 #include <openssl/rand.h>
 #include <openssl/sha.h>
 #include <iostream>
@@ -26,7 +30,7 @@
 
 namespace SessionManager {
 
-    // â”€â”€ ç®€æ˜“ JSON å–å€¼ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ©¤©¤ ¼òÒ× JSON È¡Öµ ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
     inline std::string extractJsonVal(const std::string& json,
                                        const std::string& key) {
         std::string pat = "\"" + key + "\":\"";
@@ -38,7 +42,7 @@ namespace SessionManager {
         return json.substr(pos, end - pos);
     }
 
-    // â”€â”€ SHA256 hash (hex) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ©¤©¤ SHA256 hash (hex) ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
     inline std::string sha256hex(const std::string& data) {
         unsigned char hash[SHA256_DIGEST_LENGTH];
         SHA256((const unsigned char*)data.c_str(), data.size(), hash);
@@ -48,23 +52,43 @@ namespace SessionManager {
         return std::string(hex);
     }
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    //  Refresh Token æ“ä½œï¼ˆMySQL ä¸»å­˜å‚¨ï¼Œæ—  Redis ç¼“å­˜ï¼‰
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T
+    //  Refresh Token ²Ù×÷£¨Redis Ö÷´æ´¢ + MySQL Ğ´±¸·İ£©
+    //  ¶Á: ÏÈ Redis (1-2ms, ÔÆÅÌ¿¨¶ÙÃâÒß), miss »ØÔ´ MySQL ²¢»ØĞ´¡£
+    //  key: refresh:<sha256(token)> ¡ú {"sub","email","provider"}
+    //       refresh:user:<uid> ¡ú SET of token hashes (ÅúÁ¿³·Ïú/µ¥Éè±¸µÇÂ¼)
+    // ¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T
 
-    // å­˜å‚¨ refresh token â†’ MySQL
+    inline std::string refreshKey(const std::string& hex) { return "refresh:" + hex; }
+    inline std::string refreshUserKey(const std::string& uid) { return "refresh:user:" + uid; }
+
+    inline std::string refreshJson(const std::string& uid,
+                                   const std::string& email,
+                                   const std::string& provider) {
+        return "{\"sub\":\"" + uid + "\""
+             + ",\"email\":\"" + email + "\""
+             + ",\"provider\":\"" + provider + "\"}";
+    }
+
+    // ´æ´¢ refresh token ¡ú Redis (Ö÷) + MySQL (±¸·İ, Ê§°Ü²»Ó°ÏìµÇÂ¼)
     inline void storeRefresh(const std::string& token,
                              const std::string& userId,
                              const std::string& email,
                              const std::string& provider,
                              int ttlSeconds = 30 * 24 * 3600,
                              DbPool *pool = nullptr) {
+        std::string hex = sha256hex(token);
+        try {
+            auto& r = RedisClient::instance();
+            r.setex(refreshKey(hex), ttlSeconds, refreshJson(userId, email, provider));
+            r.sadd(refreshUserKey(userId), hex);
+            r.expire(refreshUserKey(userId), ttlSeconds);
+        } catch (...) {}
+
         if (!pool) return;
         auto guard = pool->acquire(5000);
         if (!guard) return;
         MYSQL *db = guard->get();
-
-        std::string hex = sha256hex(token);
 
         // Snowflake ID
         auto now = std::chrono::system_clock::now();
@@ -75,7 +99,7 @@ namespace SessionManager {
         time_t expireT = time(nullptr) + ttlSeconds;
         strftime(expireStr, sizeof(expireStr), "%Y-%m-%d %H:%M:%S", gmtime(&expireT));
 
-        // è½¬ä¹‰å­—ç¬¦ä¸²é˜²æ³¨å…¥
+        // ×ªÒå×Ö·û´®·À×¢Èë
         char eEmail[512], eProv[128];
         mysql_real_escape_string(db, eEmail, email.c_str(), email.size());
         mysql_real_escape_string(db, eProv, provider.c_str(), provider.size());
@@ -90,15 +114,21 @@ namespace SessionManager {
         mysql_query(db, q);
     }
 
-    // æŸ¥è¯¢ refresh token â†’ ç›´æ¥æŸ¥ MySQL
+    // ²éÑ¯ refresh token ¡ú ÏÈ Redis, miss »ØÔ´ MySQL ²¢»ØĞ´
     inline std::optional<std::string> getRefresh(const std::string& token,
                                                   DbPool *pool = nullptr) {
+        std::string hex = sha256hex(token);
+        try {
+            auto& r = RedisClient::instance();
+            auto val = r.get(refreshKey(hex));
+            if (val) return *val;
+        } catch (...) {}
+
         if (!pool) return std::nullopt;
         auto guard = pool->acquire(5000);
         if (!guard) return std::nullopt;
         MYSQL *db = guard->get();
 
-        std::string hex = sha256hex(token);
         char q[512];
         snprintf(q, sizeof(q),
             "SELECT user_id, email, provider, expires_at "
@@ -117,31 +147,67 @@ namespace SessionManager {
         std::string uid = row[0] ? row[0] : "";
         std::string email = row[1] ? row[1] : "";
         std::string provider = row[2] ? row[2] : "";
+        std::string expiresAt = row[3] ? row[3] : "";
         mysql_free_result(res);
 
         if (uid.empty()) return std::nullopt;
 
-        return "{\"sub\":\"" + uid + "\""
-             + ",\"email\":\"" + email + "\""
-             + ",\"provider\":\"" + provider + "\"}";
+        // »ØĞ´ Redis, TTL = Ê£ÓàÓĞĞ§ÆÚ
+        long long remain = 3600;
+        std::tm et = {};
+        std::istringstream es(expiresAt);
+        es >> std::get_time(&et, "%Y-%m-%d %H:%M:%S");
+        if (!es.fail()) {
+            auto etT = std::chrono::system_clock::from_time_t(std::mktime(&et));
+            auto nowT = std::chrono::system_clock::now();
+            remain = (long long)std::chrono::duration_cast<std::chrono::seconds>(etT - nowT).count();
+        }
+        if (remain <= 0) return std::nullopt;
+        try {
+            auto& r = RedisClient::instance();
+            r.setex(refreshKey(hex), (int)remain, refreshJson(uid, email, provider));
+            r.sadd(refreshUserKey(uid), hex);
+            r.expire(refreshUserKey(uid), (int)remain);
+        } catch (...) {}
+
+        return refreshJson(uid, email, provider);
     }
 
-    // åˆ é™¤å•ä¸ª refresh token
+    // É¾³ıµ¥¸ö refresh token (Redis Ö÷ + MySQL ±¸·İ)
     inline void revokeRefresh(const std::string& token, DbPool *pool = nullptr) {
+        std::string hex = sha256hex(token);
+        try {
+            auto& r = RedisClient::instance();
+            auto val = r.get(refreshKey(hex));
+            if (val) {
+                std::string sub = extractJsonVal(*val, "sub");
+                if (!sub.empty()) r.srem(refreshUserKey(sub), hex);
+            }
+            r.del(refreshKey(hex));
+        } catch (...) {}
+
         if (!pool) return;
         auto guard = pool->acquire(5000);
         if (!guard) return;
         MYSQL *db = guard->get();
 
-        std::string hex = sha256hex(token);
         char q[256];
         snprintf(q, sizeof(q),
             "DELETE FROM refresh_tokens WHERE token_hash='%s'", hex.c_str());
         mysql_query(db, q);
     }
 
-    // æ’¤é”€ç”¨æˆ·æ‰€æœ‰ä»¤ç‰Œï¼ˆä¿®æ”¹å¯†ç ã€è´¦å·å¼‚å¸¸æ—¶è°ƒç”¨ï¼‰
+    // ³·ÏúÓÃ»§ËùÓĞÁîÅÆ£¨ĞŞ¸ÄÃÜÂë¡¢ÕËºÅÒì³£Ê±µ÷ÓÃ£©¡ª Redis Ö÷ + MySQL ±¸·İ
     inline void revokeAllForUser(uint64_t uid, DbPool *pool = nullptr) {
+        std::string uidStr = std::to_string(uid);
+        try {
+            auto& r = RedisClient::instance();
+            std::unordered_set<std::string> hashes;
+            r.smembers(refreshUserKey(uidStr), std::inserter(hashes, hashes.begin()));
+            for (auto& h : hashes) r.del(refreshKey(h));
+            r.del(refreshUserKey(uidStr));
+        } catch (...) {}
+
         if (!pool) return;
         auto guard = pool->acquire(5000);
         if (!guard) return;
@@ -153,7 +219,7 @@ namespace SessionManager {
         mysql_query(db, q);
     }
 
-    // å®šæœŸæ¸…ç†è¿‡æœŸ tokenï¼ˆå¯å®šæ—¶ä»»åŠ¡è°ƒç”¨ï¼‰
+    // ¶¨ÆÚÇåÀí¹ıÆÚ token£¨MySQL ²à; Redis ¿¿ TTL ×Ô¶¯¹ıÆÚ£©
     inline void purgeExpired(DbPool *pool = nullptr) {
         if (!pool) return;
         auto guard = pool->acquire(5000);
@@ -162,9 +228,9 @@ namespace SessionManager {
         mysql_query(db, "DELETE FROM refresh_tokens WHERE expires_at < NOW()");
     }
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    //  OAuth Token ç¼“å­˜ï¼ˆRedis çƒ­å±‚ï¼‰
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T
+    //  OAuth Token »º´æ£¨Redis ÈÈ²ã£©
+    // ¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T
 
     inline void cacheOAuthToken(const std::string& provider,
                                 uint64_t userId,
@@ -187,18 +253,18 @@ namespace SessionManager {
         } catch (...) { return std::nullopt; }
     }
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    //  å·¥å…·
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T
+    //  ¹¤¾ß
+    // ¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T
 
-    // è·ç¦»åˆ°æœŸ < 5 åˆ†é’Ÿå°±éœ€è¦åˆ·æ–°
+    // ¾àÀëµ½ÆÚ < 5 ·ÖÖÓ¾ÍĞèÒªË¢ĞÂ
     inline bool needsRefresh(int64_t expiresAt) {
         auto now = std::chrono::duration_cast<std::chrono::seconds>(
             std::chrono::system_clock::now().time_since_epoch()).count();
         return (expiresAt - now) < 300;
     }
 
-    // JWT ID ç”Ÿæˆ (timestamp + crypto-random hex)
+    // JWT ID Éú³É (timestamp + crypto-random hex)
     inline std::string generateJti() {
         auto now = std::chrono::system_clock::now();
         auto us = std::chrono::duration_cast<std::chrono::microseconds>(

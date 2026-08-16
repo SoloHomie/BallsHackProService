@@ -1,0 +1,4667 @@
+{
+    "sections": [
+        {
+            "id": "spore",
+            "name": "孢子"
+        },
+        {
+            "id": "keyword",
+            "name": "关键词"
+        },
+        {
+            "id": "halo",
+            "name": "球体箭头"
+        },
+        {
+            "id": "spike",
+            "name": "刺球"
+        },
+        {
+            "id": "fog",
+            "name": "迷雾"
+        },
+        {
+            "id": "skin",
+            "name": "去皮肤"
+        }
+    ],
+    "groups": [
+        {
+            "id": "spore-xuehua",
+            "name": "雪花",
+            "section": "spore",
+            "altDirs": [
+                "alltextures/ballmaterial"
+            ],
+            "dir": "alltextures/ballmaterial1",
+            "matchPrefix": true,
+            "styles": [
+                {
+                    "name": "喷射粒子金",
+                    "files": [
+                        {
+                            "md5": "c3082e9e7f9e7e840c791efd4a7e9a9d",
+                            "target": "bz_7.unity3d_u_1",
+                            "size": 71468,
+                            "file": "spore/c3082e9e7f9e7e840c791efd4a7e9a9d.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "抹茶战徽",
+                    "files": [
+                        {
+                            "md5": "7a051bf8ff64a79e325e0d3d6e9c7999",
+                            "target": "bz_7.unity3d_u_1",
+                            "size": 22316,
+                            "file": "spore/7a051bf8ff64a79e325e0d3d6e9c7999.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "喷射粒子粉",
+                    "files": [
+                        {
+                            "md5": "c3082e9e7f9e7e840c791efd4a7e9a9d",
+                            "target": "bz_7.unity3d_u_1",
+                            "size": 71468,
+                            "file": "spore/c3082e9e7f9e7e840c791efd4a7e9a9d.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "喷射粒子绿",
+                    "files": [
+                        {
+                            "md5": "c3082e9e7f9e7e840c791efd4a7e9a9d",
+                            "target": "bz_7.unity3d_u_1",
+                            "size": 71468,
+                            "file": "spore/c3082e9e7f9e7e840c791efd4a7e9a9d.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "水滴战徽",
+                    "files": [
+                        {
+                            "md5": "e024d56d362ec4e2361b093377ed57df",
+                            "target": "bz_7.unity3d_u_1",
+                            "size": 22316,
+                            "file": "spore/e024d56d362ec4e2361b093377ed57df.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "蜜糖战徽",
+                    "files": [
+                        {
+                            "md5": "f8a165e4b75b4a4cbd1e63e7f09eead8",
+                            "target": "bz_7.unity3d_u_1",
+                            "size": 22316,
+                            "file": "spore/f8a165e4b75b4a4cbd1e63e7f09eead8.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "晶耀水滴",
+                    "files": [
+                        {
+                            "md5": "d86b65df4ad78915440fe922dd646cab",
+                            "target": "bz_7.unity3d_u_1",
+                            "size": 22316,
+                            "file": "spore/d86b65df4ad78915440fe922dd646cab.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "晶耀蜜糖",
+                    "files": [
+                        {
+                            "md5": "2654674f838cde7b7e2f055f5ad9afd6",
+                            "target": "bz_7.unity3d_u_1",
+                            "size": 22316,
+                            "file": "spore/2654674f838cde7b7e2f055f5ad9afd6.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "Q版蜜糖",
+                    "files": [
+                        {
+                            "md5": "99bebce21691197924b3ebfd19cd6c6e",
+                            "target": "bz_7.unity3d_u_1",
+                            "size": 71468,
+                            "file": "spore/99bebce21691197924b3ebfd19cd6c6e.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "美化抹茶",
+                    "files": [
+                        {
+                            "md5": "36e19c68dcceb413c85fa1cab8606c35",
+                            "target": "bz_7.unity3d_u_1",
+                            "size": 22316,
+                            "file": "spore/36e19c68dcceb413c85fa1cab8606c35.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "草莓",
+                    "files": [
+                        {
+                            "md5": "3ff4a9830182a7300c982cc50e7df94c",
+                            "target": "bz_7.unity3d_u_1",
+                            "size": 22316,
+                            "file": "spore/3ff4a9830182a7300c982cc50e7df94c.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "甜冻",
+                    "files": [
+                        {
+                            "md5": "47544db34936cbd74bd5446f5a53dba9",
+                            "target": "bz_7.unity3d_u_1",
+                            "size": 22316,
+                            "file": "spore/47544db34936cbd74bd5446f5a53dba9.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "小飞机",
+                    "files": [
+                        {
+                            "md5": "6d24273bea272f877555868f7ea16c0d",
+                            "target": "bz_7.unity3d_u_1",
+                            "size": 22316,
+                            "file": "spore/6d24273bea272f877555868f7ea16c0d.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "Q版抹茶",
+                    "files": [
+                        {
+                            "md5": "c3082e9e7f9e7e840c791efd4a7e9a9d",
+                            "target": "bz_7.unity3d_u_1",
+                            "size": 71468,
+                            "file": "spore/c3082e9e7f9e7e840c791efd4a7e9a9d.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "Q版水滴",
+                    "files": [
+                        {
+                            "md5": "0a04afd9cb8c86c18f7f52c92c8729ab",
+                            "target": "bz_7.unity3d_u_1",
+                            "size": 71468,
+                            "file": "spore/0a04afd9cb8c86c18f7f52c92c8729ab.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "蜜糖",
+                    "files": [
+                        {
+                            "md5": "764a7d78d446d79ce018bbc2df794119",
+                            "target": "bz_7.unity3d_u_1",
+                            "size": 22316,
+                            "file": "spore/764a7d78d446d79ce018bbc2df794119.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "飞溅",
+                    "files": [
+                        {
+                            "md5": "26ee9209cd45c381050811f77eb00b70",
+                            "target": "bz_7.unity3d_u_1",
+                            "size": 22316,
+                            "file": "spore/26ee9209cd45c381050811f77eb00b70.bin"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "spore-qingshu",
+            "name": "情书",
+            "section": "spore",
+            "altDirs": [
+                "alltextures/ballmaterial"
+            ],
+            "dir": "alltextures/ballmaterial1",
+            "matchPrefix": true,
+            "styles": [
+                {
+                    "name": "粉星",
+                    "files": [
+                        {
+                            "md5": "a749aa20ef9e59896c7ab90bcb8e72f5",
+                            "target": "bz_sf136.unity3d_u_1",
+                            "size": 22360,
+                            "file": "spore/a749aa20ef9e59896c7ab90bcb8e72f5.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "烤串",
+                    "files": [
+                        {
+                            "md5": "daf00ea6efa5dd7a8636ab036f72d541",
+                            "target": "bz_sf136.unity3d_u_1",
+                            "size": 22360,
+                            "file": "spore/daf00ea6efa5dd7a8636ab036f72d541.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "塔啤",
+                    "files": [
+                        {
+                            "md5": "9f25d84650591465ea1c968131ca09ae",
+                            "target": "bz_sf136.unity3d_u_1",
+                            "size": 22360,
+                            "file": "spore/9f25d84650591465ea1c968131ca09ae.bin"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "spore-pugy",
+            "name": "蒲公英",
+            "section": "spore",
+            "altDirs": [
+                "alltextures/ballmaterial"
+            ],
+            "dir": "alltextures/ballmaterial1",
+            "matchPrefix": true,
+            "styles": [
+                {
+                    "name": "春芽",
+                    "files": [
+                        {
+                            "md5": "e07a47d1497be4b9b29a202fee9f6f22",
+                            "target": "bz_sf134.unity3d_u_1",
+                            "size": 22360,
+                            "file": "spore/e07a47d1497be4b9b29a202fee9f6f22.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "紫a扑克",
+                    "files": [
+                        {
+                            "md5": "402ad6d161f18a4af4aa607f182324f2",
+                            "target": "bz_sf134.unity3d_u_1",
+                            "size": 22360,
+                            "file": "spore/402ad6d161f18a4af4aa607f182324f2.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "稻草人",
+                    "files": [
+                        {
+                            "md5": "8216d918fa7899c347282c5322883a19",
+                            "target": "bz_sf134.unity3d_u_1",
+                            "size": 22360,
+                            "file": "spore/8216d918fa7899c347282c5322883a19.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "骨头",
+                    "files": [
+                        {
+                            "md5": "e27abcabf4fc60d22e9781d07bd875bc",
+                            "target": "bz_sf134.unity3d_u_1",
+                            "size": 22360,
+                            "file": "spore/e27abcabf4fc60d22e9781d07bd875bc.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "冰红茶",
+                    "files": [
+                        {
+                            "md5": "c8f3000201be4dd2410dbd9f7ddb5913",
+                            "target": "bz_sf134.unity3d_u_1",
+                            "size": 22360,
+                            "file": "spore/c8f3000201be4dd2410dbd9f7ddb5913.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "小红包",
+                    "files": [
+                        {
+                            "md5": "7b6633c42c5763cc0e9f1b6f7e9fa9d1",
+                            "target": "bz_sf134.unity3d_u_1",
+                            "size": 22360,
+                            "file": "spore/7b6633c42c5763cc0e9f1b6f7e9fa9d1.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "小火箭",
+                    "files": [
+                        {
+                            "md5": "3824b47fde9f8b8ab26c0201cfe659b7",
+                            "target": "bz_sf134.unity3d_u_1",
+                            "size": 22360,
+                            "file": "spore/3824b47fde9f8b8ab26c0201cfe659b7.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "扑克牌",
+                    "files": [
+                        {
+                            "md5": "402ad6d161f18a4af4aa607f182324f2",
+                            "target": "bz_sf134.unity3d_u_1",
+                            "size": 22360,
+                            "file": "spore/402ad6d161f18a4af4aa607f182324f2.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "小飞机",
+                    "files": [
+                        {
+                            "md5": "fc787c417b6bf1b179bf76fcdfa61770",
+                            "target": "bz_sf134.unity3d_u_1",
+                            "size": 22360,
+                            "file": "spore/fc787c417b6bf1b179bf76fcdfa61770.bin"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "spore-heye",
+            "name": "荷叶",
+            "section": "spore",
+            "altDirs": [
+                "alltextures/ballmaterial"
+            ],
+            "dir": "alltextures/ballmaterial1",
+            "matchPrefix": true,
+            "styles": [
+                {
+                    "name": "小泳圈",
+                    "files": [
+                        {
+                            "md5": "b4fb36b270912e9cfeec2df05820b45e",
+                            "target": "bz_sf135.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/b4fb36b270912e9cfeec2df05820b45e.bin"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "spore-aixindan",
+            "name": "爱心蛋",
+            "section": "spore",
+            "altDirs": [
+                "alltextures/ballmaterial"
+            ],
+            "dir": "alltextures/ballmaterial1",
+            "matchPrefix": true,
+            "styles": [
+                {
+                    "name": "2017皇冠",
+                    "files": [
+                        {
+                            "md5": "f1ab9f242e78cf476e497b00962915ff",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/f1ab9f242e78cf476e497b00962915ff.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "2018塔坦勋章",
+                    "files": [
+                        {
+                            "md5": "e34ee898f3ae63597b7a8af3bf4640a2",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/e34ee898f3ae63597b7a8af3bf4640a2.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "2022嘉年华",
+                    "files": [
+                        {
+                            "md5": "a5ea32a96ddcd2337cfe7c95ed67a296",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/a5ea32a96ddcd2337cfe7c95ed67a296.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "520",
+                    "files": [
+                        {
+                            "md5": "b1782d38344b2f756a7e010820a17da8",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/b1782d38344b2f756a7e010820a17da8.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "619",
+                    "files": [
+                        {
+                            "md5": "efe0540e8c9fa434f4187b0dcb62ac8e",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/efe0540e8c9fa434f4187b0dcb62ac8e.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "687",
+                    "files": [
+                        {
+                            "md5": "744a22dc4ddf430af3e946cac95ea218",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/744a22dc4ddf430af3e946cac95ea218.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "91",
+                    "files": [
+                        {
+                            "md5": "b4dc33bab6b8528c41001894d40ec04e",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/b4dc33bab6b8528c41001894d40ec04e.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "BGF之翼",
+                    "files": [
+                        {
+                            "md5": "697142eebfcf5a91c4fecf3d04ea0cd6",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/697142eebfcf5a91c4fecf3d04ea0cd6.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "BGF勇者之心",
+                    "files": [
+                        {
+                            "md5": "c4b4e537ddabc9c7207695f88d2a0abc",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/c4b4e537ddabc9c7207695f88d2a0abc.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "BGF印记",
+                    "files": [
+                        {
+                            "md5": "a2ebdf345d0fbd61b89bcf7fd237743a",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/a2ebdf345d0fbd61b89bcf7fd237743a.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "BGF徽章",
+                    "files": [
+                        {
+                            "md5": "1773f6c4ed8ac7039c868ba3ac150bee",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/1773f6c4ed8ac7039c868ba3ac150bee.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "BPL奖牌",
+                    "files": [
+                        {
+                            "md5": "e37489756a15d579dcc6e6e92ac6af05",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/e37489756a15d579dcc6e6e92ac6af05.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "BPL徽章",
+                    "files": [
+                        {
+                            "md5": "966fafac654ad75741aae3697f96d8ec",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/966fafac654ad75741aae3697f96d8ec.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "TT语音",
+                    "files": [
+                        {
+                            "md5": "e23c316a591c783cd7b02bfb497f8ad2",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/e23c316a591c783cd7b02bfb497f8ad2.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "三周年双剑",
+                    "files": [
+                        {
+                            "md5": "b9959fda4a2b4dce6ca5aa4148d30884",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/b9959fda4a2b4dce6ca5aa4148d30884.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "丘比特",
+                    "files": [
+                        {
+                            "md5": "a34baf7e9f93939bda838a8151f2312e",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/a34baf7e9f93939bda838a8151f2312e.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "两周年会员",
+                    "files": [
+                        {
+                            "md5": "28392a28aed263c9f42aa2b77a54162e",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/28392a28aed263c9f42aa2b77a54162e.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "两周年塔坦",
+                    "files": [
+                        {
+                            "md5": "b0ac2e38c40eede59ad6c06fa592440e",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/b0ac2e38c40eede59ad6c06fa592440e.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "便便",
+                    "files": [
+                        {
+                            "md5": "595efd20c432da333b45ab01281a840e",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/595efd20c432da333b45ab01281a840e.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "光圈",
+                    "files": [
+                        {
+                            "md5": "3c882dd0d4bab9df4fd9783a3fa0e3ac",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/3c882dd0d4bab9df4fd9783a3fa0e3ac.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "公主",
+                    "files": [
+                        {
+                            "md5": "0fa6e7f76659d50780428de7a10723c2",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/0fa6e7f76659d50780428de7a10723c2.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "公主果冻",
+                    "files": [
+                        {
+                            "md5": "ee61d3c8941d1b7543a7bc34daa2e6af",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 71512,
+                            "file": "spore/ee61d3c8941d1b7543a7bc34daa2e6af.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "六芒星",
+                    "files": [
+                        {
+                            "md5": "3692eff07365c184fbf8330d5691fff6",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/3692eff07365c184fbf8330d5691fff6.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "加油",
+                    "files": [
+                        {
+                            "md5": "e8b2cbe66d5fb17f5e2f4e118095f14b",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/e8b2cbe66d5fb17f5e2f4e118095f14b.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "卡奥斯之魂",
+                    "files": [
+                        {
+                            "md5": "4082944a0b15762ffbc753b5080773e0",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 71512,
+                            "file": "spore/4082944a0b15762ffbc753b5080773e0.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "卫星",
+                    "files": [
+                        {
+                            "md5": "338f08666281a382d12b142b65a26881",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/338f08666281a382d12b142b65a26881.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "呱呱",
+                    "files": [
+                        {
+                            "md5": "eb0e35e2c65748c1e3d64a434cf048e8",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/eb0e35e2c65748c1e3d64a434cf048e8.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "咕噜咕噜",
+                    "files": [
+                        {
+                            "md5": "c02f045f360c9661d4132d19f0fd5631",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/c02f045f360c9661d4132d19f0fd5631.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "咕噜咕噜星阵",
+                    "files": [
+                        {
+                            "md5": "cdcd8f6abe2f48fb86428642f02a3f8d",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/cdcd8f6abe2f48fb86428642f02a3f8d.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "咕噜噜",
+                    "files": [
+                        {
+                            "md5": "4676bcdf60d2f85fb761f736aafd4ff4",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/4676bcdf60d2f85fb761f736aafd4ff4.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "哈塔",
+                    "files": [
+                        {
+                            "md5": "16b085cbee4ce7fe247d13b5998c05a7",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/16b085cbee4ce7fe247d13b5998c05a7.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "哈士奇",
+                    "files": [
+                        {
+                            "md5": "64cba1c23ead5d58d9a742782d5dcb38",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/64cba1c23ead5d58d9a742782d5dcb38.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "嘉年华",
+                    "files": [
+                        {
+                            "md5": "801815b0e95754d03843f99126c3af31",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/801815b0e95754d03843f99126c3af31.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "塔坦",
+                    "files": [
+                        {
+                            "md5": "24337dc4486000f83634a3f9d71dae77",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/24337dc4486000f83634a3f9d71dae77.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "塔坦勋章",
+                    "files": [
+                        {
+                            "md5": "97b3a84c45d549d8791cf4a0b5a8fb5e",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/97b3a84c45d549d8791cf4a0b5a8fb5e.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "塔坦杯",
+                    "files": [
+                        {
+                            "md5": "22d96b739d7b1738a30766224aa0cd7c",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/22d96b739d7b1738a30766224aa0cd7c.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "太阳果冻",
+                    "files": [
+                        {
+                            "md5": "4fc10f1359d95cd04b6ca51f106b4a07",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/4fc10f1359d95cd04b6ca51f106b4a07.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "奸诈熊",
+                    "files": [
+                        {
+                            "md5": "8fde7590eeb0ca521f1a8059bc4154ef",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/8fde7590eeb0ca521f1a8059bc4154ef.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "寰宇王权",
+                    "files": [
+                        {
+                            "md5": "8a673d3aeaff29210980e0e3eb4467ac",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 71512,
+                            "file": "spore/8a673d3aeaff29210980e0e3eb4467ac.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "导弹",
+                    "files": [
+                        {
+                            "md5": "d11dfcc64902b8818486c361e9adebad",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/d11dfcc64902b8818486c361e9adebad.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "小Q",
+                    "files": [
+                        {
+                            "md5": "39189ef7b65e89fbc707f8d336981d8d",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/39189ef7b65e89fbc707f8d336981d8d.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "小宇宙",
+                    "files": [
+                        {
+                            "md5": "bb7f38cd6dda4ebe2cf5bb0ae589813c",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/bb7f38cd6dda4ebe2cf5bb0ae589813c.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "屎",
+                    "files": [
+                        {
+                            "md5": "9feaba8b9c62a35f35503d9fc58cc611",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/9feaba8b9c62a35f35503d9fc58cc611.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "微博",
+                    "files": [
+                        {
+                            "md5": "0fcafaa54c013ae81e05d9347f2d453c",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/0fcafaa54c013ae81e05d9347f2d453c.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "快手",
+                    "files": [
+                        {
+                            "md5": "f90354e3e0548365da6d51efc464f47f",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/f90354e3e0548365da6d51efc464f47f.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "我爱你",
+                    "files": [
+                        {
+                            "md5": "ae57e3374778f5a844cff55f709458a9",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/ae57e3374778f5a844cff55f709458a9.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "扩大视野",
+                    "files": [
+                        {
+                            "md5": "150f7c04346cb2bc21b7dc4f25cf49ef",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 71512,
+                            "file": "spore/150f7c04346cb2bc21b7dc4f25cf49ef.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "抖音",
+                    "files": [
+                        {
+                            "md5": "c8585a09c96a18b61e1a89cc2d04171c",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/c8585a09c96a18b61e1a89cc2d04171c.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "抹茶",
+                    "files": [
+                        {
+                            "md5": "6086bd2a4f976d879e506fa7b6ad3bca",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/6086bd2a4f976d879e506fa7b6ad3bca.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "斗鱼",
+                    "files": [
+                        {
+                            "md5": "c6f74b2e45233dcbb32259d1c4ec16b0",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/c6f74b2e45233dcbb32259d1c4ec16b0.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "新抹茶",
+                    "files": [
+                        {
+                            "md5": "d1a5c33703001743bbc913fa8f88a37a",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/d1a5c33703001743bbc913fa8f88a37a.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "果冻",
+                    "files": [
+                        {
+                            "md5": "d7112177058c4ba659787550b58b668f",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 71512,
+                            "file": "spore/d7112177058c4ba659787550b58b668f.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "榴莲",
+                    "files": [
+                        {
+                            "md5": "307bbaba554997ca94bee15a5f14dda2",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/307bbaba554997ca94bee15a5f14dda2.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "死神",
+                    "files": [
+                        {
+                            "md5": "581d5545b2ff5ce731b778d676e75cd9",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/581d5545b2ff5ce731b778d676e75cd9.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "水滴",
+                    "files": [
+                        {
+                            "md5": "4d5e5002143f6682e807a1eae93567b1",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/4d5e5002143f6682e807a1eae93567b1.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "灰色年轮",
+                    "files": [
+                        {
+                            "md5": "59355ca82483d15a6747c870e5a23c28",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/59355ca82483d15a6747c870e5a23c28.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "爱心",
+                    "files": [
+                        {
+                            "md5": "f04da9fe818f316c00c82c35a39b4809",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/f04da9fe818f316c00c82c35a39b4809.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "爱心嘉年华",
+                    "files": [
+                        {
+                            "md5": "3f2a6cce2d4fb9de98679dce143b970f",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/3f2a6cce2d4fb9de98679dce143b970f.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "爱恋阿芙娜",
+                    "files": [
+                        {
+                            "md5": "e80510ed30a183721f60ef7bac5ee83d",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 71512,
+                            "file": "spore/e80510ed30a183721f60ef7bac5ee83d.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "牌",
+                    "files": [
+                        {
+                            "md5": "dadfbb256360d758d7ca99c40e5587b7",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/dadfbb256360d758d7ca99c40e5587b7.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "牛郎",
+                    "files": [
+                        {
+                            "md5": "fc6484391bd2328b1dd9f52ed5f5c032",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/fc6484391bd2328b1dd9f52ed5f5c032.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "牧马人",
+                    "files": [
+                        {
+                            "md5": "f99d54b49c39c6242bb6135c78f7564a",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/f99d54b49c39c6242bb6135c78f7564a.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "狐狸",
+                    "files": [
+                        {
+                            "md5": "d7726253c3056f23a0e3c29125590fc0",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/d7726253c3056f23a0e3c29125590fc0.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "狐狸标",
+                    "files": [
+                        {
+                            "md5": "5fb792465c5d5ee043a946a8893f8e5b",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/5fb792465c5d5ee043a946a8893f8e5b.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "王冠",
+                    "files": [
+                        {
+                            "md5": "8fa5c45ca394536648180c6c6a81a3a5",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/8fa5c45ca394536648180c6c6a81a3a5.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "王子",
+                    "files": [
+                        {
+                            "md5": "c8b5cb93e1bb1249c3101c74877564f3",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/c8b5cb93e1bb1249c3101c74877564f3.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "王子果冻",
+                    "files": [
+                        {
+                            "md5": "5a80dbdc0c72d831baa3cbc6a696a7b6",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 71512,
+                            "file": "spore/5a80dbdc0c72d831baa3cbc6a696a7b6.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "皇冠",
+                    "files": [
+                        {
+                            "md5": "4b51ee76bdb8ad74d9d63b1ea2500979",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/4b51ee76bdb8ad74d9d63b1ea2500979.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "睿智星",
+                    "files": [
+                        {
+                            "md5": "e2df062755d6805c51229b59114a2f11",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/e2df062755d6805c51229b59114a2f11.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "篮球",
+                    "files": [
+                        {
+                            "md5": "67b507ea3f4de37e2ee140f7c3e6ceee",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/67b507ea3f4de37e2ee140f7c3e6ceee.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "红中",
+                    "files": [
+                        {
+                            "md5": "9d490e59f0fbc2ee208ddbdcec524738",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/9d490e59f0fbc2ee208ddbdcec524738.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "红桃",
+                    "files": [
+                        {
+                            "md5": "e6f1cc3ff23faec8d87c585365980910",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/e6f1cc3ff23faec8d87c585365980910.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "红钻",
+                    "files": [
+                        {
+                            "md5": "e0db8cb2b1ffb2dfa0120d088259c136",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/e0db8cb2b1ffb2dfa0120d088259c136.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "约吗",
+                    "files": [
+                        {
+                            "md5": "7e6351771297def94bbd75d20006755b",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/7e6351771297def94bbd75d20006755b.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "绿帽子",
+                    "files": [
+                        {
+                            "md5": "41725f6ce4563de750a9a4f51814e680",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/41725f6ce4563de750a9a4f51814e680.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "胖胖兔",
+                    "files": [
+                        {
+                            "md5": "eb0e0638bb7a9a75178fed87c4642950",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/eb0e0638bb7a9a75178fed87c4642950.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "菲露露",
+                    "files": [
+                        {
+                            "md5": "567ca3b4bab06d6187790b6eb57a37a8",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/567ca3b4bab06d6187790b6eb57a37a8.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "菲露露漩涡",
+                    "files": [
+                        {
+                            "md5": "a068d05136cf4d4c33f93f6891cf2584",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/a068d05136cf4d4c33f93f6891cf2584.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "蓝猫",
+                    "files": [
+                        {
+                            "md5": "cc8f07c84bc1382802d1b517e34d30af",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/cc8f07c84bc1382802d1b517e34d30af.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "虎牙",
+                    "files": [
+                        {
+                            "md5": "8108008e46283f130e2f0768fec0a19d",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/8108008e46283f130e2f0768fec0a19d.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "西瓜视频",
+                    "files": [
+                        {
+                            "md5": "6eb8ec5f920477208ef9f77943937fd1",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/6eb8ec5f920477208ef9f77943937fd1.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "金猪",
+                    "files": [
+                        {
+                            "md5": "f148503d850af5a70aa7d33c04be4635",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/f148503d850af5a70aa7d33c04be4635.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "金盾哈塔",
+                    "files": [
+                        {
+                            "md5": "a2d2cfa28846cca242801bf9ef3b61e7",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/a2d2cfa28846cca242801bf9ef3b61e7.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "金蘑菇",
+                    "files": [
+                        {
+                            "md5": "8cd04f04b12a9c8e78376e2ff84d637d",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/8cd04f04b12a9c8e78376e2ff84d637d.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "金足球",
+                    "files": [
+                        {
+                            "md5": "1c0307eb6c667d354e2cc9715514d1ab",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/1c0307eb6c667d354e2cc9715514d1ab.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "青龙",
+                    "files": [
+                        {
+                            "md5": "cb755e41803c29359122376a50f7d347",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/cb755e41803c29359122376a50f7d347.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "飞剪",
+                    "files": [
+                        {
+                            "md5": "2fe5550d1539ea957a83792a2ea2a5a6",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/2fe5550d1539ea957a83792a2ea2a5a6.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "黄星",
+                    "files": [
+                        {
+                            "md5": "53e5dfde3054a002d89098431a364131",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/53e5dfde3054a002d89098431a364131.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "黄金哈塔",
+                    "files": [
+                        {
+                            "md5": "f493daa10b219d6df013d80b8ca494ab",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/f493daa10b219d6df013d80b8ca494ab.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "龙年至臻",
+                    "files": [
+                        {
+                            "md5": "24af431759af71261f5518a01acdaf6a",
+                            "target": "bz_sf146.unity3d_u_4",
+                            "size": 22360,
+                            "file": "spore/24af431759af71261f5518a01acdaf6a.bin"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "kw-jimo",
+            "name": "寂寞星球",
+            "section": "keyword",
+            "altDirs": [],
+            "dir": "keyskin/pifu1",
+            "matchPrefix": true,
+            "styles": [
+                {
+                    "name": "dj萨瓦",
+                    "files": [
+                        {
+                            "md5": "4198fa7cc7dc886c3aa262402df4c9a1",
+                            "target": "pifu_017_lv1.unity3d_u_4",
+                            "size": 520771,
+                            "file": "keyword/4198fa7cc7dc886c3aa262402df4c9a1.bin"
+                        },
+                        {
+                            "md5": "01ab33f226dd9d5ff9b8cbdd706256c4",
+                            "target": "pifu_017_lv2.unity3d_u_4",
+                            "size": 654392,
+                            "file": "keyword/01ab33f226dd9d5ff9b8cbdd706256c4.bin"
+                        },
+                        {
+                            "md5": "6ac80b4cf8694c5a4bc1a5afc008feb8",
+                            "target": "pifu_017_lv3.unity3d_u_4",
+                            "size": 874352,
+                            "file": "keyword/6ac80b4cf8694c5a4bc1a5afc008feb8.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "丘比特",
+                    "files": [
+                        {
+                            "md5": "170d45e631a7d0754f356e6aa0735601",
+                            "target": "pifu_017_lv1.unity3d_u_4",
+                            "size": 164455,
+                            "file": "keyword/170d45e631a7d0754f356e6aa0735601.bin"
+                        },
+                        {
+                            "md5": "5ba4cb8a33aea7ba776ec43d4ff94696",
+                            "target": "pifu_017_lv2.unity3d_u_4",
+                            "size": 239988,
+                            "file": "keyword/5ba4cb8a33aea7ba776ec43d4ff94696.bin"
+                        },
+                        {
+                            "md5": "7a2bcb8f6b89dc49d072763eede26c6e",
+                            "target": "pifu_017_lv3.unity3d_u_4",
+                            "size": 264120,
+                            "file": "keyword/7a2bcb8f6b89dc49d072763eede26c6e.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "吗喽（猴）",
+                    "files": [
+                        {
+                            "md5": "978a16620ed5e90cb3df3a5e28e6e16a",
+                            "target": "pifu_017_lv1.unity3d_u_4",
+                            "size": 130796,
+                            "file": "keyword/978a16620ed5e90cb3df3a5e28e6e16a.bin"
+                        },
+                        {
+                            "md5": "de6943a6c65f46bd63cd43ac4cf1249f",
+                            "target": "pifu_017_lv2.unity3d_u_4",
+                            "size": 160668,
+                            "file": "keyword/de6943a6c65f46bd63cd43ac4cf1249f.bin"
+                        },
+                        {
+                            "md5": "346b133575dc46c1bd43ef813e7a8500",
+                            "target": "pifu_017_lv3.unity3d_u_4",
+                            "size": 199952,
+                            "file": "keyword/346b133575dc46c1bd43ef813e7a8500.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "喵喵喵爱吃鱼",
+                    "files": [
+                        {
+                            "md5": "93c7556a535c172dd85f9935304603c9",
+                            "target": "pifu_017_lv1.unity3d_u_4",
+                            "size": 103727,
+                            "file": "keyword/93c7556a535c172dd85f9935304603c9.bin"
+                        },
+                        {
+                            "md5": "529b01f95519775dc495bb14cc433267",
+                            "target": "pifu_017_lv2.unity3d_u_4",
+                            "size": 127068,
+                            "file": "keyword/529b01f95519775dc495bb14cc433267.bin"
+                        },
+                        {
+                            "md5": "206fb40e01d86cdca871f5fa3c59788c",
+                            "target": "pifu_017_lv3.unity3d_u_4",
+                            "size": 175839,
+                            "file": "keyword/206fb40e01d86cdca871f5fa3c59788c.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "大帅",
+                    "files": [
+                        {
+                            "md5": "a8cf70921f493069bf32483cf06f9ed4",
+                            "target": "pifu_017_lv1.unity3d_u_4",
+                            "size": 322147,
+                            "file": "keyword/a8cf70921f493069bf32483cf06f9ed4.bin"
+                        },
+                        {
+                            "md5": "0c081439cf53c53b56a5cda919d725e0",
+                            "target": "pifu_017_lv2.unity3d_u_4",
+                            "size": 432400,
+                            "file": "keyword/0c081439cf53c53b56a5cda919d725e0.bin"
+                        },
+                        {
+                            "md5": "63c3f4f604909298c11eb0ac0a9abb52",
+                            "target": "pifu_017_lv3.unity3d_u_4",
+                            "size": 611092,
+                            "file": "keyword/63c3f4f604909298c11eb0ac0a9abb52.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "大王秀",
+                    "files": [
+                        {
+                            "md5": "053fad3cd86912311a2eabd364bee1b9",
+                            "target": "pifu_017_lv1.unity3d_u_4",
+                            "size": 133648,
+                            "file": "keyword/053fad3cd86912311a2eabd364bee1b9.bin"
+                        },
+                        {
+                            "md5": "c8981debc53f40e2b4e3ff79708f62a0",
+                            "target": "pifu_017_lv2.unity3d_u_4",
+                            "size": 194928,
+                            "file": "keyword/c8981debc53f40e2b4e3ff79708f62a0.bin"
+                        },
+                        {
+                            "md5": "88326bc34f3773d71d44f909b765179f",
+                            "target": "pifu_017_lv3.unity3d_u_4",
+                            "size": 340836,
+                            "file": "keyword/88326bc34f3773d71d44f909b765179f.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "大脸猫",
+                    "files": [
+                        {
+                            "md5": "1079cb3830e072aa2d0303be4399c6f0",
+                            "target": "pifu_017_lv1.unity3d_u_4",
+                            "size": 130764,
+                            "file": "keyword/1079cb3830e072aa2d0303be4399c6f0.bin"
+                        },
+                        {
+                            "md5": "f70832609072f39996f8dd74de65452d",
+                            "target": "pifu_017_lv2.unity3d_u_4",
+                            "size": 168032,
+                            "file": "keyword/f70832609072f39996f8dd74de65452d.bin"
+                        },
+                        {
+                            "md5": "96bc3c23c3911498d9cb353d5e50968e",
+                            "target": "pifu_017_lv3.unity3d_u_4",
+                            "size": 204488,
+                            "file": "keyword/96bc3c23c3911498d9cb353d5e50968e.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "奶牛",
+                    "files": [
+                        {
+                            "md5": "43f798e4746999941bfa80baf64ba6ee",
+                            "target": "pifu_017_lv1.unity3d_u_4",
+                            "size": 129831,
+                            "file": "keyword/43f798e4746999941bfa80baf64ba6ee.bin"
+                        },
+                        {
+                            "md5": "2748713143b721d78446f27cd79d13a6",
+                            "target": "pifu_017_lv2.unity3d_u_4",
+                            "size": 168735,
+                            "file": "keyword/2748713143b721d78446f27cd79d13a6.bin"
+                        },
+                        {
+                            "md5": "13609bcae40e1360d49827f49d064e22",
+                            "target": "pifu_017_lv3.unity3d_u_4",
+                            "size": 194652,
+                            "file": "keyword/13609bcae40e1360d49827f49d064e22.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "小黄鸭武士",
+                    "files": [
+                        {
+                            "md5": "917c96a2c2bed967e392e82d3c5b4b5d",
+                            "target": "pifu_017_lv1.unity3d_u_4",
+                            "size": 130332,
+                            "file": "keyword/917c96a2c2bed967e392e82d3c5b4b5d.bin"
+                        },
+                        {
+                            "md5": "70587fe112aeacf419a735f2c1082ebf",
+                            "target": "pifu_017_lv2.unity3d_u_4",
+                            "size": 152727,
+                            "file": "keyword/70587fe112aeacf419a735f2c1082ebf.bin"
+                        },
+                        {
+                            "md5": "c696963afbc7f95a4b375011918c02ea",
+                            "target": "pifu_017_lv3.unity3d_u_4",
+                            "size": 181639,
+                            "file": "keyword/c696963afbc7f95a4b375011918c02ea.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "巴迪",
+                    "files": [
+                        {
+                            "md5": "7647247dc58caa010c88d8292fe6bf58",
+                            "target": "pifu_017_lv1.unity3d_u_4",
+                            "size": 379583,
+                            "file": "keyword/7647247dc58caa010c88d8292fe6bf58.bin"
+                        },
+                        {
+                            "md5": "0fd25993ec3807e4b618df830a3eca28",
+                            "target": "pifu_017_lv2.unity3d_u_4",
+                            "size": 446599,
+                            "file": "keyword/0fd25993ec3807e4b618df830a3eca28.bin"
+                        },
+                        {
+                            "md5": "03f20726f99cebca1a23ceec148b0f9d",
+                            "target": "pifu_017_lv3.unity3d_u_4",
+                            "size": 658707,
+                            "file": "keyword/03f20726f99cebca1a23ceec148b0f9d.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "影武士君夜",
+                    "files": [
+                        {
+                            "md5": "389949cfcc8161092e88b98067b57d33",
+                            "target": "pifu_017_lv1.unity3d_u_4",
+                            "size": 379583,
+                            "file": "keyword/389949cfcc8161092e88b98067b57d33.bin"
+                        },
+                        {
+                            "md5": "d74b865cfb779394aa1b932e44f4e56d",
+                            "target": "pifu_017_lv2.unity3d_u_4",
+                            "size": 446599,
+                            "file": "keyword/d74b865cfb779394aa1b932e44f4e56d.bin"
+                        },
+                        {
+                            "md5": "7f7348d864e65a65d341ddc5df4b528c",
+                            "target": "pifu_017_lv3.unity3d_u_4",
+                            "size": 1057684,
+                            "file": "keyword/7f7348d864e65a65d341ddc5df4b528c.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "拳王帝斯",
+                    "files": [
+                        {
+                            "md5": "ddc9973d4b4243af3cd39e2a350a45f3",
+                            "target": "pifu_017_lv1.unity3d_u_4",
+                            "size": 359179,
+                            "file": "keyword/ddc9973d4b4243af3cd39e2a350a45f3.bin"
+                        },
+                        {
+                            "md5": "0d96cc88d62b39b4d1214683eaec9993",
+                            "target": "pifu_017_lv2.unity3d_u_4",
+                            "size": 359175,
+                            "file": "keyword/0d96cc88d62b39b4d1214683eaec9993.bin"
+                        },
+                        {
+                            "md5": "aaed1126b972266011580913f4648ad9",
+                            "target": "pifu_017_lv3.unity3d_u_4",
+                            "size": 524144,
+                            "file": "keyword/aaed1126b972266011580913f4648ad9.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "时空探索者",
+                    "files": [
+                        {
+                            "md5": "f354183adc5569c5e27f66439562cba4",
+                            "target": "pifu_017_lv1.unity3d_u_4",
+                            "size": 379583,
+                            "file": "keyword/f354183adc5569c5e27f66439562cba4.bin"
+                        },
+                        {
+                            "md5": "9d7dcefec693c2f7f1508ecd26c4741d",
+                            "target": "pifu_017_lv2.unity3d_u_4",
+                            "size": 446599,
+                            "file": "keyword/9d7dcefec693c2f7f1508ecd26c4741d.bin"
+                        },
+                        {
+                            "md5": "ea5821f49d490005c2e6f926c4d8edfd",
+                            "target": "pifu_017_lv3.unity3d_u_4",
+                            "size": 808324,
+                            "file": "keyword/ea5821f49d490005c2e6f926c4d8edfd.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "毁灭者芬迪斯",
+                    "files": [
+                        {
+                            "md5": "f012953a3ce45f56ac5d5f4ea3e78585",
+                            "target": "pifu_017_lv1.unity3d_u_4",
+                            "size": 379583,
+                            "file": "keyword/f012953a3ce45f56ac5d5f4ea3e78585.bin"
+                        },
+                        {
+                            "md5": "9de5b229836ed65dea75cdec7c2d839a",
+                            "target": "pifu_017_lv2.unity3d_u_4",
+                            "size": 446599,
+                            "file": "keyword/9de5b229836ed65dea75cdec7c2d839a.bin"
+                        },
+                        {
+                            "md5": "b83a55a9a2988e5d75aa37e7d8de8dfe",
+                            "target": "pifu_017_lv3.unity3d_u_4",
+                            "size": 780964,
+                            "file": "keyword/b83a55a9a2988e5d75aa37e7d8de8dfe.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "波吉",
+                    "files": [
+                        {
+                            "md5": "4a91bf577d37a972d933525af1d93774",
+                            "target": "pifu_017_lv1.unity3d_u_4",
+                            "size": 170912,
+                            "file": "keyword/4a91bf577d37a972d933525af1d93774.bin"
+                        },
+                        {
+                            "md5": "e9623e05f4c4b2e6b00484c552b38dde",
+                            "target": "pifu_017_lv2.unity3d_u_4",
+                            "size": 225239,
+                            "file": "keyword/e9623e05f4c4b2e6b00484c552b38dde.bin"
+                        },
+                        {
+                            "md5": "054255d0b924ef502b77e5743a1d2412",
+                            "target": "pifu_017_lv3.unity3d_u_4",
+                            "size": 402504,
+                            "file": "keyword/054255d0b924ef502b77e5743a1d2412.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "淡定的熊少爷（大白）",
+                    "files": [
+                        {
+                            "md5": "186db9a8f04eec77ce22f180b7c7f1ca",
+                            "target": "pifu_017_lv1.unity3d_u_4",
+                            "size": 200015,
+                            "file": "keyword/186db9a8f04eec77ce22f180b7c7f1ca.bin"
+                        },
+                        {
+                            "md5": "44c64fb60ee2a1dca292114bf928ea72",
+                            "target": "pifu_017_lv2.unity3d_u_4",
+                            "size": 240407,
+                            "file": "keyword/44c64fb60ee2a1dca292114bf928ea72.bin"
+                        },
+                        {
+                            "md5": "4728e30235e23644ee56e3410f54b844",
+                            "target": "pifu_017_lv3.unity3d_u_4",
+                            "size": 268651,
+                            "file": "keyword/4728e30235e23644ee56e3410f54b844.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "西瓜姑娘",
+                    "files": [
+                        {
+                            "md5": "5d81ca8c576305d53c31c0baf6fb8f49",
+                            "target": "pifu_017_lv1.unity3d_u_4",
+                            "size": 127207,
+                            "file": "keyword/5d81ca8c576305d53c31c0baf6fb8f49.bin"
+                        },
+                        {
+                            "md5": "a567a9f9249f274d1e0b48ae71a5369a",
+                            "target": "pifu_017_lv2.unity3d_u_4",
+                            "size": 154807,
+                            "file": "keyword/a567a9f9249f274d1e0b48ae71a5369a.bin"
+                        },
+                        {
+                            "md5": "456be254b3660941d8907d6642d27213",
+                            "target": "pifu_017_lv3.unity3d_u_4",
+                            "size": 197084,
+                            "file": "keyword/456be254b3660941d8907d6642d27213.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "越野龙库拉拉",
+                    "files": [
+                        {
+                            "md5": "701751d8b4493f9fe11b0fd6cb80b983",
+                            "target": "pifu_017_lv1.unity3d_u_4",
+                            "size": 242231,
+                            "file": "keyword/701751d8b4493f9fe11b0fd6cb80b983.bin"
+                        },
+                        {
+                            "md5": "e57f8fd3f29d34bb480e8219463d6eb8",
+                            "target": "pifu_017_lv2.unity3d_u_4",
+                            "size": 242235,
+                            "file": "keyword/e57f8fd3f29d34bb480e8219463d6eb8.bin"
+                        },
+                        {
+                            "md5": "3915d55270425db6f49b08301e8ad4fd",
+                            "target": "pifu_017_lv3.unity3d_u_4",
+                            "size": 347660,
+                            "file": "keyword/3915d55270425db6f49b08301e8ad4fd.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "阿芙娜",
+                    "files": [
+                        {
+                            "md5": "951742884574bf5e9a1fa6365e5ec9ed",
+                            "target": "pifu_017_lv1.unity3d_u_4",
+                            "size": 421059,
+                            "file": "keyword/951742884574bf5e9a1fa6365e5ec9ed.bin"
+                        },
+                        {
+                            "md5": "65b299998556a7caf2f69b452bb93510",
+                            "target": "pifu_017_lv2.unity3d_u_4",
+                            "size": 654392,
+                            "file": "keyword/65b299998556a7caf2f69b452bb93510.bin"
+                        },
+                        {
+                            "md5": "7519a57d936f225a4ed6bbf4dc2b3bb3",
+                            "target": "pifu_017_lv3.unity3d_u_4",
+                            "size": 1123344,
+                            "file": "keyword/7519a57d936f225a4ed6bbf4dc2b3bb3.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "青青草原",
+                    "files": [
+                        {
+                            "md5": "c07bc9695b17ab5c845d589e90255786",
+                            "target": "pifu_017_lv1.unity3d_u_4",
+                            "size": 225859,
+                            "file": "keyword/c07bc9695b17ab5c845d589e90255786.bin"
+                        },
+                        {
+                            "md5": "43792e7081e1513b04f6c4182c5b28c1",
+                            "target": "pifu_017_lv2.unity3d_u_4",
+                            "size": 446599,
+                            "file": "keyword/43792e7081e1513b04f6c4182c5b28c1.bin"
+                        },
+                        {
+                            "md5": "65412764cdada0ed68c8aef3e894ef96",
+                            "target": "pifu_017_lv3.unity3d_u_4",
+                            "size": 758815,
+                            "file": "keyword/65412764cdada0ed68c8aef3e894ef96.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "飞猪",
+                    "files": [
+                        {
+                            "md5": "3dd51fbf294b88c2cc3d36cea437bd95",
+                            "target": "pifu_017_lv1.unity3d_u_4",
+                            "size": 156103,
+                            "file": "keyword/3dd51fbf294b88c2cc3d36cea437bd95.bin"
+                        },
+                        {
+                            "md5": "7ee412cfef87674c65d9b0447ca47ad1",
+                            "target": "pifu_017_lv2.unity3d_u_4",
+                            "size": 200792,
+                            "file": "keyword/7ee412cfef87674c65d9b0447ca47ad1.bin"
+                        },
+                        {
+                            "md5": "f179ff7076d11b7288c1e66d843716ef",
+                            "target": "pifu_017_lv3.unity3d_u_4",
+                            "size": 224644,
+                            "file": "keyword/f179ff7076d11b7288c1e66d843716ef.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "魔星战士",
+                    "files": [
+                        {
+                            "md5": "902557fc6393ea5b1e06b3a06010e458",
+                            "target": "pifu_017_lv1.unity3d_u_4",
+                            "size": 379583,
+                            "file": "keyword/902557fc6393ea5b1e06b3a06010e458.bin"
+                        },
+                        {
+                            "md5": "12f5769d2a9c486a6ac7bc957e3e1a24",
+                            "target": "pifu_017_lv2.unity3d_u_4",
+                            "size": 446599,
+                            "file": "keyword/12f5769d2a9c486a6ac7bc957e3e1a24.bin"
+                        },
+                        {
+                            "md5": "4534cc4e5e0264c1bbbb50ec1ae7ebc0",
+                            "target": "pifu_017_lv3.unity3d_u_4",
+                            "size": 728940,
+                            "file": "keyword/4534cc4e5e0264c1bbbb50ec1ae7ebc0.bin"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "kw-juzi",
+            "name": "桔子宝贝",
+            "section": "keyword",
+            "altDirs": [],
+            "dir": "keyskin/pifu3",
+            "matchPrefix": true,
+            "styles": [
+                {
+                    "name": "占卜魔法球",
+                    "files": [
+                        {
+                            "md5": "0bb32dd3fb639bb2fc52388accb81579",
+                            "target": "pifu_031_lv1.unity3d_u_4",
+                            "size": 47980,
+                            "file": "keyword/0bb32dd3fb639bb2fc52388accb81579.bin"
+                        },
+                        {
+                            "md5": "caff02b03a426505d44526963714877f",
+                            "target": "pifu_031_lv2.unity3d_u_4",
+                            "size": 330796,
+                            "file": "keyword/caff02b03a426505d44526963714877f.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "坏人小偷",
+                    "files": [
+                        {
+                            "md5": "0d7d9786842da3348b21518a8e5a93bd",
+                            "target": "pifu_031_lv1.unity3d_u_4",
+                            "size": 47980,
+                            "file": "keyword/0d7d9786842da3348b21518a8e5a93bd.bin"
+                        },
+                        {
+                            "md5": "4052ee321c01fa4c1655c6d3c4a762d2",
+                            "target": "pifu_031_lv2.unity3d_u_4",
+                            "size": 785692,
+                            "file": "keyword/4052ee321c01fa4c1655c6d3c4a762d2.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "彩虹之南",
+                    "files": [
+                        {
+                            "md5": "f12c48a609efe4b242cf10d3d824dc71",
+                            "target": "pifu_031_lv1.unity3d_u_4",
+                            "size": 2410612,
+                            "file": "keyword/f12c48a609efe4b242cf10d3d824dc71.bin"
+                        },
+                        {
+                            "md5": "689f813fa13ce6dff586adcb9e12d5de",
+                            "target": "pifu_031_lv2.unity3d_u_4",
+                            "size": 216960,
+                            "file": "keyword/689f813fa13ce6dff586adcb9e12d5de.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "时空漩涡",
+                    "files": [
+                        {
+                            "md5": "15a841d7286dae51f2d1788785f5d9b7",
+                            "target": "pifu_031_lv1.unity3d_u_4",
+                            "size": 382336,
+                            "file": "keyword/15a841d7286dae51f2d1788785f5d9b7.bin"
+                        },
+                        {
+                            "md5": "783d632b395f111f27d7541d9d4a4872",
+                            "target": "pifu_031_lv2.unity3d_u_4",
+                            "size": 382336,
+                            "file": "keyword/783d632b395f111f27d7541d9d4a4872.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "昆虫世界",
+                    "files": [
+                        {
+                            "md5": "4b3e68b2eec112c7e37844b54c652317",
+                            "target": "pifu_031_lv1.unity3d_u_4",
+                            "size": 1082800,
+                            "file": "keyword/4b3e68b2eec112c7e37844b54c652317.bin"
+                        },
+                        {
+                            "md5": "e75f38f03241016c0e5d3d7ec111d3ab",
+                            "target": "pifu_031_lv2.unity3d_u_4",
+                            "size": 1082800,
+                            "file": "keyword/e75f38f03241016c0e5d3d7ec111d3ab.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "月食",
+                    "files": [
+                        {
+                            "md5": "1c13de8b5fbc3ed6b37b861a7fd45020",
+                            "target": "pifu_031_lv1.unity3d_u_4",
+                            "size": 47980,
+                            "file": "keyword/1c13de8b5fbc3ed6b37b861a7fd45020.bin"
+                        },
+                        {
+                            "md5": "8b7c43a0d59ea362e52f3c28bd917afa",
+                            "target": "pifu_031_lv2.unity3d_u_4",
+                            "size": 374343,
+                            "file": "keyword/8b7c43a0d59ea362e52f3c28bd917afa.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "水墨神鹰",
+                    "files": [
+                        {
+                            "md5": "8dfdcadb507cfc9ae3cb540dc45c6dd5",
+                            "target": "pifu_031_lv1.unity3d_u_4",
+                            "size": 47980,
+                            "file": "keyword/8dfdcadb507cfc9ae3cb540dc45c6dd5.bin"
+                        },
+                        {
+                            "md5": "35d3b04215f84293a7e74814aa9dc26e",
+                            "target": "pifu_031_lv2.unity3d_u_4",
+                            "size": 772220,
+                            "file": "keyword/35d3b04215f84293a7e74814aa9dc26e.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "水族馆奇遇",
+                    "files": [
+                        {
+                            "md5": "4f4fc32059f3c371c9e1f80353e02b5e",
+                            "target": "pifu_031_lv1.unity3d_u_4",
+                            "size": 1304143,
+                            "file": "keyword/4f4fc32059f3c371c9e1f80353e02b5e.bin"
+                        },
+                        {
+                            "md5": "d794ce6a0bf6c7e24f9e79f5804cad93",
+                            "target": "pifu_031_lv2.unity3d_u_4",
+                            "size": 1304143,
+                            "file": "keyword/d794ce6a0bf6c7e24f9e79f5804cad93.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "水滴泡泡",
+                    "files": [
+                        {
+                            "md5": "6a1e02c170c6ab8d6307a80dc5a79c16",
+                            "target": "pifu_031_lv1.unity3d_u_4",
+                            "size": 47980,
+                            "file": "keyword/6a1e02c170c6ab8d6307a80dc5a79c16.bin"
+                        },
+                        {
+                            "md5": "5ad65d345b295182120305343aea2549",
+                            "target": "pifu_031_lv2.unity3d_u_4",
+                            "size": 276064,
+                            "file": "keyword/5ad65d345b295182120305343aea2549.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "狮子王",
+                    "files": [
+                        {
+                            "md5": "56d913e1d7d0218b6aef5f29b239c49b",
+                            "target": "pifu_031_lv1.unity3d_u_4",
+                            "size": 47980,
+                            "file": "keyword/56d913e1d7d0218b6aef5f29b239c49b.bin"
+                        },
+                        {
+                            "md5": "c4aa71d7456e52f8d45093783a0b2854",
+                            "target": "pifu_031_lv2.unity3d_u_4",
+                            "size": 315952,
+                            "file": "keyword/c4aa71d7456e52f8d45093783a0b2854.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "神殿圣杯",
+                    "files": [
+                        {
+                            "md5": "c2f1d7aa29a83ffee7323eac54fad8b4",
+                            "target": "pifu_031_lv1.unity3d_u_4",
+                            "size": 1152544,
+                            "file": "keyword/c2f1d7aa29a83ffee7323eac54fad8b4.bin"
+                        },
+                        {
+                            "md5": "44f22ecd19e71a208e6a536440fb2451",
+                            "target": "pifu_031_lv2.unity3d_u_4",
+                            "size": 1152544,
+                            "file": "keyword/44f22ecd19e71a208e6a536440fb2451.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "第五天灾",
+                    "files": [
+                        {
+                            "md5": "99f996d70ac34ab3d590d33c280a5913",
+                            "target": "pifu_031_lv1.unity3d_u_4",
+                            "size": 47980,
+                            "file": "keyword/99f996d70ac34ab3d590d33c280a5913.bin"
+                        },
+                        {
+                            "md5": "abc7e3f959fc9a66bab831be8d07f3c8",
+                            "target": "pifu_031_lv2.unity3d_u_4",
+                            "size": 1984712,
+                            "file": "keyword/abc7e3f959fc9a66bab831be8d07f3c8.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "血色狂花美杜莎",
+                    "files": [
+                        {
+                            "md5": "b3d69db8e8edda28304f518fffb68428",
+                            "target": "pifu_031_lv1.unity3d_u_4",
+                            "size": 683368,
+                            "file": "keyword/b3d69db8e8edda28304f518fffb68428.bin"
+                        },
+                        {
+                            "md5": "340672546f347282f8514ed4f92189ca",
+                            "target": "pifu_031_lv2.unity3d_u_4",
+                            "size": 820336,
+                            "file": "keyword/340672546f347282f8514ed4f92189ca.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "超级哈塔",
+                    "files": [
+                        {
+                            "md5": "d94d1a48bf5feb0d0cf00966a026bc29",
+                            "target": "pifu_031_lv1.unity3d_u_4",
+                            "size": 789159,
+                            "file": "keyword/d94d1a48bf5feb0d0cf00966a026bc29.bin"
+                        },
+                        {
+                            "md5": "30845a0168656634822d419c6901f06a",
+                            "target": "pifu_031_lv2.unity3d_u_4",
+                            "size": 789159,
+                            "file": "keyword/30845a0168656634822d419c6901f06a.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "骑士",
+                    "files": [
+                        {
+                            "md5": "1e5794696ef0c90a81cff729800e1a8a",
+                            "target": "pifu_031_lv1.unity3d_u_4",
+                            "size": 319368,
+                            "file": "keyword/1e5794696ef0c90a81cff729800e1a8a.bin"
+                        },
+                        {
+                            "md5": "37a02b3e4c1fe1b379001f54f7f43e63",
+                            "target": "pifu_031_lv2.unity3d_u_4",
+                            "size": 319368,
+                            "file": "keyword/37a02b3e4c1fe1b379001f54f7f43e63.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "鸭子舞菲露露",
+                    "files": [
+                        {
+                            "md5": "1a34f3c452605ed3a6cefab8ef9f9298",
+                            "target": "pifu_031_lv1.unity3d_u_4",
+                            "size": 47980,
+                            "file": "keyword/1a34f3c452605ed3a6cefab8ef9f9298.bin"
+                        },
+                        {
+                            "md5": "a86c368e09d0f1ed61c11b3c28c370cb",
+                            "target": "pifu_031_lv2.unity3d_u_4",
+                            "size": 722708,
+                            "file": "keyword/a86c368e09d0f1ed61c11b3c28c370cb.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "黯灭",
+                    "files": [
+                        {
+                            "md5": "bdf881bec1ea0127c151b7ad2a60da05",
+                            "target": "pifu_031_lv1.unity3d_u_4",
+                            "size": 2410612,
+                            "file": "keyword/bdf881bec1ea0127c151b7ad2a60da05.bin"
+                        },
+                        {
+                            "md5": "bdf881bec1ea0127c151b7ad2a60da05",
+                            "target": "pifu_031_lv2.unity3d_u_4",
+                            "size": 2410612,
+                            "file": "keyword/bdf881bec1ea0127c151b7ad2a60da05.bin"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "kw-xigua",
+            "name": "cool西瓜",
+            "section": "keyword",
+            "altDirs": [],
+            "dir": "keyskin/pifu2",
+            "matchPrefix": true,
+            "styles": [
+                {
+                    "name": "无",
+                    "files": [
+                        {
+                            "md5": "04d44372ec28d77eafab89ee12b5f291",
+                            "target": "pifu_025_lv1.unity3d_u_4",
+                            "size": 122760,
+                            "file": "keyword/04d44372ec28d77eafab89ee12b5f291.bin"
+                        },
+                        {
+                            "md5": "3dfca040865b04ded7cd39fdd57db5c9",
+                            "target": "pifu_025_lv2.unity3d_u_4",
+                            "size": 122760,
+                            "file": "keyword/3dfca040865b04ded7cd39fdd57db5c9.bin"
+                        },
+                        {
+                            "md5": "153c26515137ae986fdea10d7f40b938",
+                            "target": "pifu_025_lv3.unity3d_u_4",
+                            "size": 122760,
+                            "file": "keyword/153c26515137ae986fdea10d7f40b938.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "泡泡",
+                    "files": [
+                        {
+                            "md5": "c0c034e91c5106741d643b738223cd09",
+                            "target": "pifu_025_lv1.unity3d_u_4",
+                            "size": 122760,
+                            "file": "keyword/c0c034e91c5106741d643b738223cd09.bin"
+                        },
+                        {
+                            "md5": "94cb440b7fb867331cfbba941c82fae6",
+                            "target": "pifu_025_lv2.unity3d_u_4",
+                            "size": 122760,
+                            "file": "keyword/94cb440b7fb867331cfbba941c82fae6.bin"
+                        },
+                        {
+                            "md5": "523805088429a540b556657b4a6a61cd",
+                            "target": "pifu_025_lv3.unity3d_u_4",
+                            "size": 122760,
+                            "file": "keyword/523805088429a540b556657b4a6a61cd.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "白光无",
+                    "files": [
+                        {
+                            "md5": "56182f727e372bbe9337d471b4ae7edc",
+                            "target": "pifu_025_lv1.unity3d_u_4",
+                            "size": 122760,
+                            "file": "keyword/56182f727e372bbe9337d471b4ae7edc.bin"
+                        },
+                        {
+                            "md5": "55649d7d9fc03cabe3854046ea7baffd",
+                            "target": "pifu_025_lv2.unity3d_u_4",
+                            "size": 122760,
+                            "file": "keyword/55649d7d9fc03cabe3854046ea7baffd.bin"
+                        },
+                        {
+                            "md5": "3592d21127b0ccdf81823a5444e734bb",
+                            "target": "pifu_025_lv3.unity3d_u_4",
+                            "size": 122760,
+                            "file": "keyword/3592d21127b0ccdf81823a5444e734bb.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "蓝光无",
+                    "files": [
+                        {
+                            "md5": "2fe685810f72b7fbaa59c01c8069899b",
+                            "target": "pifu_025_lv1.unity3d_u_4",
+                            "size": 122760,
+                            "file": "keyword/2fe685810f72b7fbaa59c01c8069899b.bin"
+                        },
+                        {
+                            "md5": "729c3783959575a11d00f3e7e02cce26",
+                            "target": "pifu_025_lv2.unity3d_u_4",
+                            "size": 122760,
+                            "file": "keyword/729c3783959575a11d00f3e7e02cce26.bin"
+                        },
+                        {
+                            "md5": "8312a78077bb76c8b10caf9a6abb8b50",
+                            "target": "pifu_025_lv3.unity3d_u_4",
+                            "size": 122760,
+                            "file": "keyword/8312a78077bb76c8b10caf9a6abb8b50.bin"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "kw-zhaniao",
+            "name": "渣渣鸟",
+            "section": "keyword",
+            "altDirs": [],
+            "dir": "keyskin/pifu1",
+            "matchPrefix": true,
+            "styles": [
+                {
+                    "name": "御兽玉璧",
+                    "files": [
+                        {
+                            "md5": "5308118f2177feac1fe3965f02b7b6b3",
+                            "target": "pifu_018_lv2.unity3d_u_1",
+                            "size": 2125592,
+                            "file": "keyword/5308118f2177feac1fe3965f02b7b6b3.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "龙儿",
+                    "files": [
+                        {
+                            "md5": "3960cd7ca40f61bf6fdd96432023cb21",
+                            "target": "pifu_018_lv1.unity3d_u_1",
+                            "size": 558004,
+                            "file": "keyword/3960cd7ca40f61bf6fdd96432023cb21.bin"
+                        },
+                        {
+                            "md5": "ee0923233410e5d8d6d6cc1abe077032",
+                            "target": "pifu_018_lv3.unity3d_u_1",
+                            "size": 558004,
+                            "file": "keyword/ee0923233410e5d8d6d6cc1abe077032.bin"
+                        },
+                        {
+                            "md5": "34bbb146fcc077845cfa47fd9b75f1b1",
+                            "target": "pifu_018_lv2.unity3d_u_1",
+                            "size": 558004,
+                            "file": "keyword/34bbb146fcc077845cfa47fd9b75f1b1.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "蚀影之夜",
+                    "files": [
+                        {
+                            "md5": "ba7101d35afba520cf70e2e6d8f252a0",
+                            "target": "pifu_018_lv1.unity3d_u_1",
+                            "size": 994468,
+                            "file": "keyword/ba7101d35afba520cf70e2e6d8f252a0.bin"
+                        },
+                        {
+                            "md5": "71b199e3847e99ec7df29c49146db7cf",
+                            "target": "pifu_018_lv3.unity3d_u_1",
+                            "size": 994468,
+                            "file": "keyword/71b199e3847e99ec7df29c49146db7cf.bin"
+                        },
+                        {
+                            "md5": "2e5ba6b66fe8107e90226054555aab40",
+                            "target": "pifu_018_lv2.unity3d_u_1",
+                            "size": 994468,
+                            "file": "keyword/2e5ba6b66fe8107e90226054555aab40.bin"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "kw-fenshen",
+            "name": "所有分身",
+            "section": "keyword",
+            "altDirs": [],
+            "dir": "ui/keyskin",
+            "matchPrefix": true,
+            "styles": [
+                {
+                    "name": "分身美化",
+                    "files": [
+                        {
+                            "md5": "69063754732126d58ae880513e9849d1",
+                            "target": "pifu_017i.unity3d_u_4",
+                            "size": 31862,
+                            "file": "keyword/69063754732126d58ae880513e9849d1.bin"
+                        },
+                        {
+                            "md5": "69063754732126d58ae880513e9849d1",
+                            "target": "pifu_018i.unity3d_u_4",
+                            "size": 31862,
+                            "file": "keyword/69063754732126d58ae880513e9849d1.bin"
+                        },
+                        {
+                            "md5": "69063754732126d58ae880513e9849d1",
+                            "target": "pifu_025i.unity3d_u_4",
+                            "size": 31862,
+                            "file": "keyword/69063754732126d58ae880513e9849d1.bin"
+                        },
+                        {
+                            "md5": "13019b4ec8bba80e236d6f2f6bc7fcab",
+                            "target": "pifu_031i.unity3d_u_4",
+                            "size": 31774,
+                            "file": "keyword/13019b4ec8bba80e236d6f2f6bc7fcab.bin"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "spike-shuangguan",
+            "name": "双冠",
+            "section": "spike",
+            "altDirs": [],
+            "dir": "alltextures/map3",
+            "matchPrefix": true,
+            "styles": [
+                {
+                    "name": "双冠红刺",
+                    "files": [
+                        {
+                            "md5": "dff24a41202fb0e820754f5888b8c6a6",
+                            "target": "ciqiu_yuzhou_5.unity3d_u_4",
+                            "size": 70108,
+                            "file": "spike/dff24a41202fb0e820754f5888b8c6a6.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "喷射红刺",
+                    "files": [
+                        {
+                            "md5": "bbec58f3a388ef8b5323e6d80e2fb62b",
+                            "target": "ciqiu_yuzhou_5.unity3d_u_4",
+                            "size": 70108,
+                            "file": "spike/bbec58f3a388ef8b5323e6d80e2fb62b.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "喷射蓝刺",
+                    "files": [
+                        {
+                            "md5": "dd6939d5b1645eabc318205a077388bc",
+                            "target": "ciqiu_yuzhou_5.unity3d_u_4",
+                            "size": 70108,
+                            "file": "spike/dd6939d5b1645eabc318205a077388bc.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "多环蓝圈",
+                    "files": [
+                        {
+                            "md5": "ec1503bfc33bf5b9b47ba38587579a9f",
+                            "target": "ciqiu_yuzhou_5.unity3d_u_4",
+                            "size": 70108,
+                            "file": "spike/ec1503bfc33bf5b9b47ba38587579a9f.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "小泳圈",
+                    "files": [
+                        {
+                            "md5": "724ebe9389036086793ef54d217a7d69",
+                            "target": "ciqiu_yuzhou_5.unity3d_u_4",
+                            "size": 70108,
+                            "file": "spike/724ebe9389036086793ef54d217a7d69.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "无",
+                    "files": [
+                        {
+                            "md5": "ac6941c15165ce919b9b1f9a70814513",
+                            "target": "ciqiu_yuzhou_5.unity3d_u_4",
+                            "size": 70108,
+                            "file": "spike/ac6941c15165ce919b9b1f9a70814513.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "星空战绩红刺",
+                    "files": [
+                        {
+                            "md5": "6ed7edea3c3d84c1208e1fced4739e8c",
+                            "target": "ciqiu_yuzhou_5.unity3d_u_4",
+                            "size": 70108,
+                            "file": "spike/6ed7edea3c3d84c1208e1fced4739e8c.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "星空战绩蓝刺",
+                    "files": [
+                        {
+                            "md5": "d15fb4d104e9372fb10357826d6cd6c0",
+                            "target": "ciqiu_yuzhou_5.unity3d_u_4",
+                            "size": 70108,
+                            "file": "spike/d15fb4d104e9372fb10357826d6cd6c0.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "柠檬",
+                    "files": [
+                        {
+                            "md5": "3db421287ffff7ddf656de4d5edb4d53",
+                            "target": "ciqiu_yuzhou_5.unity3d_u_4",
+                            "size": 70108,
+                            "file": "spike/3db421287ffff7ddf656de4d5edb4d53.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "橙子",
+                    "files": [
+                        {
+                            "md5": "ed50cda4b89ea56634f6725f28b9f85b",
+                            "target": "ciqiu_yuzhou_5.unity3d_u_4",
+                            "size": 70108,
+                            "file": "spike/ed50cda4b89ea56634f6725f28b9f85b.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "泡泡",
+                    "files": [
+                        {
+                            "md5": "ce1d7d2a51ea7a8152e7e1116b0aba36",
+                            "target": "ciqiu_yuzhou_5.unity3d_u_4",
+                            "size": 70108,
+                            "file": "spike/ce1d7d2a51ea7a8152e7e1116b0aba36.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "灰色坤坤",
+                    "files": [
+                        {
+                            "md5": "c42e899d64406bd1c4a416a91d94c7b3",
+                            "target": "ciqiu_yuzhou_5.unity3d_u_4",
+                            "size": 70108,
+                            "file": "spike/c42e899d64406bd1c4a416a91d94c7b3.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "猕猴桃",
+                    "files": [
+                        {
+                            "md5": "5cae41054c27fc82cebb27fe4e6de2c8",
+                            "target": "ciqiu_yuzhou_5.unity3d_u_4",
+                            "size": 70108,
+                            "file": "spike/5cae41054c27fc82cebb27fe4e6de2c8.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "篮球",
+                    "files": [
+                        {
+                            "md5": "5882adccf56df654af394ecfb5030bf1",
+                            "target": "ciqiu_yuzhou_5.unity3d_u_4",
+                            "size": 70108,
+                            "file": "spike/5882adccf56df654af394ecfb5030bf1.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "紫色边境",
+                    "files": [
+                        {
+                            "md5": "919eadd50c47081479616b9d20271115",
+                            "target": "ciqiu_yuzhou_5.unity3d_u_4",
+                            "size": 70108,
+                            "file": "spike/919eadd50c47081479616b9d20271115.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "红叉",
+                    "files": [
+                        {
+                            "md5": "dd433320f101e71186b7f130ec43ad35",
+                            "target": "ciqiu_yuzhou_5.unity3d_u_4",
+                            "size": 70108,
+                            "file": "spike/dd433320f101e71186b7f130ec43ad35.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "经典红刺",
+                    "files": [
+                        {
+                            "md5": "d817a01350175b1793447781a44cdf7e",
+                            "target": "ciqiu_yuzhou_5.unity3d_u_4",
+                            "size": 70108,
+                            "file": "spike/d817a01350175b1793447781a44cdf7e.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "经典绿刺",
+                    "files": [
+                        {
+                            "md5": "dca3a75c5137f76977479b1f3e3c4ed4",
+                            "target": "ciqiu_yuzhou_5.unity3d_u_4",
+                            "size": 70108,
+                            "file": "spike/dca3a75c5137f76977479b1f3e3c4ed4.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "经典透明刺",
+                    "files": [
+                        {
+                            "md5": "fc3742f5ae4e5e99643ac6350c073e3c",
+                            "target": "ciqiu_yuzhou_5.unity3d_u_4",
+                            "size": 70108,
+                            "file": "spike/fc3742f5ae4e5e99643ac6350c073e3c.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "经典透明红刺",
+                    "files": [
+                        {
+                            "md5": "128d9ae26524dc2e67be0514c1326cd6",
+                            "target": "ciqiu_yuzhou_5.unity3d_u_4",
+                            "size": 70108,
+                            "file": "spike/128d9ae26524dc2e67be0514c1326cd6.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "绿色无",
+                    "files": [
+                        {
+                            "md5": "9be9c19d25823bd8754ea7ab59e8fdd5",
+                            "target": "ciqiu_yuzhou_5.unity3d_u_4",
+                            "size": 70108,
+                            "file": "spike/9be9c19d25823bd8754ea7ab59e8fdd5.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "绿草环绕",
+                    "files": [
+                        {
+                            "md5": "389e9e0e25df30917d7f38d014b31d0e",
+                            "target": "ciqiu_yuzhou_5.unity3d_u_4",
+                            "size": 70108,
+                            "file": "spike/389e9e0e25df30917d7f38d014b31d0e.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "花式徽章",
+                    "files": [
+                        {
+                            "md5": "35f346ca69dfcecdf0c46efd60e29ae4",
+                            "target": "ciqiu_yuzhou_5.unity3d_u_4",
+                            "size": 70108,
+                            "file": "spike/35f346ca69dfcecdf0c46efd60e29ae4.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "蓝光无",
+                    "files": [
+                        {
+                            "md5": "7721ef23fb598bb10b4aa8a6070be9b9",
+                            "target": "ciqiu_yuzhou_5.unity3d_u_4",
+                            "size": 70108,
+                            "file": "spike/7721ef23fb598bb10b4aa8a6070be9b9.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "蓝色噗噗",
+                    "files": [
+                        {
+                            "md5": "1e51430ab8eed1738410949e8fdae108",
+                            "target": "ciqiu_yuzhou_5.unity3d_u_4",
+                            "size": 70108,
+                            "file": "spike/1e51430ab8eed1738410949e8fdae108.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "蓝色月牙",
+                    "files": [
+                        {
+                            "md5": "6c16d6ea4b1ba4fb02ee7ba43a934e7c",
+                            "target": "ciqiu_yuzhou_5.unity3d_u_4",
+                            "size": 70108,
+                            "file": "spike/6c16d6ea4b1ba4fb02ee7ba43a934e7c.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "蓝花",
+                    "files": [
+                        {
+                            "md5": "8a153152b9619380e55bc5f2221539ca",
+                            "target": "ciqiu_yuzhou_5.unity3d_u_4",
+                            "size": 70108,
+                            "file": "spike/8a153152b9619380e55bc5f2221539ca.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "西瓜",
+                    "files": [
+                        {
+                            "md5": "bb6aa1782072033dcd1dbd35ff183fbc",
+                            "target": "ciqiu_yuzhou_5.unity3d_u_4",
+                            "size": 70108,
+                            "file": "spike/bb6aa1782072033dcd1dbd35ff183fbc.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "逃杀灰刺",
+                    "files": [
+                        {
+                            "md5": "327440158f626fb6d6f85b0014f9984a",
+                            "target": "ciqiu_yuzhou_5.unity3d_u_4",
+                            "size": 70108,
+                            "file": "spike/327440158f626fb6d6f85b0014f9984a.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "逃杀红刺",
+                    "files": [
+                        {
+                            "md5": "68fa554594a29590855c02cc1e9fdecb",
+                            "target": "ciqiu_yuzhou_5.unity3d_u_4",
+                            "size": 70108,
+                            "file": "spike/68fa554594a29590855c02cc1e9fdecb.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "逃杀透明灰刺1",
+                    "files": [
+                        {
+                            "md5": "67956afe5a8ac33c37b303ea374aa7d8",
+                            "target": "ciqiu_yuzhou_5.unity3d_u_4",
+                            "size": 70108,
+                            "file": "spike/67956afe5a8ac33c37b303ea374aa7d8.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "逃杀透明灰刺2",
+                    "files": [
+                        {
+                            "md5": "78ed51d26a8b154f662b3b31214d8099",
+                            "target": "ciqiu_yuzhou_5.unity3d_u_4",
+                            "size": 70108,
+                            "file": "spike/78ed51d26a8b154f662b3b31214d8099.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "逃杀透明红刺",
+                    "files": [
+                        {
+                            "md5": "d8b0d38e0ad94aa80bb8682277b98b3b",
+                            "target": "ciqiu_yuzhou_5.unity3d_u_4",
+                            "size": 70108,
+                            "file": "spike/d8b0d38e0ad94aa80bb8682277b98b3b.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "透明西瓜",
+                    "files": [
+                        {
+                            "md5": "51d6f7e50099d564cedbcc4d829d8037",
+                            "target": "ciqiu_yuzhou_5.unity3d_u_4",
+                            "size": 70108,
+                            "file": "spike/51d6f7e50099d564cedbcc4d829d8037.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "随机奖励",
+                    "files": [
+                        {
+                            "md5": "1e73bce9d5ddc85a6d0442f7b8092d58",
+                            "target": "ciqiu_yuzhou_5.unity3d_u_4",
+                            "size": 70108,
+                            "file": "spike/1e73bce9d5ddc85a6d0442f7b8092d58.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "香蕉",
+                    "files": [
+                        {
+                            "md5": "0c45952ffafc0e3e077c68e176453431",
+                            "target": "ciqiu_yuzhou_5.unity3d_u_4",
+                            "size": 70108,
+                            "file": "spike/0c45952ffafc0e3e077c68e176453431.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "黄色噗噗",
+                    "files": [
+                        {
+                            "md5": "2528b68af30a736b731b5758743dc3c7",
+                            "target": "ciqiu_yuzhou_5.unity3d_u_4",
+                            "size": 70108,
+                            "file": "spike/2528b68af30a736b731b5758743dc3c7.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "黄色月牙",
+                    "files": [
+                        {
+                            "md5": "ef21515b641446ef294c04d5b4b95282",
+                            "target": "ciqiu_yuzhou_5.unity3d_u_4",
+                            "size": 70108,
+                            "file": "spike/ef21515b641446ef294c04d5b4b95282.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "黑洞",
+                    "files": [
+                        {
+                            "md5": "14a98241d4c3887dbb92497cd567f76d",
+                            "target": "ciqiu_yuzhou_5.unity3d_u_4",
+                            "size": 70108,
+                            "file": "spike/14a98241d4c3887dbb92497cd567f76d.bin"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "spike-tuanzhan",
+            "name": "团战",
+            "section": "spike",
+            "altDirs": [],
+            "dir": "ui/activity22",
+            "matchPrefix": true,
+            "styles": [
+                {
+                    "name": "双冠红刺",
+                    "files": [
+                        {
+                            "md5": "7690dac1a08448202fea9cced8cab09c",
+                            "target": "cici2.unity3d_u_4",
+                            "size": 70064,
+                            "file": "spike/7690dac1a08448202fea9cced8cab09c.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "双冠绿刺",
+                    "files": [
+                        {
+                            "md5": "06a162658655810c0df455281a8e6f12",
+                            "target": "cici2.unity3d_u_4",
+                            "size": 70064,
+                            "file": "spike/06a162658655810c0df455281a8e6f12.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "喷射红刺",
+                    "files": [
+                        {
+                            "md5": "6c8a879d3081501756bb6e57d451d8d4",
+                            "target": "cici2.unity3d_u_4",
+                            "size": 70064,
+                            "file": "spike/6c8a879d3081501756bb6e57d451d8d4.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "喷射蓝刺",
+                    "files": [
+                        {
+                            "md5": "9a6bdbee6f7e5edbb828eadd1275ab46",
+                            "target": "cici2.unity3d_u_4",
+                            "size": 70064,
+                            "file": "spike/9a6bdbee6f7e5edbb828eadd1275ab46.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "多环蓝圈",
+                    "files": [
+                        {
+                            "md5": "8d924c0bc3ce64634e6ed670d08ebd12",
+                            "target": "cici2.unity3d_u_4",
+                            "size": 70064,
+                            "file": "spike/8d924c0bc3ce64634e6ed670d08ebd12.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "小泳圈",
+                    "files": [
+                        {
+                            "md5": "2f90cb86bffaaa8260c5e8bd6028d7b3",
+                            "target": "cici2.unity3d_u_4",
+                            "size": 70064,
+                            "file": "spike/2f90cb86bffaaa8260c5e8bd6028d7b3.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "无",
+                    "files": [
+                        {
+                            "md5": "8250b8a720e558a4731ff99d91445a97",
+                            "target": "cici2.unity3d_u_4",
+                            "size": 70064,
+                            "file": "spike/8250b8a720e558a4731ff99d91445a97.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "星空战绩红刺",
+                    "files": [
+                        {
+                            "md5": "c060eb889f0b5940541168d86004b6d2",
+                            "target": "cici2.unity3d_u_4",
+                            "size": 70064,
+                            "file": "spike/c060eb889f0b5940541168d86004b6d2.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "星空战绩蓝刺",
+                    "files": [
+                        {
+                            "md5": "f459b5bbb0c6f8200fd41a5d5d80f022",
+                            "target": "cici2.unity3d_u_4",
+                            "size": 70064,
+                            "file": "spike/f459b5bbb0c6f8200fd41a5d5d80f022.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "柠檬",
+                    "files": [
+                        {
+                            "md5": "a93f17f24f1317883e448343f50d9a1d",
+                            "target": "cici2.unity3d_u_4",
+                            "size": 70064,
+                            "file": "spike/a93f17f24f1317883e448343f50d9a1d.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "橙子",
+                    "files": [
+                        {
+                            "md5": "2bb6dd2ed0e88aaf75151d52152c89ff",
+                            "target": "cici2.unity3d_u_4",
+                            "size": 70064,
+                            "file": "spike/2bb6dd2ed0e88aaf75151d52152c89ff.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "泡泡",
+                    "files": [
+                        {
+                            "md5": "1de4b03017069939c5f7dd9be28659b2",
+                            "target": "cici2.unity3d_u_4",
+                            "size": 70064,
+                            "file": "spike/1de4b03017069939c5f7dd9be28659b2.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "灰色坤坤",
+                    "files": [
+                        {
+                            "md5": "43061e3cc822544f4fdc94f56660bd5a",
+                            "target": "cici2.unity3d_u_4",
+                            "size": 70064,
+                            "file": "spike/43061e3cc822544f4fdc94f56660bd5a.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "猕猴桃",
+                    "files": [
+                        {
+                            "md5": "12a726bfe0935b23cfb083eb6a85543f",
+                            "target": "cici2.unity3d_u_4",
+                            "size": 70064,
+                            "file": "spike/12a726bfe0935b23cfb083eb6a85543f.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "篮球",
+                    "files": [
+                        {
+                            "md5": "fd17d5082815707cf96d7aadb2f51694",
+                            "target": "cici2.unity3d_u_4",
+                            "size": 70064,
+                            "file": "spike/fd17d5082815707cf96d7aadb2f51694.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "紫色边境",
+                    "files": [
+                        {
+                            "md5": "f194051161a981e7a5da2bb10515c4ab",
+                            "target": "cici2.unity3d_u_4",
+                            "size": 70064,
+                            "file": "spike/f194051161a981e7a5da2bb10515c4ab.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "红叉",
+                    "files": [
+                        {
+                            "md5": "18684bb9ac3f244ac3ab71e61719e12a",
+                            "target": "cici2.unity3d_u_4",
+                            "size": 70064,
+                            "file": "spike/18684bb9ac3f244ac3ab71e61719e12a.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "经典红刺",
+                    "files": [
+                        {
+                            "md5": "50294d8c1ee630f9bc38c9039596a6dd",
+                            "target": "cici2.unity3d_u_4",
+                            "size": 70064,
+                            "file": "spike/50294d8c1ee630f9bc38c9039596a6dd.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "经典透明刺",
+                    "files": [
+                        {
+                            "md5": "061e311c7ab9b554771d7bf2dcd632e4",
+                            "target": "cici2.unity3d_u_4",
+                            "size": 70064,
+                            "file": "spike/061e311c7ab9b554771d7bf2dcd632e4.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "经典透明红刺",
+                    "files": [
+                        {
+                            "md5": "49ed4224542e5d471eae7779e010a5db",
+                            "target": "cici2.unity3d_u_4",
+                            "size": 70064,
+                            "file": "spike/49ed4224542e5d471eae7779e010a5db.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "绿色无",
+                    "files": [
+                        {
+                            "md5": "18f59f1f328886e8c135b25d150b6478",
+                            "target": "cici2.unity3d_u_4",
+                            "size": 70064,
+                            "file": "spike/18f59f1f328886e8c135b25d150b6478.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "绿草环绕",
+                    "files": [
+                        {
+                            "md5": "876075d15003800e64d98dc6043deb60",
+                            "target": "cici2.unity3d_u_4",
+                            "size": 70064,
+                            "file": "spike/876075d15003800e64d98dc6043deb60.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "花式徽章",
+                    "files": [
+                        {
+                            "md5": "b0cd0bf26637c36d1a5ccd8b5c45719f",
+                            "target": "cici2.unity3d_u_4",
+                            "size": 70064,
+                            "file": "spike/b0cd0bf26637c36d1a5ccd8b5c45719f.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "蓝光无",
+                    "files": [
+                        {
+                            "md5": "a4d0f95141c6ac119797890ab4ff055d",
+                            "target": "cici2.unity3d_u_4",
+                            "size": 70064,
+                            "file": "spike/a4d0f95141c6ac119797890ab4ff055d.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "蓝色噗噗",
+                    "files": [
+                        {
+                            "md5": "abbef6dd468f06f50946c7cfed95aef8",
+                            "target": "cici2.unity3d_u_4",
+                            "size": 70064,
+                            "file": "spike/abbef6dd468f06f50946c7cfed95aef8.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "蓝色月牙",
+                    "files": [
+                        {
+                            "md5": "3a9ecdfd02347c97535bc7dedb3ab0e8",
+                            "target": "cici2.unity3d_u_4",
+                            "size": 70064,
+                            "file": "spike/3a9ecdfd02347c97535bc7dedb3ab0e8.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "蓝花",
+                    "files": [
+                        {
+                            "md5": "de831e13511e15e894cb427f689219eb",
+                            "target": "cici2.unity3d_u_4",
+                            "size": 70064,
+                            "file": "spike/de831e13511e15e894cb427f689219eb.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "西瓜",
+                    "files": [
+                        {
+                            "md5": "cc3e83296ee288fb303c1043584d1b76",
+                            "target": "cici2.unity3d_u_4",
+                            "size": 70064,
+                            "file": "spike/cc3e83296ee288fb303c1043584d1b76.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "逃杀灰刺",
+                    "files": [
+                        {
+                            "md5": "ad0cb13b1de2f31329293ae6ae801df8",
+                            "target": "cici2.unity3d_u_4",
+                            "size": 70064,
+                            "file": "spike/ad0cb13b1de2f31329293ae6ae801df8.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "逃杀红刺",
+                    "files": [
+                        {
+                            "md5": "eccc60d004aa3aa750cf88ff44211417",
+                            "target": "cici2.unity3d_u_4",
+                            "size": 70064,
+                            "file": "spike/eccc60d004aa3aa750cf88ff44211417.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "逃杀透明灰刺1",
+                    "files": [
+                        {
+                            "md5": "54aa22dec35560e1f4de348bc8671619",
+                            "target": "cici2.unity3d_u_4",
+                            "size": 70064,
+                            "file": "spike/54aa22dec35560e1f4de348bc8671619.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "逃杀透明灰刺2",
+                    "files": [
+                        {
+                            "md5": "4c2b2e5984892e3f87fdace5b090f70c",
+                            "target": "cici2.unity3d_u_4",
+                            "size": 70064,
+                            "file": "spike/4c2b2e5984892e3f87fdace5b090f70c.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "逃杀透明红刺",
+                    "files": [
+                        {
+                            "md5": "14dc6cba976ee0b8d90f2542a5ea6807",
+                            "target": "cici2.unity3d_u_4",
+                            "size": 70064,
+                            "file": "spike/14dc6cba976ee0b8d90f2542a5ea6807.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "透明西瓜",
+                    "files": [
+                        {
+                            "md5": "c79455c2f87239a0765972488b7e5c00",
+                            "target": "cici2.unity3d_u_4",
+                            "size": 70064,
+                            "file": "spike/c79455c2f87239a0765972488b7e5c00.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "随机奖励",
+                    "files": [
+                        {
+                            "md5": "9e812853de2465fb5171a1bc65cee152",
+                            "target": "cici2.unity3d_u_4",
+                            "size": 70064,
+                            "file": "spike/9e812853de2465fb5171a1bc65cee152.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "香蕉",
+                    "files": [
+                        {
+                            "md5": "cc32c9f611fab1a2404247314e547f65",
+                            "target": "cici2.unity3d_u_4",
+                            "size": 70064,
+                            "file": "spike/cc32c9f611fab1a2404247314e547f65.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "黄色噗噗",
+                    "files": [
+                        {
+                            "md5": "785ccdf2f1503ef9db81537186123fb6",
+                            "target": "cici2.unity3d_u_4",
+                            "size": 70064,
+                            "file": "spike/785ccdf2f1503ef9db81537186123fb6.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "黄色月牙",
+                    "files": [
+                        {
+                            "md5": "b5b282ae09c04f3c10fa10fc17acf67f",
+                            "target": "cici2.unity3d_u_4",
+                            "size": 70064,
+                            "file": "spike/b5b282ae09c04f3c10fa10fc17acf67f.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "黑洞",
+                    "files": [
+                        {
+                            "md5": "ec063e7d278ce1f2b6a357cec408a094",
+                            "target": "cici2.unity3d_u_4",
+                            "size": 70064,
+                            "file": "spike/ec063e7d278ce1f2b6a357cec408a094.bin"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "spike-taosha",
+            "name": "逃杀",
+            "section": "spike",
+            "altDirs": [],
+            "dir": "alltextures/ingameeffect",
+            "matchPrefix": true,
+            "styles": [
+                {
+                    "name": "双冠红刺",
+                    "files": [
+                        {
+                            "md5": "1a2f6af975b390d6eac8211a03f698cf",
+                            "target": "ciqiu_dataosha.unity3d_u_4",
+                            "size": 70136,
+                            "file": "spike/1a2f6af975b390d6eac8211a03f698cf.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "双冠绿刺",
+                    "files": [
+                        {
+                            "md5": "49861def088b76b2849527e225dd7905",
+                            "target": "ciqiu_dataosha.unity3d_u_4",
+                            "size": 70136,
+                            "file": "spike/49861def088b76b2849527e225dd7905.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "喷射红刺",
+                    "files": [
+                        {
+                            "md5": "0670fa3a4174b97384eec39fb3e8f5f1",
+                            "target": "ciqiu_dataosha.unity3d_u_4",
+                            "size": 70136,
+                            "file": "spike/0670fa3a4174b97384eec39fb3e8f5f1.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "喷射蓝刺",
+                    "files": [
+                        {
+                            "md5": "587350f97688f42f03b6a6069d0c2cf2",
+                            "target": "ciqiu_dataosha.unity3d_u_4",
+                            "size": 70136,
+                            "file": "spike/587350f97688f42f03b6a6069d0c2cf2.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "多环蓝圈",
+                    "files": [
+                        {
+                            "md5": "428e1b96b25ec2861d4b0912f3a4069c",
+                            "target": "ciqiu_dataosha.unity3d_u_4",
+                            "size": 70136,
+                            "file": "spike/428e1b96b25ec2861d4b0912f3a4069c.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "无",
+                    "files": [
+                        {
+                            "md5": "6c8c1d0e0563d5535737c45a8e980aa0",
+                            "target": "ciqiu_dataosha.unity3d_u_4",
+                            "size": 70136,
+                            "file": "spike/6c8c1d0e0563d5535737c45a8e980aa0.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "星际战绩红刺",
+                    "files": [
+                        {
+                            "md5": "5b4b3eda6b2b3cf7062873312295305c",
+                            "target": "ciqiu_dataosha.unity3d_u_4",
+                            "size": 70136,
+                            "file": "spike/5b4b3eda6b2b3cf7062873312295305c.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "星际战绩蓝刺",
+                    "files": [
+                        {
+                            "md5": "a2955d1e83b891e8ac61c85ca7a66b38",
+                            "target": "ciqiu_dataosha.unity3d_u_4",
+                            "size": 70136,
+                            "file": "spike/a2955d1e83b891e8ac61c85ca7a66b38.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "柠檬",
+                    "files": [
+                        {
+                            "md5": "9b1aee28201a77f0ebd40056d235ed2e",
+                            "target": "ciqiu_dataosha.unity3d_u_4",
+                            "size": 70136,
+                            "file": "spike/9b1aee28201a77f0ebd40056d235ed2e.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "橙子",
+                    "files": [
+                        {
+                            "md5": "561c10e721d516734e0ddb0a36405fc3",
+                            "target": "ciqiu_dataosha.unity3d_u_4",
+                            "size": 70136,
+                            "file": "spike/561c10e721d516734e0ddb0a36405fc3.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "泡泡",
+                    "files": [
+                        {
+                            "md5": "f041d75c9a278d33be5a4ff1b7abfac1",
+                            "target": "ciqiu_dataosha.unity3d_u_4",
+                            "size": 70136,
+                            "file": "spike/f041d75c9a278d33be5a4ff1b7abfac1.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "灰色坤坤",
+                    "files": [
+                        {
+                            "md5": "00390228b92aaa419cc618151391db32",
+                            "target": "ciqiu_dataosha.unity3d_u_4",
+                            "size": 70136,
+                            "file": "spike/00390228b92aaa419cc618151391db32.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "猕猴桃",
+                    "files": [
+                        {
+                            "md5": "8870c952b08072277ae0c0b36b4e905e",
+                            "target": "ciqiu_dataosha.unity3d_u_4",
+                            "size": 70136,
+                            "file": "spike/8870c952b08072277ae0c0b36b4e905e.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "篮球",
+                    "files": [
+                        {
+                            "md5": "b7a41c0a500890f073c5b388b515b917",
+                            "target": "ciqiu_dataosha.unity3d_u_4",
+                            "size": 70136,
+                            "file": "spike/b7a41c0a500890f073c5b388b515b917.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "紫色边境",
+                    "files": [
+                        {
+                            "md5": "d96890cf940f65601f30df4a198d9b74",
+                            "target": "ciqiu_dataosha.unity3d_u_4",
+                            "size": 70136,
+                            "file": "spike/d96890cf940f65601f30df4a198d9b74.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "红叉",
+                    "files": [
+                        {
+                            "md5": "74971b60905120e1594f9f9c13ee636c",
+                            "target": "ciqiu_dataosha.unity3d_u_4",
+                            "size": 70136,
+                            "file": "spike/74971b60905120e1594f9f9c13ee636c.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "经典红刺",
+                    "files": [
+                        {
+                            "md5": "0ef9a9a31f33709dc891d4460d142146",
+                            "target": "ciqiu_dataosha.unity3d_u_4",
+                            "size": 70136,
+                            "file": "spike/0ef9a9a31f33709dc891d4460d142146.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "经典绿刺",
+                    "files": [
+                        {
+                            "md5": "14738ddf96629490d58219982c89f261",
+                            "target": "ciqiu_dataosha.unity3d_u_4",
+                            "size": 70136,
+                            "file": "spike/14738ddf96629490d58219982c89f261.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "经典透明刺",
+                    "files": [
+                        {
+                            "md5": "2bb829ab3e5bd6471ad1e90e6dba3f89",
+                            "target": "ciqiu_dataosha.unity3d_u_4",
+                            "size": 70136,
+                            "file": "spike/2bb829ab3e5bd6471ad1e90e6dba3f89.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "经典透明红刺",
+                    "files": [
+                        {
+                            "md5": "d8fe7f0d0e54ea78bc01a4dd65ff7b4d",
+                            "target": "ciqiu_dataosha.unity3d_u_4",
+                            "size": 70136,
+                            "file": "spike/d8fe7f0d0e54ea78bc01a4dd65ff7b4d.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "绿色无",
+                    "files": [
+                        {
+                            "md5": "39cff838f4fa17959ea18963e472652e",
+                            "target": "ciqiu_dataosha.unity3d_u_4",
+                            "size": 70136,
+                            "file": "spike/39cff838f4fa17959ea18963e472652e.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "绿草环绕",
+                    "files": [
+                        {
+                            "md5": "991167f7355d61e7f8b56d3d088b74ca",
+                            "target": "ciqiu_dataosha.unity3d_u_4",
+                            "size": 70136,
+                            "file": "spike/991167f7355d61e7f8b56d3d088b74ca.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "花式徽章",
+                    "files": [
+                        {
+                            "md5": "bc2ef9f01809f50d7b6f12fb2ee2ecf5",
+                            "target": "ciqiu_dataosha.unity3d_u_4",
+                            "size": 70136,
+                            "file": "spike/bc2ef9f01809f50d7b6f12fb2ee2ecf5.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "蓝光无",
+                    "files": [
+                        {
+                            "md5": "74236f2dc0b7c5e0cb91bb82139eb2f4",
+                            "target": "ciqiu_dataosha.unity3d_u_4",
+                            "size": 70136,
+                            "file": "spike/74236f2dc0b7c5e0cb91bb82139eb2f4.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "蓝色噗噗",
+                    "files": [
+                        {
+                            "md5": "566568ccd34937597bc48285ccb57b07",
+                            "target": "ciqiu_dataosha.unity3d_u_4",
+                            "size": 70136,
+                            "file": "spike/566568ccd34937597bc48285ccb57b07.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "蓝色月牙",
+                    "files": [
+                        {
+                            "md5": "7f38314d783f3da8ada459983efee99a",
+                            "target": "ciqiu_dataosha.unity3d_u_4",
+                            "size": 70136,
+                            "file": "spike/7f38314d783f3da8ada459983efee99a.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "蓝花",
+                    "files": [
+                        {
+                            "md5": "2a97a45ad509d3de01210516db1cab94",
+                            "target": "ciqiu_dataosha.unity3d_u_4",
+                            "size": 70136,
+                            "file": "spike/2a97a45ad509d3de01210516db1cab94.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "西瓜",
+                    "files": [
+                        {
+                            "md5": "c77468133d0cf24a1e644fc2f0469814",
+                            "target": "ciqiu_dataosha.unity3d_u_4",
+                            "size": 70136,
+                            "file": "spike/c77468133d0cf24a1e644fc2f0469814.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "逃杀红刺",
+                    "files": [
+                        {
+                            "md5": "68d44ce40cdeb68cc0e123782d175b73",
+                            "target": "ciqiu_dataosha.unity3d_u_4",
+                            "size": 70136,
+                            "file": "spike/68d44ce40cdeb68cc0e123782d175b73.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "逃杀透明灰刺1",
+                    "files": [
+                        {
+                            "md5": "8690173c3c7e30b05ddbc6d661ff6dfc",
+                            "target": "ciqiu_dataosha.unity3d_u_4",
+                            "size": 70136,
+                            "file": "spike/8690173c3c7e30b05ddbc6d661ff6dfc.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "逃杀透明灰刺2",
+                    "files": [
+                        {
+                            "md5": "db4525897110aa3335865dc26b6ddc39",
+                            "target": "ciqiu_dataosha.unity3d_u_4",
+                            "size": 70136,
+                            "file": "spike/db4525897110aa3335865dc26b6ddc39.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "逃杀透明红刺",
+                    "files": [
+                        {
+                            "md5": "09733c73a5c828c4633bed1cadda860f",
+                            "target": "ciqiu_dataosha.unity3d_u_4",
+                            "size": 70136,
+                            "file": "spike/09733c73a5c828c4633bed1cadda860f.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "透明西瓜",
+                    "files": [
+                        {
+                            "md5": "d326527411648490b9bcd303ddde1a19",
+                            "target": "ciqiu_dataosha.unity3d_u_4",
+                            "size": 70136,
+                            "file": "spike/d326527411648490b9bcd303ddde1a19.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "随机奖励",
+                    "files": [
+                        {
+                            "md5": "40e4d6c0a00f68a08b34a9ee64893fa3",
+                            "target": "ciqiu_dataosha.unity3d_u_4",
+                            "size": 70136,
+                            "file": "spike/40e4d6c0a00f68a08b34a9ee64893fa3.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "香蕉",
+                    "files": [
+                        {
+                            "md5": "0e3272d408a3c5457dbd9a153e08d2d5",
+                            "target": "ciqiu_dataosha.unity3d_u_4",
+                            "size": 70136,
+                            "file": "spike/0e3272d408a3c5457dbd9a153e08d2d5.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "黄色噗噗",
+                    "files": [
+                        {
+                            "md5": "2140b28d08802508f48331aff3211970",
+                            "target": "ciqiu_dataosha.unity3d_u_4",
+                            "size": 70136,
+                            "file": "spike/2140b28d08802508f48331aff3211970.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "黄色月牙",
+                    "files": [
+                        {
+                            "md5": "1b715726953076614f577a2efd4a966a",
+                            "target": "ciqiu_dataosha.unity3d_u_4",
+                            "size": 70136,
+                            "file": "spike/1b715726953076614f577a2efd4a966a.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "黑洞",
+                    "files": [
+                        {
+                            "md5": "48a34444cf16882442434cc76313d1fc",
+                            "target": "ciqiu_dataosha.unity3d_u_4",
+                            "size": 70136,
+                            "file": "spike/48a34444cf16882442434cc76313d1fc.bin"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "spike-daoju",
+            "name": "道具",
+            "section": "spike",
+            "altDirs": [],
+            "dir": "alltextures/map6",
+            "matchPrefix": true,
+            "styles": [
+                {
+                    "name": "双冠红刺",
+                    "files": [
+                        {
+                            "md5": "8a6e98575b599904fe5128086c64e0be",
+                            "target": "ciqiu_freeworld_blue.unity3d_u_2",
+                            "size": 70128,
+                            "file": "spike/8a6e98575b599904fe5128086c64e0be.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "双冠绿刺",
+                    "files": [
+                        {
+                            "md5": "f5e68a7abc7e888af6ebcc3288938408",
+                            "target": "ciqiu_freeworld_blue.unity3d_u_2",
+                            "size": 70128,
+                            "file": "spike/f5e68a7abc7e888af6ebcc3288938408.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "喷射红刺",
+                    "files": [
+                        {
+                            "md5": "397fa3778fb0071e3e83444b08ddbe17",
+                            "target": "ciqiu_freeworld_blue.unity3d_u_2",
+                            "size": 70128,
+                            "file": "spike/397fa3778fb0071e3e83444b08ddbe17.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "喷射蓝刺",
+                    "files": [
+                        {
+                            "md5": "dcca00231a76a54cddaeedf400d9cbcb",
+                            "target": "ciqiu_freeworld_blue.unity3d_u_2",
+                            "size": 70128,
+                            "file": "spike/dcca00231a76a54cddaeedf400d9cbcb.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "多环蓝圈",
+                    "files": [
+                        {
+                            "md5": "88d5673a8d34f094677ea28bc29c0087",
+                            "target": "ciqiu_freeworld_blue.unity3d_u_2",
+                            "size": 70128,
+                            "file": "spike/88d5673a8d34f094677ea28bc29c0087.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "小泳圈",
+                    "files": [
+                        {
+                            "md5": "01d895b67c83bf1eb0a51b0abcfac251",
+                            "target": "ciqiu_freeworld_blue.unity3d_u_2",
+                            "size": 70128,
+                            "file": "spike/01d895b67c83bf1eb0a51b0abcfac251.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "无",
+                    "files": [
+                        {
+                            "md5": "8f2051787f16b76a74a0504b7edc2216",
+                            "target": "ciqiu_freeworld_blue.unity3d_u_2",
+                            "size": 70128,
+                            "file": "spike/8f2051787f16b76a74a0504b7edc2216.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "星空战绩红刺",
+                    "files": [
+                        {
+                            "md5": "a261f9928cf7683b50ccb95fdc96a1c1",
+                            "target": "ciqiu_freeworld_blue.unity3d_u_2",
+                            "size": 70128,
+                            "file": "spike/a261f9928cf7683b50ccb95fdc96a1c1.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "星空战绩蓝刺",
+                    "files": [
+                        {
+                            "md5": "77f8c6a09b79fe68f6d99420ff6381b7",
+                            "target": "ciqiu_freeworld_blue.unity3d_u_2",
+                            "size": 70128,
+                            "file": "spike/77f8c6a09b79fe68f6d99420ff6381b7.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "柠檬",
+                    "files": [
+                        {
+                            "md5": "09afb2f0aa8abbeca4cb1ce3c5b7da9c",
+                            "target": "ciqiu_freeworld_blue.unity3d_u_2",
+                            "size": 70128,
+                            "file": "spike/09afb2f0aa8abbeca4cb1ce3c5b7da9c.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "橙子",
+                    "files": [
+                        {
+                            "md5": "12aa2197efed454b1190d4b484e0859f",
+                            "target": "ciqiu_freeworld_blue.unity3d_u_2",
+                            "size": 70128,
+                            "file": "spike/12aa2197efed454b1190d4b484e0859f.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "泡泡",
+                    "files": [
+                        {
+                            "md5": "55c43560dd6e189808095ff66326da04",
+                            "target": "ciqiu_freeworld_blue.unity3d_u_2",
+                            "size": 70128,
+                            "file": "spike/55c43560dd6e189808095ff66326da04.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "灰色坤坤",
+                    "files": [
+                        {
+                            "md5": "5721a3e71d235286807a2fd177f39a70",
+                            "target": "ciqiu_freeworld_blue.unity3d_u_2",
+                            "size": 70128,
+                            "file": "spike/5721a3e71d235286807a2fd177f39a70.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "猕猴桃",
+                    "files": [
+                        {
+                            "md5": "bc7e125b69ff28921eb523543336a4ff",
+                            "target": "ciqiu_freeworld_blue.unity3d_u_2",
+                            "size": 70128,
+                            "file": "spike/bc7e125b69ff28921eb523543336a4ff.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "篮球",
+                    "files": [
+                        {
+                            "md5": "09b14e4b90bd86c0b5a2f99019ddbe4d",
+                            "target": "ciqiu_freeworld_blue.unity3d_u_2",
+                            "size": 70128,
+                            "file": "spike/09b14e4b90bd86c0b5a2f99019ddbe4d.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "紫色边境",
+                    "files": [
+                        {
+                            "md5": "4114b3180310da996b84e6db3e553008",
+                            "target": "ciqiu_freeworld_blue.unity3d_u_2",
+                            "size": 70128,
+                            "file": "spike/4114b3180310da996b84e6db3e553008.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "红叉",
+                    "files": [
+                        {
+                            "md5": "6ce2dc61582a2fc61a30f7435f007109",
+                            "target": "ciqiu_freeworld_blue.unity3d_u_2",
+                            "size": 70128,
+                            "file": "spike/6ce2dc61582a2fc61a30f7435f007109.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "经典红刺",
+                    "files": [
+                        {
+                            "md5": "b2fedaa7bab1d8068f5fa7cb99953459",
+                            "target": "ciqiu_freeworld_blue.unity3d_u_2",
+                            "size": 20976,
+                            "file": "spike/b2fedaa7bab1d8068f5fa7cb99953459.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "经典透明刺",
+                    "files": [
+                        {
+                            "md5": "bc70ba4a35b6c586b3bb3eb90bf93ebd",
+                            "target": "ciqiu_freeworld_blue.unity3d_u_2",
+                            "size": 70128,
+                            "file": "spike/bc70ba4a35b6c586b3bb3eb90bf93ebd.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "经典透明红刺",
+                    "files": [
+                        {
+                            "md5": "b29b6d02d7223c6c64dd0ae9dadfb6e5",
+                            "target": "ciqiu_freeworld_blue.unity3d_u_2",
+                            "size": 70128,
+                            "file": "spike/b29b6d02d7223c6c64dd0ae9dadfb6e5.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "绿色无",
+                    "files": [
+                        {
+                            "md5": "09f5a5e07569fa50fb0cf6d2bf5484c8",
+                            "target": "ciqiu_freeworld_blue.unity3d_u_2",
+                            "size": 70128,
+                            "file": "spike/09f5a5e07569fa50fb0cf6d2bf5484c8.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "绿草环绕",
+                    "files": [
+                        {
+                            "md5": "4e09844f31255651c4b26675cd915d95",
+                            "target": "ciqiu_freeworld_blue.unity3d_u_2",
+                            "size": 70128,
+                            "file": "spike/4e09844f31255651c4b26675cd915d95.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "花式徽章",
+                    "files": [
+                        {
+                            "md5": "0992773e78ed6a8c11a8eaed7e304f94",
+                            "target": "ciqiu_freeworld_blue.unity3d_u_2",
+                            "size": 70128,
+                            "file": "spike/0992773e78ed6a8c11a8eaed7e304f94.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "蓝光无",
+                    "files": [
+                        {
+                            "md5": "de27128269fcd4342bb9234e326ef105",
+                            "target": "ciqiu_freeworld_blue.unity3d_u_2",
+                            "size": 70128,
+                            "file": "spike/de27128269fcd4342bb9234e326ef105.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "蓝色噗噗",
+                    "files": [
+                        {
+                            "md5": "dad8c4a9dd0c16684f24f580cb462d01",
+                            "target": "ciqiu_freeworld_blue.unity3d_u_2",
+                            "size": 70128,
+                            "file": "spike/dad8c4a9dd0c16684f24f580cb462d01.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "蓝色月牙",
+                    "files": [
+                        {
+                            "md5": "35a75680fa6537dbae6af40333ad2dd6",
+                            "target": "ciqiu_freeworld_blue.unity3d_u_2",
+                            "size": 70128,
+                            "file": "spike/35a75680fa6537dbae6af40333ad2dd6.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "蓝花",
+                    "files": [
+                        {
+                            "md5": "a624eb2969a1164cb1d1dc414dc23ccc",
+                            "target": "ciqiu_freeworld_blue.unity3d_u_2",
+                            "size": 70128,
+                            "file": "spike/a624eb2969a1164cb1d1dc414dc23ccc.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "西瓜",
+                    "files": [
+                        {
+                            "md5": "c77468133d0cf24a1e644fc2f0469814",
+                            "target": "ciqiu_freeworld_blue.unity3d_u_2",
+                            "size": 70136,
+                            "file": "spike/c77468133d0cf24a1e644fc2f0469814.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "逃杀灰刺",
+                    "files": [
+                        {
+                            "md5": "652045170cd933d6fa4af95e6c0a8008",
+                            "target": "ciqiu_freeworld_blue.unity3d_u_2",
+                            "size": 70128,
+                            "file": "spike/652045170cd933d6fa4af95e6c0a8008.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "逃杀红刺",
+                    "files": [
+                        {
+                            "md5": "f236f94212bc83cdc6fc8ebb5acd75c1",
+                            "target": "ciqiu_freeworld_blue.unity3d_u_2",
+                            "size": 70128,
+                            "file": "spike/f236f94212bc83cdc6fc8ebb5acd75c1.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "逃杀透明灰刺1",
+                    "files": [
+                        {
+                            "md5": "de69fdb3119fc823cac8cd6cc5978373",
+                            "target": "ciqiu_freeworld_blue.unity3d_u_2",
+                            "size": 70128,
+                            "file": "spike/de69fdb3119fc823cac8cd6cc5978373.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "逃杀透明灰刺2",
+                    "files": [
+                        {
+                            "md5": "78cae2a03a68a8bbe645c2e912d9577d",
+                            "target": "ciqiu_freeworld_blue.unity3d_u_2",
+                            "size": 70128,
+                            "file": "spike/78cae2a03a68a8bbe645c2e912d9577d.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "逃杀透明红刺",
+                    "files": [
+                        {
+                            "md5": "620c3daca3b375bea76870335e12d4e9",
+                            "target": "ciqiu_freeworld_blue.unity3d_u_2",
+                            "size": 70128,
+                            "file": "spike/620c3daca3b375bea76870335e12d4e9.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "透明西瓜",
+                    "files": [
+                        {
+                            "md5": "d326527411648490b9bcd303ddde1a19",
+                            "target": "ciqiu_freeworld_blue.unity3d_u_2",
+                            "size": 70136,
+                            "file": "spike/d326527411648490b9bcd303ddde1a19.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "随机奖励",
+                    "files": [
+                        {
+                            "md5": "61905240b14d900488f3787314e5bde9",
+                            "target": "ciqiu_freeworld_blue.unity3d_u_2",
+                            "size": 70128,
+                            "file": "spike/61905240b14d900488f3787314e5bde9.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "香蕉",
+                    "files": [
+                        {
+                            "md5": "c060b35132dbb6109fc31d06af83eb4b",
+                            "target": "ciqiu_freeworld_blue.unity3d_u_2",
+                            "size": 70128,
+                            "file": "spike/c060b35132dbb6109fc31d06af83eb4b.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "黄色噗噗",
+                    "files": [
+                        {
+                            "md5": "d0ed7f7b9e5be239d508730c705223df",
+                            "target": "ciqiu_freeworld_blue.unity3d_u_2",
+                            "size": 70128,
+                            "file": "spike/d0ed7f7b9e5be239d508730c705223df.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "黄色月牙",
+                    "files": [
+                        {
+                            "md5": "e488f0d9dfedaf60acc7d7a45ce728ae",
+                            "target": "ciqiu_freeworld_blue.unity3d_u_2",
+                            "size": 70128,
+                            "file": "spike/e488f0d9dfedaf60acc7d7a45ce728ae.bin"
+                        }
+                    ]
+                },
+                {
+                    "name": "黑洞",
+                    "files": [
+                        {
+                            "md5": "108bf5bf79e35746d454e0993b329dd2",
+                            "target": "ciqiu_freeworld_blue.unity3d_u_2",
+                            "size": 70128,
+                            "file": "spike/108bf5bf79e35746d454e0993b329dd2.bin"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "fog-hong",
+            "name": "去红雾",
+            "section": "fog",
+            "altDirs": [],
+            "dir": "alltextures/map3",
+            "matchPrefix": true,
+            "styles": [
+                {
+                    "name": "去红雾",
+                    "files": [
+                        {
+                            "md5": "d13553a0fbd87248edbdf1f815a615a9",
+                            "target": "partnerdunew.unity3d_u_4",
+                            "size": 472844,
+                            "file": "fog/d13553a0fbd87248edbdf1f815a615a9.bin"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "fog-lan",
+            "name": "去蓝雾不留坑",
+            "section": "fog",
+            "altDirs": [],
+            "dir": "alltextures/map1",
+            "matchPrefix": true,
+            "styles": [
+                {
+                    "name": "去蓝雾不留坑",
+                    "files": [
+                        {
+                            "md5": "7d6cc9a6949b7cb238938d0caccd1c9a",
+                            "target": "caocongnew.unity3d_u_4",
+                            "size": 1122845,
+                            "file": "fog/7d6cc9a6949b7cb238938d0caccd1c9a.bin"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "halo-jiantou",
+            "verPatch": {
+                "file": "common/data/uipic.unity3d"
+            },
+            "dir": "",
+            "styles": [
+                {
+                    "preview": "halo/136ae79e.png",
+                    "name": "二阶黄",
+                    "files": [
+                        {
+                            "md5": "136ae79e7bee82345631c57dd7fcce9c",
+                            "target": "uipic.unity3d_u_136ae79e7bee82345631c57dd7fcce9c",
+                            "size": 4625374,
+                            "file": "halo/136ae79e7bee82345631c57dd7fcce9c.bin"
+                        }
+                    ]
+                },
+                {
+                    "preview": "halo/2c7fb3f4.png",
+                    "name": "像素世界",
+                    "files": [
+                        {
+                            "md5": "2c7fb3f4a5f913aa4115c7ab057c7049",
+                            "target": "uipic.unity3d_u_2c7fb3f4a5f913aa4115c7ab057c7049",
+                            "size": 4626757,
+                            "file": "halo/2c7fb3f4a5f913aa4115c7ab057c7049.bin"
+                        }
+                    ]
+                },
+                {
+                    "preview": "halo/4c8e7990.png",
+                    "name": "动感光波",
+                    "files": [
+                        {
+                            "md5": "4c8e799067d64024ffbfec07b9ba1864",
+                            "target": "uipic.unity3d_u_4c8e799067d64024ffbfec07b9ba1864",
+                            "size": 4626047,
+                            "file": "halo/4c8e799067d64024ffbfec07b9ba1864.bin"
+                        }
+                    ]
+                },
+                {
+                    "preview": "halo/5c9a2eac.png",
+                    "name": "单调机械",
+                    "files": [
+                        {
+                            "md5": "5c9a2eacf5d438cd98f468108dab3261",
+                            "target": "uipic.unity3d_u_5c9a2eacf5d438cd98f468108dab3261",
+                            "size": 4617274,
+                            "file": "halo/5c9a2eacf5d438cd98f468108dab3261.bin"
+                        }
+                    ]
+                },
+                {
+                    "preview": "halo/3ff59b9e.png",
+                    "name": "发光白",
+                    "files": [
+                        {
+                            "md5": "3ff59b9e2efd32b6c711df85d30ddcc7",
+                            "target": "uipic.unity3d_u_3ff59b9e2efd32b6c711df85d30ddcc7",
+                            "size": 4622288,
+                            "file": "halo/3ff59b9e2efd32b6c711df85d30ddcc7.bin"
+                        }
+                    ]
+                },
+                {
+                    "preview": "halo/a29cbafe.png",
+                    "name": "圆形",
+                    "files": [
+                        {
+                            "md5": "a29cbafe861ada9fd8d40e3d2b5b47c4",
+                            "target": "uipic.unity3d_u_a29cbafe861ada9fd8d40e3d2b5b47c4",
+                            "size": 4616983,
+                            "file": "halo/a29cbafe861ada9fd8d40e3d2b5b47c4.bin"
+                        }
+                    ]
+                },
+                {
+                    "preview": "halo/da961a77.png",
+                    "name": "坤坤",
+                    "files": [
+                        {
+                            "md5": "da961a77aa249d51d2f2801891a0bdca",
+                            "target": "uipic.unity3d_u_da961a77aa249d51d2f2801891a0bdca",
+                            "size": 4620914,
+                            "file": "halo/da961a77aa249d51d2f2801891a0bdca.bin"
+                        }
+                    ]
+                },
+                {
+                    "preview": "halo/b1b5ec58.png",
+                    "name": "弯钩橙",
+                    "files": [
+                        {
+                            "md5": "b1b5ec58902e2151ae422da56200e22d",
+                            "target": "uipic.unity3d_u_b1b5ec58902e2151ae422da56200e22d",
+                            "size": 4620601,
+                            "file": "halo/b1b5ec58902e2151ae422da56200e22d.bin"
+                        }
+                    ]
+                },
+                {
+                    "preview": "halo/b4e73e5c.png",
+                    "name": "弯钩紫",
+                    "files": [
+                        {
+                            "md5": "b4e73e5c7f92f555cebf8bdc2ed36fd1",
+                            "target": "uipic.unity3d_u_b4e73e5c7f92f555cebf8bdc2ed36fd1",
+                            "size": 4620978,
+                            "file": "halo/b4e73e5c7f92f555cebf8bdc2ed36fd1.bin"
+                        }
+                    ]
+                },
+                {
+                    "preview": "halo/51e57de6.png",
+                    "name": "彩色",
+                    "files": [
+                        {
+                            "md5": "51e57de6ec351b6c78c59953eeabc1cf",
+                            "target": "uipic.unity3d_u_51e57de6ec351b6c78c59953eeabc1cf",
+                            "size": 4617897,
+                            "file": "halo/51e57de6ec351b6c78c59953eeabc1cf.bin"
+                        }
+                    ]
+                },
+                {
+                    "preview": "halo/9b61cffc.png",
+                    "name": "旧版紫",
+                    "files": [
+                        {
+                            "md5": "9b61cffc90e47ced8017c1d3bcb0ea75",
+                            "target": "uipic.unity3d_u_9b61cffc90e47ced8017c1d3bcb0ea75",
+                            "size": 4622314,
+                            "file": "halo/9b61cffc90e47ced8017c1d3bcb0ea75.bin"
+                        }
+                    ]
+                },
+                {
+                    "preview": "halo/5ab8dad8.png",
+                    "name": "旧版金",
+                    "files": [
+                        {
+                            "md5": "5ab8dad88b7fe38f04b0788e2ec1a4d2",
+                            "target": "uipic.unity3d_u_5ab8dad88b7fe38f04b0788e2ec1a4d2",
+                            "size": 4618208,
+                            "file": "halo/5ab8dad88b7fe38f04b0788e2ec1a4d2.bin"
+                        }
+                    ]
+                },
+                {
+                    "preview": "halo/07b6720a.png",
+                    "name": "旧版青",
+                    "files": [
+                        {
+                            "md5": "07b6720a422f08cab3af9db278be232e",
+                            "target": "uipic.unity3d_u_07b6720a422f08cab3af9db278be232e",
+                            "size": 4617965,
+                            "file": "halo/07b6720a422f08cab3af9db278be232e.bin"
+                        }
+                    ]
+                },
+                {
+                    "preview": "halo/af47f3af.png",
+                    "name": "机械",
+                    "files": [
+                        {
+                            "md5": "af47f3afa6c9e3416f6a994ed0cb7bed",
+                            "target": "uipic.unity3d_u_af47f3afa6c9e3416f6a994ed0cb7bed",
+                            "size": 4621156,
+                            "file": "halo/af47f3afa6c9e3416f6a994ed0cb7bed.bin"
+                        }
+                    ]
+                },
+                {
+                    "preview": "halo/4101c7c4.png",
+                    "name": "橙色天空",
+                    "files": [
+                        {
+                            "md5": "4101c7c45468b469d4fe6300a17aee91",
+                            "target": "uipic.unity3d_u_4101c7c45468b469d4fe6300a17aee91",
+                            "size": 4618950,
+                            "file": "halo/4101c7c45468b469d4fe6300a17aee91.bin"
+                        }
+                    ]
+                },
+                {
+                    "preview": "halo/6339a20a.png",
+                    "name": "水果派",
+                    "files": [
+                        {
+                            "md5": "6339a20a9419ba01ccbc52e0850ef362",
+                            "target": "uipic.unity3d_u_6339a20a9419ba01ccbc52e0850ef362",
+                            "size": 4624624,
+                            "file": "halo/6339a20a9419ba01ccbc52e0850ef362.bin"
+                        }
+                    ]
+                },
+                {
+                    "preview": "halo/60b56145.png",
+                    "name": "深蓝",
+                    "files": [
+                        {
+                            "md5": "60b561456ab0e625779c8048afad026a",
+                            "target": "uipic.unity3d_u_60b561456ab0e625779c8048afad026a",
+                            "size": 4619459,
+                            "file": "halo/60b561456ab0e625779c8048afad026a.bin"
+                        }
+                    ]
+                },
+                {
+                    "preview": "halo/528e3711.png",
+                    "name": "清澈",
+                    "files": [
+                        {
+                            "md5": "528e3711e6cf6dbcf4a9fd014d516b8a",
+                            "target": "uipic.unity3d_u_528e3711e6cf6dbcf4a9fd014d516b8a",
+                            "size": 4617587,
+                            "file": "halo/528e3711e6cf6dbcf4a9fd014d516b8a.bin"
+                        }
+                    ]
+                },
+                {
+                    "preview": "halo/64e3a13f.png",
+                    "name": "渐变机械",
+                    "files": [
+                        {
+                            "md5": "64e3a13fc0e4df732f7e9609a385b4f9",
+                            "target": "uipic.unity3d_u_64e3a13fc0e4df732f7e9609a385b4f9",
+                            "size": 4621315,
+                            "file": "halo/64e3a13fc0e4df732f7e9609a385b4f9.bin"
+                        }
+                    ]
+                },
+                {
+                    "preview": "halo/40160b5a.png",
+                    "name": "燕尾紫",
+                    "files": [
+                        {
+                            "md5": "40160b5a1787810bdfeb78de4ae80a1c",
+                            "target": "uipic.unity3d_u_40160b5a1787810bdfeb78de4ae80a1c",
+                            "size": 4623524,
+                            "file": "halo/40160b5a1787810bdfeb78de4ae80a1c.bin"
+                        }
+                    ]
+                },
+                {
+                    "preview": "halo/88ca0159.png",
+                    "name": "燕尾红",
+                    "files": [
+                        {
+                            "md5": "88ca0159d1b59e789633e0f0942e6ef2",
+                            "target": "uipic.unity3d_u_88ca0159d1b59e789633e0f0942e6ef2",
+                            "size": 4621770,
+                            "file": "halo/88ca0159d1b59e789633e0f0942e6ef2.bin"
+                        }
+                    ]
+                },
+                {
+                    "preview": "halo/55295c38.png",
+                    "name": "燕尾蓝",
+                    "files": [
+                        {
+                            "md5": "55295c384aa94ed93413e55a6cce6c2d",
+                            "target": "uipic.unity3d_u_55295c384aa94ed93413e55a6cce6c2d",
+                            "size": 4621033,
+                            "file": "halo/55295c384aa94ed93413e55a6cce6c2d.bin"
+                        }
+                    ]
+                },
+                {
+                    "preview": "halo/c480a77e.png",
+                    "name": "燕尾黄",
+                    "files": [
+                        {
+                            "md5": "c480a77e631a85f3473b8b402c925f0c",
+                            "target": "uipic.unity3d_u_c480a77e631a85f3473b8b402c925f0c",
+                            "size": 4619009,
+                            "file": "halo/c480a77e631a85f3473b8b402c925f0c.bin"
+                        }
+                    ]
+                },
+                {
+                    "preview": "halo/01f605de.png",
+                    "name": "片甲白",
+                    "files": [
+                        {
+                            "md5": "01f605de634f556dbabaf5e4d62ef59a",
+                            "target": "uipic.unity3d_u_01f605de634f556dbabaf5e4d62ef59a",
+                            "size": 4617996,
+                            "file": "halo/01f605de634f556dbabaf5e4d62ef59a.bin"
+                        }
+                    ]
+                },
+                {
+                    "preview": "halo/9ed76613.png",
+                    "name": "紫翼",
+                    "files": [
+                        {
+                            "md5": "9ed76613487d3269b0484fe13e3c08eb",
+                            "target": "uipic.unity3d_u_9ed76613487d3269b0484fe13e3c08eb",
+                            "size": 4624090,
+                            "file": "halo/9ed76613487d3269b0484fe13e3c08eb.bin"
+                        }
+                    ]
+                },
+                {
+                    "preview": "halo/79e10390.png",
+                    "name": "羽翼",
+                    "files": [
+                        {
+                            "md5": "79e10390c2833983b115924be29fd0c4",
+                            "target": "uipic.unity3d_u_79e10390c2833983b115924be29fd0c4",
+                            "size": 4620599,
+                            "file": "halo/79e10390c2833983b115924be29fd0c4.bin"
+                        }
+                    ]
+                },
+                {
+                    "preview": "halo/542a5644.png",
+                    "name": "肉丝",
+                    "files": [
+                        {
+                            "md5": "542a56443b58a8cbf5d352f354c83031",
+                            "target": "uipic.unity3d_u_542a56443b58a8cbf5d352f354c83031",
+                            "size": 4625705,
+                            "file": "halo/542a56443b58a8cbf5d352f354c83031.bin"
+                        }
+                    ]
+                },
+                {
+                    "preview": "halo/c630ad71.png",
+                    "name": "蝴蝶紫",
+                    "files": [
+                        {
+                            "md5": "c630ad71ceb6a9e09ac0237ed936fa77",
+                            "target": "uipic.unity3d_u_c630ad71ceb6a9e09ac0237ed936fa77",
+                            "size": 4622834,
+                            "file": "halo/c630ad71ceb6a9e09ac0237ed936fa77.bin"
+                        }
+                    ]
+                },
+                {
+                    "preview": "halo/db6a21bb.png",
+                    "name": "裂缝白",
+                    "files": [
+                        {
+                            "md5": "db6a21bb67c2dc9ca805b862d34d4a46",
+                            "target": "uipic.unity3d_u_db6a21bb67c2dc9ca805b862d34d4a46",
+                            "size": 4620236,
+                            "file": "halo/db6a21bb67c2dc9ca805b862d34d4a46.bin"
+                        }
+                    ]
+                },
+                {
+                    "preview": "halo/717417c5.png",
+                    "name": "赛博朋克",
+                    "files": [
+                        {
+                            "md5": "717417c56cb98050f2490b3de45acd62",
+                            "target": "uipic.unity3d_u_717417c56cb98050f2490b3de45acd62",
+                            "size": 4620527,
+                            "file": "halo/717417c56cb98050f2490b3de45acd62.bin"
+                        }
+                    ]
+                },
+                {
+                    "preview": "halo/a843e012.png",
+                    "name": "铠甲蓝",
+                    "files": [
+                        {
+                            "md5": "a843e012677dbc2e9d9bba0833ac6065",
+                            "target": "uipic.unity3d_u_a843e012677dbc2e9d9bba0833ac6065",
+                            "size": 4622956,
+                            "file": "halo/a843e012677dbc2e9d9bba0833ac6065.bin"
+                        }
+                    ]
+                },
+                {
+                    "preview": "halo/e5a2093d.png",
+                    "name": "锈迹白",
+                    "files": [
+                        {
+                            "md5": "e5a2093d0f10bde6b2b474ac772e1d64",
+                            "target": "uipic.unity3d_u_e5a2093d0f10bde6b2b474ac772e1d64",
+                            "size": 4621044,
+                            "file": "halo/e5a2093d0f10bde6b2b474ac772e1d64.bin"
+                        }
+                    ]
+                },
+                {
+                    "preview": "halo/0a89c110.png",
+                    "name": "锐克",
+                    "files": [
+                        {
+                            "md5": "0a89c110836d30af3a55f66575329c07",
+                            "target": "uipic.unity3d_u_0a89c110836d30af3a55f66575329c07",
+                            "size": 4619906,
+                            "file": "halo/0a89c110836d30af3a55f66575329c07.bin"
+                        }
+                    ]
+                }
+            ],
+            "name": "箭头光环",
+            "section": "halo",
+            "altDirs": [],
+            "matchPrefix": false
+        },
+        {
+            "id": "skin-qupi",
+            "dir": "",
+            "mechanism": {
+                "match": "shopconfig.unity3d",
+                "type": "verdel"
+            },
+            "styles": [
+                {
+                    "name": "去皮",
+                    "files": []
+                }
+            ],
+            "name": "去皮肤",
+            "section": "skin",
+            "altDirs": [],
+            "matchPrefix": false
+        },
+        {
+            "id": "skin-quhuodong",
+            "dir": "",
+            "mechanism": {
+                "prefixes": [ "activityconfig", "shopconfig" ],
+                "mode": "200",
+                "type": "denyread"
+            },
+            "styles": [
+                {
+                    "name": "\u53bb\u6d3b\u52a8",
+                    "files": []
+                }
+            ],
+            "name": "\u53bb\u6d3b\u52a8",
+            "section": "skin",
+            "altDirs": [],
+            "matchPrefix": false
+        }
+    ],
+    "version": 1
+}

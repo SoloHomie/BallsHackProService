@@ -4,30 +4,47 @@
 #include "../core/cache/RedisClient.h"
 #include "../common/StringUtils.h"
 #include <string>
+#include <vector>
+#include <iterator>
 #include <sstream>
 #include <cstdlib>
 #include <ctime>
+#include <chrono>
+#include <thread>
 
 // ═══════════════════════════════════════════════════════════════
-//  P2P 信令服务器 — Redis 房间管理
+//  P2P 信令 + Relay 中转服务器 — Redis 房间管理 (v2, 2026-08-14)
 // ═══════════════════════════════════════════════════════════════
 //
-// Key:  peer:<code>:0     → 控制方 ip:port
-//       peer:<code>:1     → 被控制方 ip:port
-//       peer:<code>:email → 控制方 email（防自加入）
+// 槽位按"设备 uid"定位 (每台机器持久化一个随机 uid):
+//   peer:<code>:0     → 控制方 public_ip:port
+//   peer:<code>:uid0  → 控制方 uid
+//   peer:<code>:1     → 被控制方 public_ip:port
+//   peer:<code>:uid1  → 被控制方 uid
+//   peer:<code>:email → 控制方 email (旧房间清理用)
+//   relay:<code>:0/1  → 中转数据队列 (按目标槽位分列)
+//   relay:<code>:seq  → 全局数据序号
 //
-// TTL: 120s，通过 /api/peer/peers 轮询续期
+// 不再比对 "ip:port" 字符串 (客户端无法自know公网 IP, 曾致匹配全错位)。
+// 同账号两台机器可互连 (uid 不同即可); 同一设备 (uid 相同) 禁止自加入。
+//
+// TTL: 120s，peers/push/pull 活跃即续期。
 //
 // 流程:
-//   控制方 POST /api/peer/create  {port}               → 生成房码 + slot0
-//   被方   POST /api/peer/join    {room_code, port}    → slot1 + 返回对方地址
-//   双方   GET  /api/peer/status  ?room=XXX             → 查看人数/状态
-//   双方   GET  /api/peer/peers   ?room=XXX&self=ADDR   → 获取对方地址（同时续期）
-//   任一方 POST /api/peer/unregister {room_code, addr}  → 退出
+//   控制方 POST /api/peer/create  {port, uid}            → 房码 + slot0
+//   被方   POST /api/peer/join    {room_code, port, uid} → slot1 + 返回对方地址
+//   双方   GET  /api/peer/status  ?room=XXX               → 查看人数/状态
+//   双方   GET  /api/peer/peers   ?room=XXX&uid=YYY       → 获取对方地址 + 续期
+//   控制方 POST /api/peer/push    {room_code, uid, op, x, y, split} → 写入对端队列
+//   双方   GET  /api/peer/pull    ?room=XXX&uid=YYY&seq=N&wait=100 → 长轮询取数据
+//   任一方 POST /api/peer/unregister {room_code, uid}     → 退出
+//   POST /api/peer/heartbeat {room_code, uid}             → 续期 (兼容保留)
 // ═══════════════════════════════════════════════════════════════
 
-static const int  ROOM_TTL  = 120;  // 房间槽位 TTL（秒）
-static const int  NOTIFY_TTL = 30;  // 离开通知 TTL
+static const int  ROOM_TTL    = 120;  // 房间槽位 TTL（秒）
+static const int  RELAY_TTL   = 300;  // 中转队列/序号 TTL（秒）
+static const int  NOTIFY_TTL  = 30;   // 离开通知 TTL
+static const long RELAY_MAX   = 100;  // 每队列最多保留条数
 static const char RC_CHARS[] = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 static const int  RC_LEN = sizeof(RC_CHARS) - 1;
 
@@ -101,12 +118,31 @@ static std::string peerJsonFromVal(const std::string &val) {
     return "null";
 }
 
+// ── 取队列里 seq > lastSeq 的第一条 (顺序扫描, 队列上限 100) ──
+static bool relayPopNext(sw::redis::Redis &r, const std::string &listKey,
+                         long long lastSeq, std::string &out) {
+    std::vector<std::string> items;
+    r.lrange(listKey, 0, -1, std::back_inserter(items));
+    for (const auto &it : items) {
+        std::string s = StringUtils::jsonVal(it, "seq");
+        try {
+            if (std::stoll(s) > lastSeq) { out = it; return true; }
+        } catch (...) {}
+    }
+    return false;
+}
+
+// ── 解析 bool (兼容 "true"/"1"/true) ──
+static bool parseBool(const std::string &s) {
+    return s == "true" || s == "1" || s == "TRUE" || s == "True";
+}
+
 void registerPeerRoutes(HttpServer &server, AuthService &auth, DbPool &) {
 
     // ═══════════════════════════════════════════════════════
     //  POST /api/peer/create
     //  控制方创建房间
-    //  Body: {port: 12345}
+    //  Body: {port: 12345, uid: "设备唯一标识"}
     //  ═══════════════════════════════════════════════════════
     server.route("POST", "/api/peer/create",
         [&](const std::string &body, const std::string &, const std::string &headers) {
@@ -114,11 +150,14 @@ void registerPeerRoutes(HttpServer &server, AuthService &auth, DbPool &) {
             if (!tp) return AuthService::jsonErr("UNAUTHORIZED", "请先登录");
 
             std::string portStr = StringUtils::jsonVal(body, "port");
+            std::string uid = StringUtils::jsonVal(body, "uid");
             int port = 0;
             try { port = std::stoi(portStr); }
             catch (...) { return AuthService::jsonErr("FIELDS_REQUIRED", "需要有效 port"); }
             if (port <= 0 || port > 65535)
                 return AuthService::jsonErr("FIELDS_REQUIRED", "port 范围 1-65535");
+            if (uid.empty() || uid.size() > 64)
+                return AuthService::jsonErr("FIELDS_REQUIRED", "需要有效 uid");
 
             std::string clientIp = extractClientIp(headers);
             std::string val = clientIp + ":" + std::to_string(port);
@@ -133,6 +172,8 @@ void registerPeerRoutes(HttpServer &server, AuthService &auth, DbPool &) {
                     std::string oldCode = *existing;
                     r.del("peer:" + oldCode + ":0");
                     r.del("peer:" + oldCode + ":1");
+                    r.del("peer:" + oldCode + ":uid0");
+                    r.del("peer:" + oldCode + ":uid1");
                     r.del("peer:" + oldCode + ":email");
                     r.setex("peer:" + oldCode + ":notify", NOTIFY_TTL, "room_closed");
                     r.del("peer:user:" + email);
@@ -155,6 +196,7 @@ void registerPeerRoutes(HttpServer &server, AuthService &auth, DbPool &) {
 
             // 写 slot 0（控制方）
             r.setex("peer:" + code + ":0", ROOM_TTL, val);
+            r.setex("peer:" + code + ":uid0", ROOM_TTL, uid);
             r.setex("peer:" + code + ":email", ROOM_TTL, email);
             r.setex("peer:user:" + email, ROOM_TTL, code);
 
@@ -171,7 +213,7 @@ void registerPeerRoutes(HttpServer &server, AuthService &auth, DbPool &) {
     // ═══════════════════════════════════════════════════════
     //  POST /api/peer/join
     //  被控制方加入房间
-    //  Body: {room_code: "ABC123", port: 12346}
+    //  Body: {room_code: "ABC123", port: 12346, uid: "设备唯一标识"}
     //  ═══════════════════════════════════════════════════════
     server.route("POST", "/api/peer/join",
         [&](const std::string &body, const std::string &, const std::string &headers) {
@@ -180,15 +222,17 @@ void registerPeerRoutes(HttpServer &server, AuthService &auth, DbPool &) {
 
             std::string code = StringUtils::jsonVal(body, "room_code");
             std::string portStr = StringUtils::jsonVal(body, "port");
+            std::string uid = StringUtils::jsonVal(body, "uid");
             int port = 0;
             try { port = std::stoi(portStr); }
             catch (...) { return AuthService::jsonErr("FIELDS_REQUIRED", "需要有效 port"); }
             if (code.empty() || port <= 0 || port > 65535)
                 return AuthService::jsonErr("FIELDS_REQUIRED", "需要 room_code 和有效 port");
+            if (uid.empty() || uid.size() > 64)
+                return AuthService::jsonErr("FIELDS_REQUIRED", "需要有效 uid");
 
             std::string clientIp = extractClientIp(headers);
             std::string val = clientIp + ":" + std::to_string(port);
-            std::string email = tp->email;
 
             auto &r = RedisClient::instance();
 
@@ -197,19 +241,21 @@ void registerPeerRoutes(HttpServer &server, AuthService &auth, DbPool &) {
             if (!v0)
                 return AuthService::jsonErr("ROOM_NOT_FOUND", "房间不存在或已过期");
 
-            // 检查是否加入自己的房间（通过 email 判断，而非 IP）
-            auto ownerEmail = r.get("peer:" + code + ":email");
-            if (ownerEmail && *ownerEmail == email)
-                return AuthService::jsonErr("SELF_JOIN", "不能加入自己创建的房间");
+            // 同一设备不能加入自己创建的房间 (uid 相同; 同账号不同设备允许)
+            auto uid0 = r.get("peer:" + code + ":uid0");
+            if (uid0 && *uid0 == uid)
+                return AuthService::jsonErr("SELF_JOIN", "同一设备不能加入自己创建的房间");
 
-            // 检查是否已有其他用户加入了被控制方槽位
+            // 检查是否已有其他设备占用了被控制方槽位
             auto v1 = r.get("peer:" + code + ":1");
             if (v1) {
-                // 检查是不是自己（重连）
-                if (*v1 == val) {
-                    // 重连：更新 TTL
+                auto uid1 = r.get("peer:" + code + ":uid1");
+                // 自己重连 (同 uid) → 更新 TTL
+                if (uid1 && *uid1 == uid) {
                     r.setex("peer:" + code + ":1", ROOM_TTL, val);
-                    r.setex("peer:" + code + ":0", ROOM_TTL, *v0);
+                    r.setex("peer:" + code + ":uid1", ROOM_TTL, uid);
+                    r.expire("peer:" + code + ":0", ROOM_TTL);
+                    r.expire("peer:" + code + ":uid0", ROOM_TTL);
                     std::string peerIp; int peerPort;
                     if (parseAddr(*v0, peerIp, peerPort)) {
                         std::ostringstream resp;
@@ -227,8 +273,10 @@ void registerPeerRoutes(HttpServer &server, AuthService &auth, DbPool &) {
 
             // 写入 slot 1（被控制方）
             r.setex("peer:" + code + ":1", ROOM_TTL, val);
+            r.setex("peer:" + code + ":uid1", ROOM_TTL, uid);
             // 续期 slot 0
             r.expire("peer:" + code + ":0", ROOM_TTL);
+            r.expire("peer:" + code + ":uid0", ROOM_TTL);
             r.expire("peer:" + code + ":email", ROOM_TTL);
 
             // 返回对方（控制方）地址
@@ -294,7 +342,7 @@ void registerPeerRoutes(HttpServer &server, AuthService &auth, DbPool &) {
     // ═══════════════════════════════════════════════════════
     //  GET /api/peer/peers
     //  获取对方地址 + 续期自身槽位
-    //  Query: ?room=ABC123&self=ip:port
+    //  Query: ?room=ABC123&uid=YYY
     //  ═══════════════════════════════════════════════════════
     server.route("GET", "/api/peer/peers",
         [&](const std::string &, const std::string &query, const std::string &headers) {
@@ -302,21 +350,23 @@ void registerPeerRoutes(HttpServer &server, AuthService &auth, DbPool &) {
             if (!tp) return AuthService::jsonErr("UNAUTHORIZED", "请先登录");
 
             std::string code = StringUtils::queryVal(query, "room");
-            std::string myAddr = StringUtils::queryVal(query, "self");
+            std::string uid = StringUtils::queryVal(query, "uid");
             if (code.empty())
                 return AuthService::jsonErr("FIELDS_REQUIRED", "需要 room 参数");
+            if (uid.empty())
+                return AuthService::jsonErr("FIELDS_REQUIRED", "需要 uid 参数");
 
             auto &r = RedisClient::instance();
 
-            // 检查对方是否离开了
+            // 检查对方是否离开了 (200+status, 客户端按 status 字段处理)
             auto notify = r.get("peer:" + code + ":notify");
             if (notify) {
                 std::string msg = *notify;
                 r.del("peer:" + code + ":notify");
                 if (msg == "peer_left")
-                    return AuthService::jsonErr("PEER_LEFT", "对方已退出房间");
+                    return std::string("{\"success\":true,\"status\":\"peer_left\",\"member_count\":1,\"member_max\":2}");
                 if (msg == "room_closed")
-                    return AuthService::jsonErr("ROOM_CLOSED", "房间已关闭");
+                    return std::string("{\"success\":true,\"status\":\"room_closed\",\"member_count\":0,\"member_max\":2}");
             }
 
             auto v0 = r.get("peer:" + code + ":0");
@@ -325,32 +375,34 @@ void registerPeerRoutes(HttpServer &server, AuthService &auth, DbPool &) {
             if (!v0 && !v1)
                 return AuthService::jsonErr("ROOM_NOT_FOUND", "房间不存在或已过期");
 
+            // 按 uid 定位自己所在的槽位 (0=控制方, 1=被控制方)
+            int mySlot = -1;
+            {
+                auto uid0 = r.get("peer:" + code + ":uid0");
+                auto uid1 = r.get("peer:" + code + ":uid1");
+                if (uid0 && *uid0 == uid && v0) mySlot = 0;
+                else if (uid1 && *uid1 == uid && v1) mySlot = 1;
+            }
+            if (mySlot < 0)
+                return AuthService::jsonErr("NOT_FOUND", "你的设备不在房间中，请重新加入");
+
             // 续期自己所在的槽位
-            if (!myAddr.empty()) {
-                if (v0 && *v0 == myAddr) {
-                    r.expire("peer:" + code + ":0", ROOM_TTL);
-                    r.expire("peer:" + code + ":email", ROOM_TTL);
-                } else if (v1 && *v1 == myAddr) {
-                    r.expire("peer:" + code + ":1", ROOM_TTL);
-                }
+            if (mySlot == 0) {
+                r.expire("peer:" + code + ":0", ROOM_TTL);
+                r.expire("peer:" + code + ":uid0", ROOM_TTL);
+                r.expire("peer:" + code + ":email", ROOM_TTL);
+            } else {
+                r.expire("peer:" + code + ":1", ROOM_TTL);
+                r.expire("peer:" + code + ":uid1", ROOM_TTL);
             }
 
-            // 返回不是自己的那个
-            std::string result;
-            if (v0 && (!myAddr.empty() && *v0 != myAddr))
-                result = *v0;
-            else if (v1 && (!myAddr.empty() && *v1 != myAddr))
-                result = *v1;
-            else if (v0 && v1) {
-                // 没传 self → 返回 v1（被控制方）
-                result = *v1;
-            }
-
-            if (result.empty())
-                return AuthService::jsonErr("WAITING", "等待对方加入");
+            // 返回另一个槽位; 对方未加入 → 200 + peer:null (轮询静默等待)
+            auto other = (mySlot == 0) ? v1 : v0;
+            if (!other)
+                return std::string("{\"success\":true,\"peer\":null,\"member_count\":1,\"member_max\":2}");
 
             std::string peerIp; int peerPort;
-            if (!parseAddr(result, peerIp, peerPort))
+            if (!parseAddr(*other, peerIp, peerPort))
                 return AuthService::jsonErr("INVALID", "数据损坏");
 
             int count = 0;
@@ -367,9 +419,154 @@ void registerPeerRoutes(HttpServer &server, AuthService &auth, DbPool &) {
         });
 
     // ═══════════════════════════════════════════════════════
+    //  POST /api/peer/push  (Relay 中转)
+    //  控制方推送操作数据 → 写入对端队列
+    //  Body: {room_code, uid, op, x, y, split}
+    //  ═══════════════════════════════════════════════════════
+    server.route("POST", "/api/peer/push",
+        [&](const std::string &body, const std::string &, const std::string &headers) {
+            auto tp = auth.authenticate(headers);
+            if (!tp) return AuthService::jsonErr("UNAUTHORIZED", "请先登录");
+
+            std::string code = StringUtils::jsonVal(body, "room_code");
+            std::string uid = StringUtils::jsonVal(body, "uid");
+            std::string op = StringUtils::jsonVal(body, "op");
+            if (code.empty() || uid.empty() || op.empty())
+                return AuthService::jsonErr("FIELDS_REQUIRED", "需要 room_code/uid/op");
+
+            auto &r = RedisClient::instance();
+
+            auto v0 = r.get("peer:" + code + ":0");
+            auto v1 = r.get("peer:" + code + ":1");
+            if (!v0 && !v1)
+                return AuthService::jsonErr("ROOM_NOT_FOUND", "房间不存在或已过期");
+
+            // 定位发送方槽位 → 数据进对端队列
+            int mySlot = -1;
+            {
+                auto uid0 = r.get("peer:" + code + ":uid0");
+                auto uid1 = r.get("peer:" + code + ":uid1");
+                if (uid0 && *uid0 == uid && v0) mySlot = 0;
+                else if (uid1 && *uid1 == uid && v1) mySlot = 1;
+            }
+            if (mySlot < 0)
+                return AuthService::jsonErr("NOT_FOUND", "你的设备不在房间中，请重新加入");
+
+            // 续期自身槽位 (活跃即保活)
+            r.expire("peer:" + code + ":" + std::to_string(mySlot), ROOM_TTL);
+            r.expire("peer:" + code + ":uid" + std::to_string(mySlot), ROOM_TTL);
+            if (mySlot == 0) r.expire("peer:" + code + ":email", ROOM_TTL);
+
+            // 对端不在线 → 数据直接丢弃 (操作坐标是瞬态数据)
+            int dstSlot = (mySlot == 0) ? 1 : 0;
+            auto dst = (dstSlot == 0) ? v0 : v1;
+            if (!dst)
+                return AuthService::jsonErr("PEER_LEFT", "对方已退出房间");
+
+            // 数值解析
+            double x = 0, y = 0;
+            try {
+                x = std::stod(StringUtils::jsonVal(body, "x"));
+                y = std::stod(StringUtils::jsonVal(body, "y"));
+            } catch (...) { return AuthService::jsonErr("FIELDS_REQUIRED", "x/y 需为数字"); }
+            bool split = parseBool(StringUtils::jsonVal(body, "split"));
+
+            // 全局序号
+            long long seq = r.incr("relay:" + code + ":seq");
+            r.expire("relay:" + code + ":seq", RELAY_TTL);
+
+            std::ostringstream item;
+            item << "{\"seq\":" << seq
+                 << ",\"op\":\"" << AuthService::jsonEscape(op) << "\""
+                 << ",\"x\":" << x
+                 << ",\"y\":" << y
+                 << ",\"split\":" << (split ? "true" : "false")
+                 << "}";
+
+            std::string listKey = "relay:" + code + ":" + std::to_string(dstSlot);
+            r.rpush(listKey, item.str());
+            r.ltrim(listKey, -RELAY_MAX, -1);   // 只留最近 100 条
+            r.expire(listKey, RELAY_TTL);
+
+            return AuthService::jsonOk("ok");
+        });
+
+    // ═══════════════════════════════════════════════════════
+    //  GET /api/peer/pull  (Relay 中转, 长轮询)
+    //  拉取本设备队列中 seq > N 的第一条数据
+    //  Query: ?room=ABC123&uid=YYY&seq=N&wait=100
+    //  ═══════════════════════════════════════════════════════
+    server.route("GET", "/api/peer/pull",
+        [&](const std::string &, const std::string &query, const std::string &headers) {
+            auto tp = auth.authenticate(headers);
+            if (!tp) return AuthService::jsonErr("UNAUTHORIZED", "请先登录");
+
+            std::string code = StringUtils::queryVal(query, "room");
+            std::string uid = StringUtils::queryVal(query, "uid");
+            long long lastSeq = 0;
+            try { lastSeq = std::stoll(StringUtils::queryVal(query, "seq")); }
+            catch (...) {}
+            int waitMs = 100;
+            try { waitMs = std::stoi(StringUtils::queryVal(query, "wait")); }
+            catch (...) {}
+            if (waitMs < 0) waitMs = 0;
+            if (waitMs > 1000) waitMs = 1000;   // 上限 1s
+
+            if (code.empty() || uid.empty())
+                return AuthService::jsonErr("FIELDS_REQUIRED", "需要 room/uid 参数");
+
+            auto &r = RedisClient::instance();
+
+            // 定位自身槽位
+            auto v0 = r.get("peer:" + code + ":0");
+            auto v1 = r.get("peer:" + code + ":1");
+            int mySlot = -1;
+            {
+                auto uid0 = r.get("peer:" + code + ":uid0");
+                auto uid1 = r.get("peer:" + code + ":uid1");
+                if (uid0 && *uid0 == uid && v0) mySlot = 0;
+                else if (uid1 && *uid1 == uid && v1) mySlot = 1;
+            }
+            if (mySlot < 0)
+                return std::string("{\"success\":true,\"room_closed\":true}");
+
+            std::string listKey = "relay:" + code + ":" + std::to_string(mySlot);
+
+            // 长轮询: 最多等 waitMs
+            auto deadline = std::chrono::steady_clock::now()
+                          + std::chrono::milliseconds(waitMs);
+            while (true) {
+                std::string item;
+                if (relayPopNext(r, listKey, lastSeq, item)) {
+                    std::ostringstream resp;
+                    resp << "{\"success\":true"
+                         << ",\"has_data\":true"
+                         << ",\"data\":" << item
+                         << "}";
+                    return resp.str();
+                }
+                // 对端槽位消失 → 对方已退出 (我还在房间)
+                if (!r.get("peer:" + code + ":" + std::to_string(1 - mySlot)))
+                    return std::string("{\"success\":true,\"peer_left\":true}");
+                // 我方槽位消失 → 房间整体关闭
+                if (!r.get("peer:" + code + ":" + std::to_string(mySlot)))
+                    return std::string("{\"success\":true,\"room_closed\":true}");
+                if (std::chrono::steady_clock::now() >= deadline) break;
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            }
+
+            // 无数据也要续期 (轮询即活跃)
+            r.expire("peer:" + code + ":" + std::to_string(mySlot), ROOM_TTL);
+            r.expire("peer:" + code + ":uid" + std::to_string(mySlot), ROOM_TTL);
+            if (mySlot == 0) r.expire("peer:" + code + ":email", ROOM_TTL);
+
+            return std::string("{\"success\":true,\"has_data\":false}");
+        });
+
+    // ═══════════════════════════════════════════════════════
     //  POST /api/peer/unregister
     //  退出房间 / 取消注册
-    //  Body: {room_code: "ABC123", addr: "ip:port"}
+    //  Body: {room_code: "ABC123", uid: "设备唯一标识"}
     //  ═══════════════════════════════════════════════════════
     server.route("POST", "/api/peer/unregister",
         [&](const std::string &body, const std::string &, const std::string &headers) {
@@ -377,9 +574,11 @@ void registerPeerRoutes(HttpServer &server, AuthService &auth, DbPool &) {
             if (!tp) return AuthService::jsonErr("UNAUTHORIZED", "请先登录");
 
             std::string code = StringUtils::jsonVal(body, "room_code");
-            std::string myAddr = StringUtils::jsonVal(body, "addr");
+            std::string uid = StringUtils::jsonVal(body, "uid");
             if (code.empty())
                 return AuthService::jsonErr("FIELDS_REQUIRED", "需要 room_code");
+            if (uid.empty())
+                return AuthService::jsonErr("FIELDS_REQUIRED", "需要 uid");
 
             auto &r = RedisClient::instance();
             std::string k0 = "peer:" + code + ":0";
@@ -388,30 +587,49 @@ void registerPeerRoutes(HttpServer &server, AuthService &auth, DbPool &) {
             auto v0 = r.get(k0);
             auto v1 = r.get(k1);
 
+            // 按 uid 定位自身槽位
+            int mySlot = -1;
+            {
+                auto uid0 = r.get("peer:" + code + ":uid0");
+                auto uid1 = r.get("peer:" + code + ":uid1");
+                if (uid0 && *uid0 == uid && v0) mySlot = 0;
+                else if (uid1 && *uid1 == uid && v1) mySlot = 1;
+            }
+
             bool isController = false;
-            if (v0 && (!myAddr.empty() && *v0 == myAddr)) {
+            if (mySlot == 0) {
                 isController = true;
                 r.del(k0);
+                r.del("peer:" + code + ":uid0");
                 r.del("peer:" + code + ":email");
                 // 控制器退出 → 关闭房间，通知被控制方
                 r.setex("peer:" + code + ":notify", NOTIFY_TTL, "room_closed");
                 if (v1) r.del(k1);
-            } else if (v1 && (!myAddr.empty() && *v1 == myAddr)) {
+                if (v1) r.del("peer:" + code + ":uid1");
+            } else if (mySlot == 1) {
                 r.del(k1);
+                r.del("peer:" + code + ":uid1");
                 // 被控制方退出 → 通知控制方
                 r.setex("peer:" + code + ":notify", NOTIFY_TTL, "peer_left");
             }
 
+            // 清理中转队列
+            r.del("relay:" + code + ":0");
+            r.del("relay:" + code + ":1");
+            r.del("relay:" + code + ":seq");
+
             // 清理用户→房间映射
             r.del("peer:user:" + tp->email);
 
+            if (mySlot < 0)
+                return AuthService::jsonOk("ok");   // 不在房间也幂等返回成功
             return AuthService::jsonOk(isController ? "房间已关闭" : "已退出房间");
         });
 
     // ═══════════════════════════════════════════════════════
     //  POST /api/peer/heartbeat
-    //  续期自身槽位（控制方定期调用保持房间存活）
-    //  Body: {room_code: "ABC123", addr: "ip:port"}
+    //  续期自身槽位（兼容保留；活跃续期已由 peers/push/pull 覆盖）
+    //  Body: {room_code: "ABC123", uid: "设备唯一标识"}
     //  ═══════════════════════════════════════════════════════
     server.route("POST", "/api/peer/heartbeat",
         [&](const std::string &body, const std::string &, const std::string &headers) {
@@ -419,24 +637,28 @@ void registerPeerRoutes(HttpServer &server, AuthService &auth, DbPool &) {
             if (!tp) return AuthService::jsonErr("UNAUTHORIZED", "请先登录");
 
             std::string code = StringUtils::jsonVal(body, "room_code");
-            std::string myAddr = StringUtils::jsonVal(body, "addr");
-            if (code.empty() || myAddr.empty())
-                return AuthService::jsonErr("FIELDS_REQUIRED", "需要 room_code 和 addr");
+            std::string uid = StringUtils::jsonVal(body, "uid");
+            if (code.empty() || uid.empty())
+                return AuthService::jsonErr("FIELDS_REQUIRED", "需要 room_code 和 uid");
 
             auto &r = RedisClient::instance();
 
-            // 续期自己所在的槽位
+            // 按 uid 定位自身槽位并续期
             auto v0 = r.get("peer:" + code + ":0");
             auto v1 = r.get("peer:" + code + ":1");
-
-            if (v0 && *v0 == myAddr) {
-                r.expire("peer:" + code + ":0", ROOM_TTL);
-                r.expire("peer:" + code + ":email", ROOM_TTL);
-            } else if (v1 && *v1 == myAddr) {
-                r.expire("peer:" + code + ":1", ROOM_TTL);
-            } else {
-                return AuthService::jsonErr("NOT_FOUND", "你的地址不在房间中，请重新加入");
+            int mySlot = -1;
+            {
+                auto uid0 = r.get("peer:" + code + ":uid0");
+                auto uid1 = r.get("peer:" + code + ":uid1");
+                if (uid0 && *uid0 == uid && v0) mySlot = 0;
+                else if (uid1 && *uid1 == uid && v1) mySlot = 1;
             }
+            if (mySlot < 0)
+                return AuthService::jsonErr("NOT_FOUND", "你的设备不在房间中，请重新加入");
+
+            r.expire("peer:" + code + ":" + std::to_string(mySlot), ROOM_TTL);
+            r.expire("peer:" + code + ":uid" + std::to_string(mySlot), ROOM_TTL);
+            if (mySlot == 0) r.expire("peer:" + code + ":email", ROOM_TTL);
 
             int count = 0;
             if (v0) count++;

@@ -1,5 +1,5 @@
 #pragma once
-// â”€â”€ Redis connection wrapper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ©¤©¤ Redis connection wrapper ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
 // Thin singleton. Call instance() to get a Redis connection.
 // Set SUREITY_REDIS_URL env var to configure.
 //
@@ -10,9 +10,10 @@
 #include <string>
 
 #ifdef SUREITY_NO_REDIS
-// â”€â”€ No-op stub â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ©¤©¤ No-op stub ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
 #include <optional>
 #include <vector>
+#include <unordered_set>
 #include <cstdint>
 
 class RedisClient {
@@ -33,6 +34,7 @@ public:
         void srem(const std::string&, const std::string&) {}
         template<typename T>
         void smembers(const std::string&, T) {}
+        std::unordered_set<std::string> smembers(const std::string&) { return {}; }
         void expire(const std::string&, int) {}
     };
 
@@ -42,7 +44,7 @@ public:
     }
 };
 #else
-// â”€â”€ Real Redis (redis-plus-plus) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ©¤©¤ Real Redis (redis-plus-plus) ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
 #include <sw/redis++/redis++.h>
 #include <memory>
 

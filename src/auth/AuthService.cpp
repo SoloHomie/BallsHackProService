@@ -1,6 +1,7 @@
 #include "AuthService.h"
 #include "CodeManager.h"
 #include "UserStore.h"
+#include "PasswordHash.h"
 #include "TokenService.h"
 #include "SessionManager.h"
 #include "../core/database/DbPool.h"
@@ -23,7 +24,7 @@ AuthService::AuthService(DbPool& pool)
     , m_token(JWT_SECRET) {}
 AuthService::~AuthService() = default;
 
-// â”€â”€ JSON utilities â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ©¤©¤ JSON utilities ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
 std::string AuthService::jsonEscape(const std::string &s) {
     std::string r;
     r.reserve(s.size() + 4);
@@ -53,109 +54,111 @@ std::string AuthService::jsonErr(const std::string &code, const std::string &msg
            "\",\"message\":\"" + jsonEscape(msg) + "\"}";
 }
 
-// â”€â”€ sendCode â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ©¤©¤ sendCode ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
 std::string AuthService::sendCode(const std::string &email,
                                    const std::string &purpose) {
     if (email.empty())
-        return jsonErr("EMAIL_REQUIRED", "è¯·è¾“å…¥é‚®ç®±åœ°å€");
+        return jsonErr("EMAIL_REQUIRED", "ÇëÊäÈëÓÊÏäµØÖ·");
     if (!validEmail(email))
-        return jsonErr("INVALID_EMAIL", "é‚®ç®±æ ¼å¼ä¸æ­£ç¡®");
+        return jsonErr("INVALID_EMAIL", "ÓÊÏä¸ñÊ½²»ÕıÈ·");
 
     if (purpose != CodePurpose::REGISTER &&
         purpose != CodePurpose::LOGIN &&
         purpose != CodePurpose::RESET &&
         purpose != CodePurpose::BOT_VERIFY)
-        return jsonErr("INVALID_PURPOSE", "æ“ä½œç±»å‹æ— æ•ˆ");
+        return jsonErr("INVALID_PURPOSE", "²Ù×÷ÀàĞÍÎŞĞ§");
 
     bool exists = m_users.exists(email);
     if (purpose == CodePurpose::REGISTER && exists)
-        return jsonErr("EMAIL_EXISTS", "è¯¥é‚®ç®±å·²è¢«æ³¨å†Œï¼Œè¯·ç›´æ¥ç™»å½•");
+        return jsonErr("EMAIL_EXISTS", "¸ÃÓÊÏäÒÑ±»×¢²á£¬ÇëÖ±½ÓµÇÂ¼");
     if ((purpose == CodePurpose::LOGIN ||
          purpose == CodePurpose::RESET ||
          purpose == CodePurpose::BOT_VERIFY) && !exists)
-        return jsonErr("ACCOUNT_NOT_FOUND", "è¯¥è´¦å·ä¸å­˜åœ¨ï¼Œè¯·å…ˆæ³¨å†Œ");
+        return jsonErr("ACCOUNT_NOT_FOUND", "¸ÃÕËºÅ²»´æÔÚ£¬ÇëÏÈ×¢²á");
 
     int cd = m_codes.cooldownRemaining(email, purpose);
     if (cd > 0)
-        return jsonErr("COOLDOWN", "éªŒè¯ç å‘é€è¿‡äºé¢‘ç¹ï¼Œè¯· " + std::to_string(cd) + " ç§’åå†è¯•");
+        return jsonErr("COOLDOWN", "ÑéÖ¤Âë·¢ËÍ¹ıÓÚÆµ·±£¬Çë " + std::to_string(cd) + " ÃëºóÔÙÊÔ");
 
     std::string code = m_codes.generate(email, purpose);
     if (code.empty())
-        return jsonErr("SEND_FAILED", "éªŒè¯ç ç”Ÿæˆå¤±è´¥ï¼Œè¯·ç¨åé‡è¯•");
+        return jsonErr("SEND_FAILED", "ÑéÖ¤ÂëÉú³ÉÊ§°Ü£¬ÇëÉÔºóÖØÊÔ");
 
-    // å¼€å‘æ¨¡å¼ï¼šè·³è¿‡ SMTPï¼Œç›´æ¥è¿”å›éªŒè¯ç 
+    // ¿ª·¢Ä£Ê½£ºÌø¹ı SMTP£¬Ö±½Ó·µ»ØÑéÖ¤Âë
     if (!Env::get("BH_SMTP_MOCK").empty()) {
-        return "{\"success\":true,\"message\":\"éªŒè¯ç : " + code + "\",\"code\":\"" + code + "\"}";
+        return "{\"success\":true,\"message\":\"ÑéÖ¤Âë: " + code + "\",\"code\":\"" + code + "\"}";
     }
 
-    // SMTP å¼‚æ­¥å‘é€ â€” å›½å†…ç”¨æˆ·åˆ°æµ·å¤–é‚®ä»¶æœåŠ¡å™¨å»¶è¿Ÿé«˜,
-    // åŒæ­¥ç­‰å¾…ä¼šå¯¼è‡´å®¢æˆ·ç«¯è¶…æ—¶æ–­å¼€, æ”¹ä¸ºåå°å‘é€ç«‹å³è¿”å›
+    // SMTP Òì²½·¢ËÍ ¡ª ¹úÄÚÓÃ»§µ½º£ÍâÓÊ¼ş·şÎñÆ÷ÑÓ³Ù¸ß,
+    // Í¬²½µÈ´ı»áµ¼ÖÂ¿Í»§¶Ë³¬Ê±¶Ï¿ª, ¸ÄÎªºóÌ¨·¢ËÍÁ¢¼´·µ»Ø
     std::string codeCopy = code;
     std::string emailCopy = email;
     std::string purposeCopy = purpose;
     int ttlCopy = ServerConfig::CODE_TTL_SEC;
-    // EmailService::sendVerifyCode æ¯æ¬¡æ–°å»º CURL handle, çº¿ç¨‹å®‰å…¨
+    // EmailService::sendVerifyCode Ã¿´ÎĞÂ½¨ CURL handle, Ïß³Ì°²È«
     EmailService *emailPtr = m_email.get();
     std::thread([emailPtr, emailCopy, codeCopy, ttlCopy, purposeCopy]() {
         emailPtr->sendVerifyCode(emailCopy, codeCopy, ttlCopy, purposeCopy);
     }).detach();
 
-    return jsonOk("éªŒè¯ç å·²å‘é€ï¼Œè¯·æŸ¥æ”¶é‚®ç®±");
+    return jsonOk("ÑéÖ¤ÂëÒÑ·¢ËÍ£¬Çë²éÊÕÓÊÏä");
 }
 
-// â”€â”€ login (password) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ©¤©¤ login (password) ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
 std::string AuthService::login(const std::string &email, const std::string &password) {
     if (email.empty() || password.empty())
-        return jsonErr("FIELDS_REQUIRED", "è¯·è¾“å…¥é‚®ç®±å’Œå¯†ç ");
+        return jsonErr("FIELDS_REQUIRED", "ÇëÊäÈëÓÊÏäºÍÃÜÂë");
     if (!validEmail(email))
-        return jsonErr("INVALID_EMAIL", "é‚®ç®±æ ¼å¼ä¸æ­£ç¡®");
-    if (!m_users.exists(email))
-        return jsonErr("ACCOUNT_NOT_FOUND", "è¯¥è´¦å·ä¸å­˜åœ¨ï¼Œè¯·å…ˆæ³¨å†Œ");
-    if (!m_users.verifyPassword(email, password))
-        return jsonErr("INVALID_CREDENTIALS", "å¯†ç é”™è¯¯ï¼Œè¯·æ£€æŸ¥åé‡è¯•");
+        return jsonErr("INVALID_EMAIL", "ÓÊÏä¸ñÊ½²»ÕıÈ·");
 
-    auto user = m_users.findByEmail(email);
+    // Ò»´Î²éÑ¯ÄÃ»Ø uid/salt/hash/ÓÃ»§ĞÅÏ¢ (Ô­ exists+verifyPassword+findByEmail Èı´Î²éÑ¯ºÏ²¢)
+    auto cred = m_users.findAuthByEmail(email);
+    if (!cred)
+        return jsonErr("ACCOUNT_NOT_FOUND", "¸ÃÕËºÅ²»´æÔÚ£¬ÇëÏÈ×¢²á");
+    if (cred->passwordHash.empty()
+        || !PasswordHash::verify(cred->salt, password, cred->id, cred->passwordHash))
+        return jsonErr("INVALID_CREDENTIALS", "ÃÜÂë´íÎó£¬Çë¼ì²éºóÖØÊÔ");
 
     TokenPayload tp;
-    tp.sub      = std::to_string(user->id);
+    tp.sub      = std::to_string(cred->id);
     tp.email    = email;
     tp.provider = "password";
     tp.jti      = SessionManager::generateJti();
     std::string accessToken = m_token.generateAccess(tp, 900);
-    bindSession(tp.sub, tp.jti);  // å•è®¾å¤‡ç™»å½•
+    bindSession(tp.sub, tp.jti);  // µ¥Éè±¸µÇÂ¼
 
-    // æ¸…é™¤æ—§ refresh tokenï¼Œåªä¿ç•™æœ€æ–°ä¸€ä¸ª
-    SessionManager::revokeAllForUser(user->id, &m_pool);
+    // Çå³ı¾É refresh token£¬Ö»±£Áô×îĞÂÒ»¸ö
+    SessionManager::revokeAllForUser(cred->id, &m_pool);
     std::string refreshToken = TokenService::generateRefresh();
     SessionManager::storeRefresh(refreshToken, tp.sub, email, "password", 30*24*3600, &m_pool);
 
     std::ostringstream resp;
-    resp << "{\"success\":true,\"message\":\"æ¬¢è¿å›æ¥ï¼å¡”å¦å·²ç»è¿«ä¸åŠå¾…æƒ³å’Œä½ å¼€ä¸€å±€äº†~\""
+    resp << "{\"success\":true,\"message\":\"»¶Ó­»ØÀ´£¡ËşÌ¹ÒÑ¾­ÆÈ²»¼°´ıÏëºÍÄã¿ªÒ»¾ÖÁË~\""
          << ",\"access_token\":\"" << jsonEscape(accessToken) << "\""
          << ",\"refresh_token\":\"" << jsonEscape(refreshToken) << "\""
          << ",\"token_type\":\"Bearer\""
          << ",\"expires_in\":900"
-         << ",\"uid\":\"" << std::to_string(user->id) << "\""
+         << ",\"uid\":\"" << std::to_string(cred->id) << "\""
          << ",\"email\":\"" << jsonEscape(email) << "\""
-         << ",\"username\":\"" << jsonEscape(user->username) << "\""
+         << ",\"username\":\"" << jsonEscape(cred->username) << "\""
          << "}";
     return resp.str();
 }
 
-// â”€â”€ loginWithCode â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ©¤©¤ loginWithCode ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
 std::string AuthService::loginWithCode(const std::string &email,
                                         const std::string &code) {
     if (email.empty() || code.empty())
-        return jsonErr("FIELDS_REQUIRED", "è¯·è¾“å…¥é‚®ç®±å’ŒéªŒè¯ç ");
+        return jsonErr("FIELDS_REQUIRED", "ÇëÊäÈëÓÊÏäºÍÑéÖ¤Âë");
     if (!validEmail(email))
-        return jsonErr("INVALID_EMAIL", "é‚®ç®±æ ¼å¼ä¸æ­£ç¡®");
+        return jsonErr("INVALID_EMAIL", "ÓÊÏä¸ñÊ½²»ÕıÈ·");
     if (!m_users.exists(email))
-        return jsonErr("ACCOUNT_NOT_FOUND", "è¯¥è´¦å·ä¸å­˜åœ¨ï¼Œè¯·å…ˆæ³¨å†Œ");
+        return jsonErr("ACCOUNT_NOT_FOUND", "¸ÃÕËºÅ²»´æÔÚ£¬ÇëÏÈ×¢²á");
     if (!m_codes.validate(email, code, CodePurpose::LOGIN))
-        return jsonErr("INVALID_CODE", "éªŒè¯ç é”™è¯¯æˆ–å·²è¿‡æœŸ");
+        return jsonErr("INVALID_CODE", "ÑéÖ¤Âë´íÎó»òÒÑ¹ıÆÚ");
 
     auto user = m_users.findByEmail(email);
-    if (!user) return jsonErr("DB_ERROR", "ç”¨æˆ·æ•°æ®å¼‚å¸¸");
+    if (!user) return jsonErr("DB_ERROR", "ÓÃ»§Êı¾İÒì³£");
 
     TokenPayload tp;
     tp.sub      = std::to_string(user->id);
@@ -169,7 +172,7 @@ std::string AuthService::loginWithCode(const std::string &email,
     SessionManager::storeRefresh(refreshToken, tp.sub, email, "password", 30*24*3600, &m_pool);
 
     std::ostringstream resp;
-    resp << "{\"success\":true,\"message\":\"æ¬¢è¿å›æ¥ï¼å¡”å¦å·²ç»è¿«ä¸åŠå¾…æƒ³å’Œä½ å¼€ä¸€å±€äº†~\""
+    resp << "{\"success\":true,\"message\":\"»¶Ó­»ØÀ´£¡ËşÌ¹ÒÑ¾­ÆÈ²»¼°´ıÏëºÍÄã¿ªÒ»¾ÖÁË~\""
          << ",\"access_token\":\"" << jsonEscape(accessToken) << "\""
          << ",\"refresh_token\":\"" << jsonEscape(refreshToken) << "\""
          << ",\"token_type\":\"Bearer\""
@@ -181,56 +184,56 @@ std::string AuthService::loginWithCode(const std::string &email,
     return resp.str();
 }
 
-// â”€â”€ register â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ©¤©¤ register ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
 std::string AuthService::doRegister(const std::string &email, const std::string &password,
                                      const std::string &code, const std::string &username) {
     if (email.empty() || password.empty() || code.empty())
-        return jsonErr("FIELDS_REQUIRED", "è¯·å¡«å†™é‚®ç®±ã€å¯†ç å’ŒéªŒè¯ç ");
+        return jsonErr("FIELDS_REQUIRED", "ÇëÌîĞ´ÓÊÏä¡¢ÃÜÂëºÍÑéÖ¤Âë");
     if (!validEmail(email))
-        return jsonErr("INVALID_EMAIL", "é‚®ç®±æ ¼å¼ä¸æ­£ç¡®");
+        return jsonErr("INVALID_EMAIL", "ÓÊÏä¸ñÊ½²»ÕıÈ·");
     if (!validPassword(password))
-        return jsonErr("WEAK_PASSWORD", "å¯†ç éœ€ä¸º6-20ä½ï¼Œä¸”åŒ…å«å­—æ¯å’Œæ•°å­—");
+        return jsonErr("WEAK_PASSWORD", "ÃÜÂëĞèÎª6-20Î»£¬ÇÒ°üº¬×ÖÄ¸ºÍÊı×Ö");
 
     if (m_users.exists(email))
-        return jsonErr("EMAIL_EXISTS", "è¯¥é‚®ç®±å·²è¢«æ³¨å†Œï¼Œè¯·ç›´æ¥ç™»å½•");
+        return jsonErr("EMAIL_EXISTS", "¸ÃÓÊÏäÒÑ±»×¢²á£¬ÇëÖ±½ÓµÇÂ¼");
 
     if (!m_codes.validate(email, code, CodePurpose::REGISTER))
-        return jsonErr("INVALID_CODE", "éªŒè¯ç é”™è¯¯æˆ–å·²è¿‡æœŸ");
+        return jsonErr("INVALID_CODE", "ÑéÖ¤Âë´íÎó»òÒÑ¹ıÆÚ");
 
     if (!m_users.create(email, password, username))
-        return jsonErr("REGISTER_FAILED", "æ³¨å†Œå¤±è´¥ï¼Œè¯·ç¨åé‡è¯•");
+        return jsonErr("REGISTER_FAILED", "×¢²áÊ§°Ü£¬ÇëÉÔºóÖØÊÔ");
 
-    return jsonOk("å¡”å¦å¼€å¿ƒå¾—è½¬èµ·äº†åœˆï¼æ¬¢è¿æ–°æˆ˜å‹åŠ å…¥æˆ‘ä»¬çš„å¤§å®¶åº­~", "email", email);
+    return jsonOk("ËşÌ¹¿ªĞÄµÃ×ªÆğÁËÈ¦£¡»¶Ó­ĞÂÕ½ÓÑ¼ÓÈëÎÒÃÇµÄ´ó¼ÒÍ¥~", "email", email);
 }
 
-// â”€â”€ resetPassword â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ©¤©¤ resetPassword ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
 std::string AuthService::resetPassword(const std::string &email, const std::string &code,
                                         const std::string &newPassword) {
     if (email.empty() || code.empty() || newPassword.empty())
-        return jsonErr("FIELDS_REQUIRED", "è¯·å¡«å†™é‚®ç®±ã€éªŒè¯ç å’Œæ–°å¯†ç ");
+        return jsonErr("FIELDS_REQUIRED", "ÇëÌîĞ´ÓÊÏä¡¢ÑéÖ¤ÂëºÍĞÂÃÜÂë");
     if (!validEmail(email))
-        return jsonErr("INVALID_EMAIL", "é‚®ç®±æ ¼å¼ä¸æ­£ç¡®");
+        return jsonErr("INVALID_EMAIL", "ÓÊÏä¸ñÊ½²»ÕıÈ·");
     if (!validPassword(newPassword))
-        return jsonErr("WEAK_PASSWORD", "å¯†ç éœ€ä¸º6-20ä½ï¼Œä¸”åŒ…å«å­—æ¯å’Œæ•°å­—");
+        return jsonErr("WEAK_PASSWORD", "ÃÜÂëĞèÎª6-20Î»£¬ÇÒ°üº¬×ÖÄ¸ºÍÊı×Ö");
 
     if (!m_users.exists(email))
-        return jsonErr("ACCOUNT_NOT_FOUND", "è¯¥è´¦å·ä¸å­˜åœ¨ï¼Œè¯·å…ˆæ³¨å†Œ");
+        return jsonErr("ACCOUNT_NOT_FOUND", "¸ÃÕËºÅ²»´æÔÚ£¬ÇëÏÈ×¢²á");
 
     if (!m_codes.validate(email, code, CodePurpose::RESET)) {
-        return jsonErr("INVALID_CODE", "éªŒè¯ç é”™è¯¯æˆ–å·²è¿‡æœŸ");
+        return jsonErr("INVALID_CODE", "ÑéÖ¤Âë´íÎó»òÒÑ¹ıÆÚ");
     }
 
     if (!m_users.updatePassword(email, newPassword)) {
-        return jsonErr("RESET_FAILED", "å¯†ç é‡ç½®å¤±è´¥ï¼Œè¯·ç¨åé‡è¯•");
+        return jsonErr("RESET_FAILED", "ÃÜÂëÖØÖÃÊ§°Ü£¬ÇëÉÔºóÖØÊÔ");
     }
 
     auto user = m_users.findByEmail(email);
     if (user) SessionManager::revokeAllForUser(user->id, &m_pool);
 
-    return jsonOk("å“ˆå“’å¸®ä½ æŠŠå¯†ç é”ä¿®å¥½å•¦ï¼Œè¿™æ¬¡å¯åˆ«å†å¼„ä¸¢äº†å“¦~");
+    return jsonOk("¹şßÕ°ïÄã°ÑÃÜÂëËøĞŞºÃÀ²£¬Õâ´Î¿É±ğÔÙÅª¶ªÁËÅ¶~");
 }
 
-// â”€â”€ OAuth â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ©¤©¤ OAuth ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
 std::string AuthService::oauthGetUrl(const std::string &provider,
                                       std::string &state) {
     if (provider == "github")
@@ -250,7 +253,7 @@ std::string AuthService::oauthCallback(const std::string &provider,
         oauthUser = m_oauth->discordExchange(code, state);
 
     if (!oauthUser) {
-        return jsonErr("OAUTH_FAILED", "ç¬¬ä¸‰æ–¹æˆæƒå¤±è´¥ï¼Œè¯·é‡è¯•");
+        return jsonErr("OAUTH_FAILED", "µÚÈı·½ÊÚÈ¨Ê§°Ü£¬ÇëÖØÊÔ");
     }
 
     auto &ou = *oauthUser;
@@ -270,7 +273,7 @@ std::string AuthService::oauthCallback(const std::string &provider,
     }
 
     auto user = m_users.findByEmail(email);
-    if (!user) return jsonErr("DB_ERROR", "ç”¨æˆ·åˆ›å»ºå¤±è´¥ï¼Œè¯·é‡è¯•");
+    if (!user) return jsonErr("DB_ERROR", "ÓÃ»§´´½¨Ê§°Ü£¬ÇëÖØÊÔ");
 
     TokenPayload tp;
     tp.sub      = std::to_string(user->id);
@@ -284,7 +287,7 @@ std::string AuthService::oauthCallback(const std::string &provider,
     SessionManager::storeRefresh(refreshToken, tp.sub, email, ou.provider, 30*24*3600, &m_pool);
 
     std::ostringstream resp;
-    resp << "{\"success\":true,\"message\":\"æ¬¢è¿å›æ¥ï¼å¡”å¦å·²ç»è¿«ä¸åŠå¾…æƒ³å’Œä½ å¼€ä¸€å±€äº†~\""
+    resp << "{\"success\":true,\"message\":\"»¶Ó­»ØÀ´£¡ËşÌ¹ÒÑ¾­ÆÈ²»¼°´ıÏëºÍÄã¿ªÒ»¾ÖÁË~\""
          << ",\"access_token\":\"" << jsonEscape(accessToken) << "\""
          << ",\"refresh_token\":\"" << jsonEscape(refreshToken) << "\""
          << ",\"token_type\":\"Bearer\""
@@ -299,7 +302,7 @@ std::string AuthService::oauthCallback(const std::string &provider,
     return resp.str();
 }
 
-// â”€â”€ OAuth ç»‘å®šæ¨¡å¼ â”€â”€
+// ©¤©¤ OAuth °ó¶¨Ä£Ê½ ©¤©¤
 std::string AuthService::oauthCallbackBind(const std::string &provider,
                                             const std::string &code,
                                             const std::string &state,
@@ -311,12 +314,12 @@ std::string AuthService::oauthCallbackBind(const std::string &provider,
         oauthUser = m_oauth->discordExchange(code, state);
 
     if (!oauthUser)
-        return jsonErr("OAUTH_FAILED", "ç¬¬ä¸‰æ–¹æˆæƒå¤±è´¥ï¼Œè¯·é‡è¯•");
+        return jsonErr("OAUTH_FAILED", "µÚÈı·½ÊÚÈ¨Ê§°Ü£¬ÇëÖØÊÔ");
 
     auto &ou = *oauthUser;
     auto user = m_users.findById(bindUserId);
     if (!user)
-        return jsonErr("USER_NOT_FOUND", "ç”¨æˆ·ä¸å­˜åœ¨");
+        return jsonErr("USER_NOT_FOUND", "ÓÃ»§²»´æÔÚ");
 
     m_users.linkOAuth(user->email, ou.provider, ou.providerId);
 
@@ -331,7 +334,7 @@ std::string AuthService::oauthCallbackBind(const std::string &provider,
     SessionManager::storeRefresh(refreshToken, tp.sub, tp.email, ou.provider, 30*24*3600, &m_pool);
 
     std::ostringstream resp;
-    resp << "{\"success\":true,\"message\":\"ç»‘å®šæˆåŠŸ\""
+    resp << "{\"success\":true,\"message\":\"°ó¶¨³É¹¦\""
          << ",\"access_token\":\"" << jsonEscape(accessToken) << "\""
          << ",\"refresh_token\":\"" << jsonEscape(refreshToken) << "\""
          << ",\"token_type\":\"Bearer\""
@@ -344,15 +347,15 @@ std::string AuthService::oauthCallbackBind(const std::string &provider,
     return resp.str();
 }
 
-// â”€â”€ é‰´æƒ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ©¤©¤ ¼øÈ¨ ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
 
 std::string AuthService::extractBearerToken(const std::string &headers) {
-    // åœ¨åŸå§‹ HTTP headers ä¸­æŸ¥æ‰¾ "Authorization: Bearer <token>"
-    // headers æ ¼å¼: "Host: x\r\nAuthorization: Bearer abc\r\n..."
+    // ÔÚÔ­Ê¼ HTTP headers ÖĞ²éÕÒ "Authorization: Bearer <token>"
+    // headers ¸ñÊ½: "Host: x\r\nAuthorization: Bearer abc\r\n..."
     std::string key = "Authorization:";
     auto pos = headers.find(key);
     if (pos == std::string::npos) {
-        // ä¹Ÿæ”¯æŒå°å†™å¼€å¤´
+        // Ò²Ö§³ÖĞ¡Ğ´¿ªÍ·
         key = "authorization:";
         pos = headers.find(key);
     }
@@ -361,21 +364,21 @@ std::string AuthService::extractBearerToken(const std::string &headers) {
     }
 
     pos += key.size();
-    // è·³è¿‡ç©ºæ ¼
+    // Ìø¹ı¿Õ¸ñ
     while (pos < headers.size() && (headers[pos] == ' ' || headers[pos] == '\t'))
         ++pos;
 
-    // æœŸæœ› "Bearer " å‰ç¼€
+    // ÆÚÍû "Bearer " Ç°×º
     std::string bearer = "Bearer ";
     if (headers.compare(pos, bearer.size(), bearer) != 0) {
-        // ä¹Ÿæ”¯æŒå°å†™
+        // Ò²Ö§³ÖĞ¡Ğ´
         bearer = "bearer ";
         if (headers.compare(pos, bearer.size(), bearer) != 0)
             return {};
     }
     pos += bearer.size();
 
-    // è¯»å– token ç›´åˆ° \r æˆ– \n
+    // ¶ÁÈ¡ token Ö±µ½ \r »ò \n
     auto end = headers.find_first_of("\r\n", pos);
     std::string token = headers.substr(pos, end - pos);
     // trim trailing whitespace
@@ -391,12 +394,12 @@ std::optional<TokenPayload> AuthService::authenticate(
     auto tp = m_token.verify(token);
     if (!tp) return std::nullopt;
 
-    // â”€â”€ å•è®¾å¤‡ç™»å½•: æ£€æŸ¥ JTI â”€â”€
+    // ©¤©¤ µ¥Éè±¸µÇÂ¼: ¼ì²é JTI ©¤©¤
     try {
         auto &r = RedisClient::instance();
         auto stored = r.get("session:" + tp->sub);
         if (stored && *stored != tp->jti) {
-            // å¦ä¸€è®¾å¤‡å·²ç™»å½•, æ­¤ token ä½œåºŸ
+            // ÁíÒ»Éè±¸ÒÑµÇÂ¼, ´Ë token ×÷·Ï
             return std::nullopt;
         }
     } catch (...) {}
@@ -410,7 +413,7 @@ void AuthService::bindSession(const std::string &uid, const std::string &jti) {
     } catch (...) {}
 }
 
-// â”€â”€ validators â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ©¤©¤ validators ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
 bool AuthService::validEmail(const std::string &email) const {
     auto at = email.find('@');
     if (at == std::string::npos || at == 0) return false;

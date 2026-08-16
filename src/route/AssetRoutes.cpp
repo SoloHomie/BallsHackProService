@@ -32,6 +32,21 @@ static std::string esc(const std::string &s) {
     return AuthService::jsonEscape(s);
 }
 
+// ── base64 编码 ──
+static std::string b64encode(const std::string &raw) {
+    static const char *b64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    std::string out;
+    int val = 0, valb = -6;
+    for (unsigned char c : raw) {
+        val = (val << 8) + c;
+        valb += 8;
+        while (valb >= 0) { out += b64[(val >> valb) & 0x3F]; valb -= 6; }
+    }
+    if (valb > -6) out += b64[((val << 8) >> (valb + 8)) & 0x3F];
+    while (out.size() % 4) out += '=';
+    return out;
+}
+
 void registerAssetRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
 
     // ═══════════════════════════════════════════════════
@@ -110,18 +125,68 @@ void registerAssetRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
             ss << f.rdbuf();
             std::string raw = ss.str();
 
-            // base64 编码 (简单实现)
-            static const char *b64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-            std::string b64str;
-            int val = 0, valb = -6;
-            for (unsigned char c : raw) {
-                val = (val << 8) + c;
-                valb += 8;
-                while (valb >= 0) { b64str += b64[(val >> valb) & 0x3F]; valb -= 6; }
-            }
-            if (valb > -6) b64str += b64[((val << 8) >> (valb + 8)) & 0x3F];
-            while (b64str.size() % 4) b64str += '=';
+            return "{\"success\":true,\"elf_base64\":\"" + b64encode(raw) + "\"}";
+        });
 
-            return "{\"success\":true,\"elf_base64\":\"" + b64str + "\"}";
+    // ═══════════════════════════════════════════════════
+    //  美化资源清单 (需登录)
+    // ═══════════════════════════════════════════════════
+    server.route("GET", "/api/assets/beautify/manifest",
+        [&](const std::string &, const std::string &, const std::string &headers) {
+            auto tp = auth.authenticate(headers);
+            if (!tp) return AuthService::jsonErr("UNAUTHORIZED", "请先登录");
+
+            std::ifstream f("assets/beautify_manifest.json");
+            if (!f) return AuthService::jsonErr("NOT_FOUND", "美化资源未部署");
+            std::ostringstream ss; ss << f.rdbuf();
+            return ss.str();
+        });
+
+    // ═══════════════════════════════════════════════════
+    //  美化文件下载 (需登录+订阅, 内容寻址)
+    // ═══════════════════════════════════════════════════
+    server.route("GET", "/api/assets/beautify/file",
+        [&](const std::string &, const std::string &query, const std::string &headers) {
+            auto tp = auth.authenticate(headers);
+            if (!tp) return AuthService::jsonErr("UNAUTHORIZED", "请先登录");
+
+            std::string subExpires;
+            if (!checkSubscribed(auth, tp, subExpires)) {
+                return AuthService::jsonErr("FORBIDDEN",
+                    "此功能需要Pro订阅。如需订阅请联系开发者。");
+            }
+
+            std::string path = StringUtils::queryVal(query, "path");
+            // 路径校验: 只允许 beautify/ 下相对路径, 禁 .. 与绝对路径/反斜杠
+            if (path.empty() || path.find("..") != std::string::npos ||
+                path[0] == '/' || path[0] == '\\' ||
+                path.find('\\') != std::string::npos) {
+                return AuthService::jsonErr("BAD_REQUEST", "非法路径");
+            }
+
+            std::ifstream f("assets/beautify/" + path, std::ios::binary);
+            if (!f) return AuthService::jsonErr("NOT_FOUND", "资源不存在");
+
+            std::ostringstream ss; ss << f.rdbuf();
+            std::string raw = ss.str();
+            return "{\"success\":true,\"data_base64\":\"" + b64encode(raw) + "\"}";
+        });
+
+    // ═══════════════════════════════════════════════════
+    //  美化预览图 (公开, 仅 png 缩略图, 供 QML Image 直接加载)
+    // ═══════════════════════════════════════════════════
+    server.route("GET", "/api/assets/beautify/preview",
+        [&](const std::string &, const std::string &query, const std::string &) {
+            std::string path = StringUtils::queryVal(query, "path");
+            if (path.empty() || path.find("..") != std::string::npos ||
+                path[0] == '/' || path[0] == '\\' ||
+                path.find('\\') != std::string::npos ||
+                path.find(".png") == std::string::npos) {
+                return AuthService::jsonErr("BAD_REQUEST", "非法路径");
+            }
+            std::ifstream f("assets/beautify/" + path, std::ios::binary);
+            if (!f) return std::string("{\"success\":false,\"message\":\"not found\"}");
+            std::ostringstream ss; ss << f.rdbuf();
+            return "BIN:" + ss.str();
         });
 }

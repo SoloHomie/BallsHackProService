@@ -1,31 +1,31 @@
 [
   {
     "id": "1",
-    "name": "日卡",
+    "name": "体验会员",
     "amount": 500,
     "days": 1
   },
   {
     "id": "2",
-    "name": "周卡",
+    "name": "周会员",
     "amount": 2500,
     "days": 7
   },
   {
     "id": "3",
-    "name": "月卡",
+    "name": "月会员",
     "amount": 8800,
     "days": 30
   },
   {
     "id": "4",
-    "name": "季卡",
+    "name": "季会员",
     "amount": 19800,
     "days": 90
   },
   {
     "id": "5",
-    "name": "年卡",
+    "name": "年会员",
     "amount": 28800,
     "days": 365
   }
