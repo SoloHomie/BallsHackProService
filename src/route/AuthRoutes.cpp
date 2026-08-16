@@ -87,15 +87,21 @@ void registerAuthRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
     // ── 密码登录 ──────────────────────────────────
     server.route("POST", "/api/auth/login",
         [&](const std::string &body, const std::string &, const std::string &) {
-            return auth.login(StringUtils::jsonVal(body, "email"),
-                              StringUtils::jsonVal(body, "password"));
+            std::string email = StringUtils::jsonVal(body, "email");
+            auto u = auth.userStore().findByEmail(email);
+            if (u && u->status != 0)
+                return AuthService::jsonErr("BANNED", "账号已被封禁，请联系管理员");
+            return auth.login(email, StringUtils::jsonVal(body, "password"));
         });
 
     // ── 验证码登录 ────────────────────────────────
     server.route("POST", "/api/auth/verify-login",
         [&](const std::string &body, const std::string &, const std::string &) {
-            return auth.loginWithCode(StringUtils::jsonVal(body, "email"),
-                                      StringUtils::jsonVal(body, "code"));
+            std::string email = StringUtils::jsonVal(body, "email");
+            auto u = auth.userStore().findByEmail(email);
+            if (u && u->status != 0)
+                return AuthService::jsonErr("BANNED", "账号已被封禁，请联系管理员");
+            return auth.loginWithCode(email, StringUtils::jsonVal(body, "code"));
         });
 
     // ── 注册 ──────────────────────────────────────
@@ -237,6 +243,13 @@ void registerAuthRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
             if (sub.empty())
                 return AuthService::jsonErr("INVALID_TOKEN", "会话数据损坏，请重新登录");
 
+            // 封禁检查: 被封禁用户禁止续期, 并立即作废其 refresh token
+            // (解封后需重新登录; 单一数据源 MySQL, 解封必然立即生效)
+            if (auth.userStore().isBanned(std::stoull(sub))) {
+                SessionManager::revokeRefresh(refreshToken, &pool);
+                return AuthService::jsonErr("BANNED", "账号已被封禁，请联系管理员");
+            }
+
             SessionManager::revokeRefresh(refreshToken, &pool);
 
             TokenPayload tp;
@@ -353,6 +366,26 @@ void registerAuthRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
                     }
                     r.setex("online:" + tp->sub, 30, tp->email);
                 } catch (...) {}
+            } else {
+                // authenticate 失败但 JWT 仍合法 → 被封禁(或 token 过期/顶号)
+                // 被封禁: 返回 kicked 状态, 客户端按被踢流程强制登出
+                auto raw = auth.peekToken(headers);
+                if (raw) {
+                    try {
+                        auto &r = RedisClient::instance();
+                        if (r.exists("kicked:" + raw->sub)) {
+                            r.del("kicked:" + raw->sub);
+                            std::ostringstream kr;
+                            kr << "{\"success\":true,\"status\":\"kicked\",\"subscribed\":false}";
+                            return kr.str();
+                        }
+                    } catch (...) {}
+                    if (auth.userStore().isBanned(std::stoull(raw->sub))) {
+                        std::ostringstream kr;
+                        kr << "{\"success\":true,\"status\":\"kicked\",\"subscribed\":false}";
+                        return kr.str();
+                    }
+                }
             }
 
             std::ostringstream resp;

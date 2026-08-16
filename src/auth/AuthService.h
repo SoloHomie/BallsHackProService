@@ -38,6 +38,8 @@ public:
 
     // ── 鉴权 ──────────────────────────────────────
     std::optional<TokenPayload> authenticate(const std::string &headers) const;
+    // 仅验 JWT 签名 (不做会话/封禁检查) — 心跳路由用于区分 被踢/被封/顶号
+    std::optional<TokenPayload> peekToken(const std::string &headers) const;
     static std::string extractBearerToken(const std::string &headers);
     // 绑定会话: 新登录时调用, 使旧设备 token 失效
     void bindSession(const std::string &uid, const std::string &jti);

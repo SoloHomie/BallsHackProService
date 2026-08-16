@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS users (
     avatar_url      VARCHAR(512)  DEFAULT NULL,
     provider              VARCHAR(32)  NOT NULL DEFAULT 'local',
     subscription_expires  DATETIME     DEFAULT NULL,
+    status                TINYINT      NOT NULL DEFAULT 0 COMMENT '0=normal,1=banned',
     balance               BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '金额(分)',
     created_at            DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

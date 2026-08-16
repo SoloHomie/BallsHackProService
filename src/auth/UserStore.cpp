@@ -65,7 +65,7 @@ UserStore::findByEmail(const std::string& email) const {
 
     StmtGuard stmt{mysql_stmt_init(db)};
     const char* sql =
-        "SELECT id, email, username, created_at, subscription_expires "
+        "SELECT id, email, username, created_at, subscription_expires, status "
         "FROM users WHERE LOWER(email) = LOWER(?)";
     int prepRc = mysql_stmt_prepare(stmt, sql, (unsigned long)strlen(sql));
     if (prepRc != 0) {
@@ -91,8 +91,10 @@ UserStore::findByEmail(const std::string& email) const {
     char dbSubExp[32] = {};
     unsigned long lenSubExp = 0;
     bool isNullSubExp = 0;
+    char dbStatus = 0;
+    bool isNullStatus = 0;
 
-    MYSQL_BIND result[5] = {};
+    MYSQL_BIND result[6] = {};
     result[0].buffer_type = MYSQL_TYPE_LONGLONG;
     result[0].buffer = &id;
     result[1].buffer_type = MYSQL_TYPE_STRING;
@@ -107,6 +109,8 @@ UserStore::findByEmail(const std::string& email) const {
     result[4].buffer_type = MYSQL_TYPE_STRING;
     result[4].buffer = dbSubExp; result[4].buffer_length = sizeof(dbSubExp) - 1;
     result[4].length = &lenSubExp; result[4].is_null = &isNullSubExp;
+    result[5].buffer_type = MYSQL_TYPE_TINY;
+    result[5].buffer = &dbStatus; result[5].is_null = &isNullStatus;
     mysql_stmt_bind_result(stmt, result);
     int storeRc = mysql_stmt_store_result(stmt);
 
@@ -126,6 +130,7 @@ UserStore::findByEmail(const std::string& email) const {
     info.username  = dbName;
     info.createdAt = fmtTime(dbCreated);
     if (!isNullSubExp) info.subscription_expires = dbSubExp;
+    if (!isNullStatus) info.status = dbStatus;
 
     // 查 OAuth 绑定（新作用域，让 stmt 析构先释放）
     {
@@ -351,7 +356,7 @@ UserStore::findAuthByEmail(const std::string& email) const {
 
     StmtGuard stmt{mysql_stmt_init(db)};
     const char* sql =
-        "SELECT id, email, username, created_at, subscription_expires, salt, password_hash "
+        "SELECT id, email, username, created_at, subscription_expires, salt, password_hash, status "
         "FROM users WHERE LOWER(email) = LOWER(?)";
     if (mysql_stmt_prepare(stmt, sql, (unsigned long)strlen(sql)) != 0)
         return std::nullopt;
@@ -372,8 +377,10 @@ UserStore::findAuthByEmail(const std::string& email) const {
     char dbSubExp[32] = {};
     unsigned long lenSubExp = 0;
     bool isNullSubExp = 0;
+    char dbStatus = 0;
+    bool isNullStatus = 0;
 
-    MYSQL_BIND result[7] = {};
+    MYSQL_BIND result[8] = {};
     result[0].buffer_type = MYSQL_TYPE_LONGLONG;
     result[0].buffer = &id;
     result[1].buffer_type = MYSQL_TYPE_STRING;
@@ -394,6 +401,8 @@ UserStore::findAuthByEmail(const std::string& email) const {
     result[6].buffer_type = MYSQL_TYPE_STRING;
     result[6].buffer = dbHash; result[6].buffer_length = sizeof(dbHash) - 1;
     result[6].length = &lenHash;
+    result[7].buffer_type = MYSQL_TYPE_TINY;
+    result[7].buffer = &dbStatus; result[7].is_null = &isNullStatus;
     mysql_stmt_bind_result(stmt, result);
     mysql_stmt_store_result(stmt);
 
@@ -415,6 +424,7 @@ UserStore::findAuthByEmail(const std::string& email) const {
     cred.passwordHash = dbHash;
     cred.createdAt = fmtTime(dbCreated);
     if (!isNullSubExp) cred.subscription_expires = dbSubExp;
+    if (!isNullStatus) cred.status = dbStatus;
     return cred;
 }
 
@@ -633,6 +643,24 @@ bool UserStore::createFromOAuth(const std::string& email,
 // ═══════════════════════════════════════════════════════
 //  count
 // ═══════════════════════════════════════════════════════
+// isBanned: 封禁查询 - 单一数据源 MySQL users.status, 无缓存,
+// 解封(UPDATE status=0)必然立即生效, 不存在"解封了解不了"的残留状态
+bool UserStore::isBanned(uint64_t id) const {
+    auto guard = m_pool.acquire(3000);
+    if (!guard) return false;   // DB busy -> fail-open
+    MYSQL* db = guard->get();
+    char q[128];
+    snprintf(q, sizeof(q),
+        "SELECT 1 FROM users WHERE id=%llu AND status=1 LIMIT 1",
+        (unsigned long long)id);
+    if (mysql_query(db, q) != 0) return false;
+    MYSQL_RES* res = mysql_store_result(db);
+    if (!res) return false;
+    bool banned = (mysql_num_rows(res) > 0);
+    mysql_free_result(res);
+    return banned;
+}
+
 int UserStore::count() const {
     auto guard = m_pool.acquire(5000);
     if (!guard) return 0;

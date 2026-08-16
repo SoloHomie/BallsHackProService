@@ -430,6 +430,7 @@ void registerSystemRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
             resp << "{\"success\":true"
                  << ",\"email\":\"" << AuthService::jsonEscape(user->email) << "\""
                  << ",\"username\":\"" << AuthService::jsonEscape(user->username) << "\""
+                 << ",\"status\":" << user->status
                  << ",\"subscription_expires\":\"" << AuthService::jsonEscape(user->subscription_expires) << "\"";
             // 计算剩余天数
             if (!user->subscription_expires.empty()) {
@@ -546,14 +547,118 @@ void registerSystemRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
             try {
                 auto &r = RedisClient::instance();
                 if (!uid.empty()) {
-                    r.setex("kicked:" + uid, 60, "1");
+                    // 5分钟窗口: 客户端5s心跳必能收到; 覆盖短暂离线/重启场景
+                    r.setex("kicked:" + uid, 300, "1");
                 } else {
                     // 通过 email 找 uid
                     auto user = auth.userStore().findByEmail(email);
-                    if (user) r.setex("kicked:" + std::to_string(user->id), 60, "1");
+                    if (user) r.setex("kicked:" + std::to_string(user->id), 300, "1");
                 }
             } catch (...) {}
             return AuthService::jsonOk("已踢出，用户下次心跳将被强制下线");
+        });
+
+    // ── 管理: 设置订阅到期时间 (绝对值, 覆盖式) ─────
+    server.route("POST", "/api/admin/set-subscription",
+        [&](const std::string &body, const std::string &, const std::string &headers) {
+            auto tp = auth.authenticate(headers);
+            if (!tp) return AuthService::jsonErr("UNAUTHORIZED", "请先登录");
+            if (tp->email != "admin@solohomie.top")
+                return AuthService::jsonErr("FORBIDDEN", "无管理员权限");
+            std::string email   = StringUtils::jsonVal(body, "email");
+            std::string expires = StringUtils::jsonVal(body, "expires");
+            if (email.empty() || expires.empty())
+                return AuthService::jsonErr("FIELDS_REQUIRED", "email和expires必填");
+            auto u = auth.userStore().findByEmail(email);
+            if (!u) return AuthService::jsonErr("NOT_FOUND", "用户不存在");
+            auto g = pool.acquire(5000);
+            if (!g) return AuthService::jsonErr("DB_ERROR", "db busy");
+            MYSQL *db = g->get();
+            char q[512]; char eesc[256]; char eesc2[64];
+            mysql_real_escape_string(db, eesc, email.c_str(), email.size());
+            if (expires == "clear") {
+                snprintf(q, sizeof(q),
+                    "UPDATE users SET subscription_expires=NULL WHERE email='%s'", eesc);
+            } else {
+                // 格式: YYYY-MM-DD HH:MM:SS (或 YYYY-MM-DD)
+                mysql_real_escape_string(db, eesc2, expires.c_str(), expires.size());
+                snprintf(q, sizeof(q),
+                    "UPDATE users SET subscription_expires='%s' WHERE email='%s'", eesc2, eesc);
+            }
+            if (mysql_query(db, q) != 0)
+                return AuthService::jsonErr("DB_ERROR", mysql_error(db));
+            // 回写 Redis 缓存 (与加天数接口同款逻辑; clear 时删缓存)
+            auto nu = auth.userStore().findByEmail(email);
+            if (nu) {
+                try {
+                    auto &r = RedisClient::instance();
+                    if (nu->subscription_expires.empty()) {
+                        r.del("sub:" + std::to_string(nu->id));
+                    } else {
+                        struct tm et = {};
+                        std::istringstream iss(nu->subscription_expires);
+                        iss >> std::get_time(&et, "%Y-%m-%d %H:%M:%S");
+                        int ttl = (int)(std::mktime(&et) - std::time(nullptr));
+                        if (ttl < 60) ttl = 60;
+                        r.setex("sub:" + std::to_string(nu->id), ttl, nu->subscription_expires);
+                    }
+                } catch (...) {}
+            }
+            return AuthService::jsonOk(expires == "clear"
+                ? "已清除订阅到期时间"
+                : "已设置到期时间: " + expires);
+        });
+
+    // ── 管理: 封禁 ────────────────────────────────
+    server.route("POST", "/api/admin/ban",
+        [&](const std::string &body, const std::string &, const std::string &headers) {
+            auto tp = auth.authenticate(headers);
+            if (!tp) return AuthService::jsonErr("UNAUTHORIZED", "请先登录");
+            if (tp->email != "admin@solohomie.top")
+                return AuthService::jsonErr("FORBIDDEN", "无管理员权限");
+            std::string email = StringUtils::jsonVal(body, "email");
+            if (email.empty()) return AuthService::jsonErr("FIELDS_REQUIRED", "email必填");
+            auto u = auth.userStore().findByEmail(email);
+            if (!u) return AuthService::jsonErr("NOT_FOUND", "用户不存在");
+            auto g = pool.acquire(5000);
+            if (!g) return AuthService::jsonErr("DB_ERROR", "db busy");
+            MYSQL *db = g->get();
+            char q[512]; char eesc[256];
+            mysql_real_escape_string(db, eesc, email.c_str(), email.size());
+            snprintf(q, sizeof(q), "UPDATE users SET status=1 WHERE email='%s'", eesc);
+            if (mysql_query(db, q) != 0)
+                return AuthService::jsonErr("DB_ERROR", mysql_error(db));
+            // 在线立即踢出 (5分钟窗口, 客户端5s心跳必能收到)
+            try {
+                RedisClient::instance().setex("kicked:" + std::to_string(u->id), 300, "1");
+            } catch (...) {}
+            return AuthService::jsonOk("已封禁 " + email);
+        });
+
+    // ── 管理: 解封 ────────────────────────────────
+    server.route("POST", "/api/admin/unban",
+        [&](const std::string &body, const std::string &, const std::string &headers) {
+            auto tp = auth.authenticate(headers);
+            if (!tp) return AuthService::jsonErr("UNAUTHORIZED", "请先登录");
+            if (tp->email != "admin@solohomie.top")
+                return AuthService::jsonErr("FORBIDDEN", "无管理员权限");
+            std::string email = StringUtils::jsonVal(body, "email");
+            if (email.empty()) return AuthService::jsonErr("FIELDS_REQUIRED", "email必填");
+            auto u = auth.userStore().findByEmail(email);
+            if (!u) return AuthService::jsonErr("NOT_FOUND", "用户不存在");
+            auto g = pool.acquire(5000);
+            if (!g) return AuthService::jsonErr("DB_ERROR", "db busy");
+            MYSQL *db = g->get();
+            char q[512]; char eesc[256];
+            mysql_real_escape_string(db, eesc, email.c_str(), email.size());
+            snprintf(q, sizeof(q), "UPDATE users SET status=0 WHERE email='%s'", eesc);
+            if (mysql_query(db, q) != 0)
+                return AuthService::jsonErr("DB_ERROR", mysql_error(db));
+            // 清理可能残留的踢出标记 (幂等, 保证解封后立即可登录)
+            try {
+                RedisClient::instance().del("kicked:" + std::to_string(u->id));
+            } catch (...) {}
+            return AuthService::jsonOk("已解封 " + email);
         });
 
 }

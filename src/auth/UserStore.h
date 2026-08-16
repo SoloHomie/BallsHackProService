@@ -16,6 +16,7 @@ public:
         std::string passwordHash;   // PBKDF2 hex（不再暴露，但保留兼容）
         std::string createdAt;
         std::string subscription_expires;  // NULL if not subscribed
+        int         status = 0;            // 0=normal, 1=banned
         // OAuth bindings: provider → providerId
         std::unordered_map<std::string, std::string> oauthLinks;
     };
@@ -36,6 +37,7 @@ public:
         std::string passwordHash;
         std::string createdAt;
         std::string subscription_expires;
+        int         status = 0;            // 0=normal, 1=banned
     };
     std::optional<AuthCred> findAuthByEmail(const std::string &email) const;
 
@@ -60,6 +62,9 @@ public:
                          const std::string &providerId);
 
     int count() const;
+
+    // 封禁查询 (DB fail-open: 查询失败视为未封禁, 避免误伤全员)
+    bool isBanned(uint64_t id) const;
 
 private:
     DbPool& m_pool;

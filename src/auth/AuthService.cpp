@@ -275,6 +275,9 @@ std::string AuthService::oauthCallback(const std::string &provider,
     auto user = m_users.findByEmail(email);
     if (!user) return jsonErr("DB_ERROR", "用户创建失败，请重试");
 
+    if (user->status != 0)
+        return jsonErr("BANNED", "account banned");
+
     TokenPayload tp;
     tp.sub      = std::to_string(user->id);
     tp.email    = email;
@@ -387,6 +390,13 @@ std::string AuthService::extractBearerToken(const std::string &headers) {
     return token;
 }
 
+std::optional<TokenPayload> AuthService::peekToken(
+    const std::string &headers) const {
+    std::string token = extractBearerToken(headers);
+    if (token.empty()) return std::nullopt;
+    return m_token.verify(token);
+}
+
 std::optional<TokenPayload> AuthService::authenticate(
     const std::string &headers) const {
     std::string token = extractBearerToken(headers);
@@ -402,6 +412,12 @@ std::optional<TokenPayload> AuthService::authenticate(
             // 另一设备已登录, 此 token 作废
             return std::nullopt;
         }
+    } catch (...) {}
+
+    // Ban check: query MySQL users.status (single source of truth, no cache)
+    try {
+        if (m_users.isBanned(std::stoull(tp->sub)))
+            return std::nullopt;
     } catch (...) {}
 
     return tp;
