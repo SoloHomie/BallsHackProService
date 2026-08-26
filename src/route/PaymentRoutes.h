@@ -5,6 +5,9 @@ class AuthService;
 class DbPool;
 
 /// 注册支付路由：创建订单、ZPay 回调、订单查询
+class VPayService;
+VPayService *paymentService();
+
 void registerPaymentRoutes(HttpServer &server, AuthService &auth, DbPool &pool);
 
 /// 对账任务：扫描近 2 小时未支付订单, 逐个向平台查单补账

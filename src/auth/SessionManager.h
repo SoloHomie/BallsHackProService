@@ -1,17 +1,17 @@
 #pragma once
-// ©¤©¤ Session / Token ¹ÜÀí£¨´ó³§±ê×¼Ë«ÁîÅÆÄ£Ê½£©©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
+// â”€â”€ Session / Token ç®¡ç†ï¼ˆå¤§å‚æ ‡å‡†åŒä»¤ç‰Œæ¨¡å¼ï¼‰â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 //
 // Access Token (JWT, 15 min):
-//   ÎŞ×´Ì¬£¬Ç©Ãû×ÔÑéÖ¤£¬²»²éÈÎºÎ´æ´¢¡£
+//   æ— çŠ¶æ€ï¼Œç­¾åè‡ªéªŒè¯ï¼Œä¸æŸ¥ä»»ä½•å­˜å‚¨ã€‚
 //   Authorization: Bearer <token>
 //
-// Refresh Token (Ëæ»ú hex, 30 Ìì):
-//   Redis Ö÷´æ´¢ (×Ô¶¯µÇÂ¼/Ë¢ĞÂ 1-2ms, ÔÆÅÌ¿¨¶ÙÃâÒß), MySQL Ğ´±¸·İ¶µµ×¡£
-//   Ö§³ÖÂÖ»»£ºÃ¿´ÎË¢ĞÂÊ±¾É token Ê§Ğ§£¬·¢ĞÂ token¡£
-//   ³·Ïú£º°´ token µ¥Ìõ³·Ïú / °´ÓÃ»§ÅúÁ¿³·Ïú¡£
+// Refresh Token (éšæœº hex, 30 å¤©):
+//   Redis ä¸»å­˜å‚¨ (è‡ªåŠ¨ç™»å½•/åˆ·æ–° 1-2ms, äº‘ç›˜å¡é¡¿å…ç–«), MySQL å†™å¤‡ä»½å…œåº•ã€‚
+//   æ”¯æŒè½®æ¢ï¼šæ¯æ¬¡åˆ·æ–°æ—¶æ—§ token å¤±æ•ˆï¼Œå‘æ–° tokenã€‚
+//   æ’¤é”€ï¼šæŒ‰ token å•æ¡æ’¤é”€ / æŒ‰ç”¨æˆ·æ‰¹é‡æ’¤é”€ã€‚
 //
 // OAuth Token:
-//   Redis »º´æ£¨ÈÈ²éÑ¯£¬TTL = ÁîÅÆ¹ıÆÚÊ±¼ä£©¡£
+//   Redis ç¼“å­˜ï¼ˆçƒ­æŸ¥è¯¢ï¼ŒTTL = ä»¤ç‰Œè¿‡æœŸæ—¶é—´ï¼‰ã€‚
 
 #include <string>
 #include <string_view>
@@ -30,7 +30,7 @@
 
 namespace SessionManager {
 
-    // ©¤©¤ ¼òÒ× JSON È¡Öµ ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
+    // â”€â”€ ç®€æ˜“ JSON å–å€¼ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     inline std::string extractJsonVal(const std::string& json,
                                        const std::string& key) {
         std::string pat = "\"" + key + "\":\"";
@@ -42,7 +42,7 @@ namespace SessionManager {
         return json.substr(pos, end - pos);
     }
 
-    // ©¤©¤ SHA256 hash (hex) ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
+    // â”€â”€ SHA256 hash (hex) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     inline std::string sha256hex(const std::string& data) {
         unsigned char hash[SHA256_DIGEST_LENGTH];
         SHA256((const unsigned char*)data.c_str(), data.size(), hash);
@@ -52,12 +52,12 @@ namespace SessionManager {
         return std::string(hex);
     }
 
-    // ¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T
-    //  Refresh Token ²Ù×÷£¨Redis Ö÷´æ´¢ + MySQL Ğ´±¸·İ£©
-    //  ¶Á: ÏÈ Redis (1-2ms, ÔÆÅÌ¿¨¶ÙÃâÒß), miss »ØÔ´ MySQL ²¢»ØĞ´¡£
-    //  key: refresh:<sha256(token)> ¡ú {"sub","email","provider"}
-    //       refresh:user:<uid> ¡ú SET of token hashes (ÅúÁ¿³·Ïú/µ¥Éè±¸µÇÂ¼)
-    // ¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    //  Refresh Token æ“ä½œï¼ˆRedis ä¸»å­˜å‚¨ + MySQL å†™å¤‡ä»½ï¼‰
+    //  è¯»: å…ˆ Redis (1-2ms, äº‘ç›˜å¡é¡¿å…ç–«), miss å›æº MySQL å¹¶å›å†™ã€‚
+    //  key: refresh:<sha256(token)> â†’ {"sub","email","provider"}
+    //       refresh:user:<uid> â†’ SET of token hashes (æ‰¹é‡æ’¤é”€/å•è®¾å¤‡ç™»å½•)
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     inline std::string refreshKey(const std::string& hex) { return "refresh:" + hex; }
     inline std::string refreshUserKey(const std::string& uid) { return "refresh:user:" + uid; }
@@ -70,7 +70,7 @@ namespace SessionManager {
              + ",\"provider\":\"" + provider + "\"}";
     }
 
-    // ´æ´¢ refresh token ¡ú Redis (Ö÷) + MySQL (±¸·İ, Ê§°Ü²»Ó°ÏìµÇÂ¼)
+    // å­˜å‚¨ refresh token â†’ Redis (ä¸») + MySQL (å¤‡ä»½, å¤±è´¥ä¸å½±å“ç™»å½•)
     inline void storeRefresh(const std::string& token,
                              const std::string& userId,
                              const std::string& email,
@@ -99,7 +99,7 @@ namespace SessionManager {
         time_t expireT = time(nullptr) + ttlSeconds;
         strftime(expireStr, sizeof(expireStr), "%Y-%m-%d %H:%M:%S", gmtime(&expireT));
 
-        // ×ªÒå×Ö·û´®·À×¢Èë
+        // è½¬ä¹‰å­—ç¬¦ä¸²é˜²æ³¨å…¥
         char eEmail[512], eProv[128];
         mysql_real_escape_string(db, eEmail, email.c_str(), email.size());
         mysql_real_escape_string(db, eProv, provider.c_str(), provider.size());
@@ -114,7 +114,7 @@ namespace SessionManager {
         mysql_query(db, q);
     }
 
-    // ²éÑ¯ refresh token ¡ú ÏÈ Redis, miss »ØÔ´ MySQL ²¢»ØĞ´
+    // æŸ¥è¯¢ refresh token â†’ å…ˆ Redis, miss å›æº MySQL å¹¶å›å†™
     inline std::optional<std::string> getRefresh(const std::string& token,
                                                   DbPool *pool = nullptr) {
         std::string hex = sha256hex(token);
@@ -152,7 +152,7 @@ namespace SessionManager {
 
         if (uid.empty()) return std::nullopt;
 
-        // »ØĞ´ Redis, TTL = Ê£ÓàÓĞĞ§ÆÚ
+        // å›å†™ Redis, TTL = å‰©ä½™æœ‰æ•ˆæœŸ
         long long remain = 3600;
         std::tm et = {};
         std::istringstream es(expiresAt);
@@ -173,7 +173,7 @@ namespace SessionManager {
         return refreshJson(uid, email, provider);
     }
 
-    // É¾³ıµ¥¸ö refresh token (Redis Ö÷ + MySQL ±¸·İ)
+    // åˆ é™¤å•ä¸ª refresh token (Redis ä¸» + MySQL å¤‡ä»½)
     inline void revokeRefresh(const std::string& token, DbPool *pool = nullptr) {
         std::string hex = sha256hex(token);
         try {
@@ -197,7 +197,7 @@ namespace SessionManager {
         mysql_query(db, q);
     }
 
-    // ³·ÏúÓÃ»§ËùÓĞÁîÅÆ£¨ĞŞ¸ÄÃÜÂë¡¢ÕËºÅÒì³£Ê±µ÷ÓÃ£©¡ª Redis Ö÷ + MySQL ±¸·İ
+    // æ’¤é”€ç”¨æˆ·æ‰€æœ‰ä»¤ç‰Œï¼ˆä¿®æ”¹å¯†ç ã€è´¦å·å¼‚å¸¸æ—¶è°ƒç”¨ï¼‰â€” Redis ä¸» + MySQL å¤‡ä»½
     inline void revokeAllForUser(uint64_t uid, DbPool *pool = nullptr) {
         std::string uidStr = std::to_string(uid);
         try {
@@ -219,7 +219,7 @@ namespace SessionManager {
         mysql_query(db, q);
     }
 
-    // ¶¨ÆÚÇåÀí¹ıÆÚ token£¨MySQL ²à; Redis ¿¿ TTL ×Ô¶¯¹ıÆÚ£©
+    // å®šæœŸæ¸…ç†è¿‡æœŸ tokenï¼ˆMySQL ä¾§; Redis é  TTL è‡ªåŠ¨è¿‡æœŸï¼‰
     inline void purgeExpired(DbPool *pool = nullptr) {
         if (!pool) return;
         auto guard = pool->acquire(5000);
@@ -228,9 +228,9 @@ namespace SessionManager {
         mysql_query(db, "DELETE FROM refresh_tokens WHERE expires_at < NOW()");
     }
 
-    // ¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T
-    //  OAuth Token »º´æ£¨Redis ÈÈ²ã£©
-    // ¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    //  OAuth Token ç¼“å­˜ï¼ˆRedis çƒ­å±‚ï¼‰
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     inline void cacheOAuthToken(const std::string& provider,
                                 uint64_t userId,
@@ -253,18 +253,18 @@ namespace SessionManager {
         } catch (...) { return std::nullopt; }
     }
 
-    // ¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T
-    //  ¹¤¾ß
-    // ¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    //  å·¥å…·
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
-    // ¾àÀëµ½ÆÚ < 5 ·ÖÖÓ¾ÍĞèÒªË¢ĞÂ
+    // è·ç¦»åˆ°æœŸ < 5 åˆ†é’Ÿå°±éœ€è¦åˆ·æ–°
     inline bool needsRefresh(int64_t expiresAt) {
         auto now = std::chrono::duration_cast<std::chrono::seconds>(
             std::chrono::system_clock::now().time_since_epoch()).count();
         return (expiresAt - now) < 300;
     }
 
-    // JWT ID Éú³É (timestamp + crypto-random hex)
+    // JWT ID ç”Ÿæˆ (timestamp + crypto-random hex)
     inline std::string generateJti() {
         auto now = std::chrono::system_clock::now();
         auto us = std::chrono::duration_cast<std::chrono::microseconds>(

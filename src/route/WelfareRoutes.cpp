@@ -9,12 +9,21 @@
 #include <sstream>
 #include <cstdio>
 #include <ctime>
+#include <cstring>
 
-static void insertSeedData(MYSQL *db) {
-    // 新人福利 — 3天会员（永久有效）
-    mysql_query(db,
-        "INSERT IGNORE INTO welfare_events (id,name,description,event_type,reward_amount,starts_at,expires_at) "
-        "VALUES (1,'新人礼包','欢迎加入球球大家庭！免费领取 3 天 Pro 会员体验~','new_user',3,'2024-01-01','2099-12-31')");
+// 2026-08-26 定向专属福利: 取用户 email 转义进 eesc (查不到则保持空串 = 仅全员福利)
+static void loadEmailEscaped(MYSQL *db, uint64_t uid, char *eesc, size_t eescSz) {
+    eesc[0] = '\0';
+    char qe[256];
+    snprintf(qe, sizeof(qe), "SELECT email FROM users WHERE id=%llu", uid);
+    mysql_query(db, qe);
+    MYSQL_RES *re = mysql_store_result(db);
+    if (re) {
+        MYSQL_ROW rw = mysql_fetch_row(re);
+        if (rw && rw[0])
+            mysql_real_escape_string(db, eesc, rw[0], std::min<size_t>(strlen(rw[0]), eescSz - 1));
+        mysql_free_result(re);
+    }
 }
 
 void registerWelfareRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
@@ -29,7 +38,12 @@ void registerWelfareRoutes(HttpServer &server, AuthService &auth, DbPool &pool) 
             auto guard = pool.acquire(5000);
             if (!guard) return AuthService::jsonErr("DB_ERROR", "数据库繁忙");
             MYSQL *db = guard->get();
-            insertSeedData(db);
+            char eesc[256];
+            loadEmailEscaped(db, uid, eesc, sizeof(eesc));
+            // 2026-08-16 移除补种: 旧代码每次请求 INSERT IGNORE 新人礼包,
+            // 导致运营端 DELETE 删除福利后, 任何人一打开福利页就自动复活 id=1
+            // 并可继续领取 (welfare_claims 累计 114 条)。福利数据以运营库为准,
+            // 不再由接口自动生成; 关闭福利请 UPDATE is_active=0 而非 DELETE。
 
             std::string now = "NOW()";
             char q[1024];
@@ -40,8 +54,9 @@ void registerWelfareRoutes(HttpServer &server, AuthService &auth, DbPool &pool) 
                 "FROM welfare_events e "
                 "LEFT JOIN welfare_claims c ON e.id = c.event_id AND c.user_id = %llu "
                 "WHERE e.is_active = 1 AND e.starts_at <= NOW() AND e.expires_at >= NOW() "
+                "AND (e.target_email IS NULL OR e.target_email='%s') "
                 "ORDER BY e.event_type = 'new_user' DESC, e.starts_at ASC",
-                uid);
+                uid, eesc);
             mysql_query(db, q);
             MYSQL_RES *res = mysql_store_result(db);
             std::string json = "{\"success\":true,\"events\":[";
@@ -78,11 +93,16 @@ void registerWelfareRoutes(HttpServer &server, AuthService &auth, DbPool &pool) 
             if (!guard) return AuthService::jsonErr("DB_ERROR", "数据库繁忙");
             MYSQL *db = guard->get();
 
+            // 2026-08-26 定向专属福利: 专属福利仅目标用户可领 (防串领)
+            char eesc[256];
+            loadEmailEscaped(db, uid, eesc, sizeof(eesc));
+
             // 检查活动是否有效
             char q[512];
             snprintf(q, sizeof(q),
                 "SELECT id, reward_amount FROM welfare_events "
-                "WHERE id=%llu AND is_active=1 AND starts_at<=NOW() AND expires_at>=NOW()", eid);
+                "WHERE id=%llu AND is_active=1 AND starts_at<=NOW() AND expires_at>=NOW() "
+                "AND (target_email IS NULL OR target_email='%s')", eid, eesc);
             mysql_query(db, q);
             MYSQL_RES *res = mysql_store_result(db);
             if (!res || mysql_num_rows(res) == 0) {

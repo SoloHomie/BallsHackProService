@@ -1,5 +1,5 @@
 #pragma once
-// ©¤©¤ Redis connection wrapper ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
+// â”€â”€ Redis connection wrapper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Thin singleton. Call instance() to get a Redis connection.
 // Set SUREITY_REDIS_URL env var to configure.
 //
@@ -10,7 +10,7 @@
 #include <string>
 
 #ifdef SUREITY_NO_REDIS
-// ©¤©¤ No-op stub ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
+// â”€â”€ No-op stub â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 #include <optional>
 #include <vector>
 #include <unordered_set>
@@ -44,7 +44,7 @@ public:
     }
 };
 #else
-// ©¤©¤ Real Redis (redis-plus-plus) ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
+// â”€â”€ Real Redis (redis-plus-plus) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 #include <sw/redis++/redis++.h>
 #include <memory>
 

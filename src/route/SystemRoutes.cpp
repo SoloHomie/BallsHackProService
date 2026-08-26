@@ -1,9 +1,12 @@
 #include "SystemRoutes.h"
+#include "PaymentRoutes.h"
+#include "../payment/VPayService.h"
 
 #include "../core/server/HttpServer.h"
 #include "../core/server/TlsConnection.h"
 #include "../auth/AuthService.h"
 #include "../common/StringUtils.h"
+#include "../common/Snowflake.h"
 #include "../core/cache/RedisClient.h"
 #include "../core/database/DbPool.h"
 #include "../core/config/ServerConfig.h"
@@ -22,6 +25,10 @@
 #include <sys/stat.h>
 #include <filesystem>
 #include <cstdint>
+#include <cctype>
+#include <chrono>
+#include <random>
+#include "../common/Snowflake.h"
 #include <cstring>
 
 // ── inline MD5 (RFC 1321) ────────────────────────
@@ -248,6 +255,23 @@ void registerSystemRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
             }
             if (!af) return std::string("{\"active\":false}");
             return std::string((std::istreambuf_iterator<char>(af)), std::istreambuf_iterator<char>());
+        });
+
+    // ── 用户引导配置 (guide.json, bind mount) ──
+    server.route("GET", "/api/guide",
+        [&](const std::string &, const std::string &, const std::string &) {
+            std::ifstream gf;
+            std::string dir = Env::exeDir();
+            for (int up = 0; up <= 2; ++up) {
+                gf.open(dir + "/guide.json");
+                if (gf) break;
+                auto sep = dir.rfind('/');
+                if (sep == std::string::npos) sep = dir.rfind('\\');
+                if (sep == std::string::npos) break;
+                dir = dir.substr(0, sep);
+            }
+            if (!gf) return std::string("{\"enabled\":false}");
+            return std::string((std::istreambuf_iterator<char>(gf)), std::istreambuf_iterator<char>());
         });
 
     // ── 更新文件下载: /api/dl?file=xxx → releases/xxx ──
@@ -609,6 +633,147 @@ void registerSystemRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
                 : "已设置到期时间: " + expires);
         });
 
+    // ── 管理: 定向专属福利 (发到指定用户, 仅该用户可见可领; 领取=加 N 天 Pro) ──
+    server.route("POST", "/api/admin/welfare-grant",
+        [&](const std::string &body, const std::string &, const std::string &headers) {
+            auto tp = auth.authenticate(headers);
+            if (!tp) return AuthService::jsonErr("UNAUTHORIZED", "请先登录");
+            if (tp->email != "admin@solohomie.top")
+                return AuthService::jsonErr("FORBIDDEN", "无管理员权限");
+            std::string email = StringUtils::jsonVal(body, "email");
+            std::string daysStr = StringUtils::jsonVal(body, "days");
+            std::string name = StringUtils::jsonVal(body, "name");
+            std::string expStr = StringUtils::jsonVal(body, "expires_days");
+            // 2026-08-26 修复: 空串直接 stoi 抛异常 → 500; 先判空再解析
+            if (email.empty() || daysStr.empty() ||
+                daysStr.find_first_not_of("0123456789") != std::string::npos)
+                return AuthService::jsonErr("FIELDS_REQUIRED", "email和days必填(天数>0)");
+            int days = std::stoi(daysStr);
+            int expiresDays = expStr.empty() ? 0 : std::stoi(expStr);
+            if (name.empty()) name = "专属福利";
+            if (expiresDays <= 0) expiresDays = 30;
+            auto u = auth.userStore().findByEmail(email);
+            if (!u) return AuthService::jsonErr("NOT_FOUND", "用户不存在");
+            auto g = pool.acquire(5000);
+            if (!g) return AuthService::jsonErr("DB_ERROR", "db busy");
+            MYSQL *db = g->get();
+            char q[1024]; char eesc[256]; char neesc[128];
+            mysql_real_escape_string(db, eesc, email.c_str(), email.size());
+            mysql_real_escape_string(db, neesc, name.c_str(), name.size());
+            uint64_t eid = Snowflake::generate();
+            snprintf(q, sizeof(q),
+                "INSERT INTO welfare_events (id, name, description, event_type, target_email,"
+                " reward_amount, starts_at, expires_at, is_active)"
+                " VALUES (%llu, '%s', '管理员定向发放', 'general', '%s', %d,"
+                " NOW(), DATE_ADD(NOW(), INTERVAL %d DAY), 1)",
+                eid, neesc, eesc, days, expiresDays);
+            if (mysql_query(db, q) != 0)
+                return AuthService::jsonErr("DB_ERROR", mysql_error(db));
+            return AuthService::jsonOk("已向 " + email + " 发放专属福利: " + name
+                + " (+" + std::to_string(days) + "天 Pro, " + std::to_string(expiresDays) + " 天内可领)");
+        });
+
+    // ── 管理: 退款 (仅限有付费记录用户; 全额退, 标记订单 refunded + 取消订阅) ──
+    // 边界: 无 paid 订单 → 不改任何数据 (兑换码/福利订阅不受误伤); 幂等; 返回退款总额
+    server.route("POST", "/api/admin/refund",
+        [&](const std::string &body, const std::string &, const std::string &headers) {
+            auto tp = auth.authenticate(headers);
+            if (!tp) return AuthService::jsonErr("UNAUTHORIZED", "请先登录");
+            if (tp->email != "admin@solohomie.top")
+                return AuthService::jsonErr("FORBIDDEN", "无管理员权限");
+            std::string email = StringUtils::jsonVal(body, "email");
+            if (email.empty())
+                return AuthService::jsonErr("FIELDS_REQUIRED", "email必填");
+            bool forceRefund = StringUtils::jsonVal(body, "force") == "true";
+            auto u = auth.userStore().findByEmail(email);
+            if (!u) return AuthService::jsonErr("NOT_FOUND", "用户不存在");
+            auto g = pool.acquire(5000);
+            if (!g) return AuthService::jsonErr("DB_ERROR", "db busy");
+            MYSQL *db = g->get();
+            // 1) 先查 paid 订单 (count + 总额)
+            char q[512];
+            snprintf(q, sizeof(q),
+                "SELECT COUNT(*), COALESCE(SUM(amount),0) FROM payment_orders "
+                "WHERE user_id=%llu AND status='paid'", (unsigned long long)u->id);
+            if (mysql_query(db, q) != 0)
+                return AuthService::jsonErr("DB_ERROR", mysql_error(db));
+            MYSQL_RES *res = mysql_store_result(db);
+            long long cnt = 0, total = 0;
+            if (res && mysql_num_rows(res) > 0) {
+                MYSQL_ROW row = mysql_fetch_row(res);
+                cnt  = row[0] ? atoll(row[0]) : 0;
+                total = row[1] ? atoll(row[1]) : 0;
+            }
+            if (res) mysql_free_result(res);
+            // 2) 无付费记录 → 不动任何数据 (防误伤兑换码/福利订阅)
+            if (cnt <= 0)
+                return AuthService::jsonOk("该用户无付费记录, 未做任何变更");
+            // 2.5) 退款时限: 最新付费 30 分钟内可退 (force=true 人工流程不受限)
+            if (!forceRefund) {
+                snprintf(q, sizeof(q),
+                    "SELECT COUNT(*) FROM payment_orders WHERE user_id=%llu "
+                    "AND status='paid' AND created_at >= NOW() - INTERVAL 30 MINUTE",
+                    (unsigned long long)u->id);
+                if (mysql_query(db, q) != 0)
+                    return AuthService::jsonErr("DB_ERROR", mysql_error(db));
+                MYSQL_RES *tres = mysql_store_result(db);
+                long long recent = 0;
+                if (tres && mysql_num_rows(tres) > 0) {
+                    MYSQL_ROW trow = mysql_fetch_row(tres);
+                    recent = (trow && trow[0]) ? atoll(trow[0]) : 0;
+                }
+                if (tres) mysql_free_result(tres);
+                if (recent <= 0)
+                    return AuthService::jsonErr("REFUND_TIMEOUT", "已超过 30 分钟退款时限, 无法退款");
+            }
+            // 3) 标记订单 refunded + 取消订阅
+            // 3) ikunpay refund first (all succeed -> then mark system)
+            {
+                auto *pay = paymentService();
+                if (!pay)
+                    return AuthService::jsonErr("PAY_SERVICE_UNAVAILABLE", "PAY_SERVICE_UNAVAILABLE");
+                snprintf(q, sizeof(q),
+                    "SELECT id, amount FROM payment_orders WHERE user_id=%llu AND status='paid'",
+                    (unsigned long long)u->id);
+                if (mysql_query(db, q) != 0)
+                    return AuthService::jsonErr("DB_ERROR", mysql_error(db));
+                MYSQL_RES *ores = mysql_store_result(db);
+                if (!ores) return AuthService::jsonErr("DB_ERROR", "no result");
+                MYSQL_ROW orow;
+                while ((orow = mysql_fetch_row(ores)) != nullptr) {
+                    uint64_t oid = strtoull(orow[0], nullptr, 10);
+                    long long cents = atoll(orow[1]);
+                    char money[32];
+                    snprintf(money, sizeof(money), "%.2f", (double)cents / 100.0);
+                    if (!forceRefund) {
+                        std::string rerr;
+                        if (!pay->refundOrder(oid, money, rerr)) {
+                            mysql_free_result(ores);
+                            return AuthService::jsonErr("REFUND_FAIL", "PLATFORM_REFUND_FAIL: " + rerr);
+                        }
+                    }
+                }
+                mysql_free_result(ores);
+            }
+            // 4) mark orders refunded + clear subscription
+
+            snprintf(q, sizeof(q),
+                "UPDATE payment_orders SET status='refunded', refunded_at=NOW() "
+                "WHERE user_id=%llu AND status='paid'", (unsigned long long)u->id);
+            if (mysql_query(db, q) != 0)
+                return AuthService::jsonErr("DB_ERROR", mysql_error(db));
+            snprintf(q, sizeof(q),
+                "UPDATE users SET subscription_expires=NULL WHERE id=%llu", (unsigned long long)u->id);
+            mysql_query(db, q);
+            try { RedisClient::instance().del("sub:" + std::to_string(u->id)); } catch (...) {}
+            char buf[160];
+            if (forceRefund)
+                snprintf(buf, sizeof(buf), "已标记退款 %lld 笔订单共 %lld 分 (人工已退款), 订阅已取消", cnt, total);
+            else
+                snprintf(buf, sizeof(buf), "已退款 %lld 笔订单共 %lld 分, 订阅已取消", cnt, total);
+            return AuthService::jsonOk(buf);
+        });
+
     // ── 管理: 封禁 ────────────────────────────────
     server.route("POST", "/api/admin/ban",
         [&](const std::string &body, const std::string &, const std::string &headers) {
@@ -636,6 +801,162 @@ void registerSystemRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
         });
 
     // ── 管理: 解封 ────────────────────────────────
+    // ── 兑换码管理: 生成 (2026-08-16) ──
+    server.route("POST", "/api/admin/redeem/generate",
+        [&](const std::string &body, const std::string &, const std::string &headers) {
+            auto tp = auth.authenticate(headers);
+            if (!tp) return AuthService::jsonErr("UNAUTHORIZED", "请先登录");
+            if (tp->email != "admin@solohomie.top")
+                return AuthService::jsonErr("FORBIDDEN", "无管理员权限");
+            auto getNum = [&](const std::string &key, uint64_t def) -> uint64_t {
+                std::string v = StringUtils::jsonVal(body, key);
+                if (v.empty()) return def;
+                try { return std::stoull(v); } catch (...) { return def; }
+            };
+            uint64_t days    = getNum("days", 0);
+            uint64_t count   = getNum("count", 1);
+            uint64_t maxUses = getNum("max_uses", 1);    // 0=不限次数
+            uint64_t expDays = getNum("expires_days", 0); // 0=永久有效
+            std::string prefix = StringUtils::jsonVal(body, "prefix");
+            if (prefix.empty()) prefix = "BH";
+            for (char &c : prefix) c = (char)std::toupper((unsigned char)c);
+            if (days < 1 || days > 3650)
+                return AuthService::jsonErr("FIELDS_REQUIRED", "days 需在 1-3650 天");
+            if (count < 1 || count > 500)
+                return AuthService::jsonErr("FIELDS_REQUIRED", "count 需在 1-500");
+            if (maxUses > 10000)
+                return AuthService::jsonErr("FIELDS_REQUIRED", "max_uses 需为 0(不限) 或 1-10000");
+            if (expDays > 3650)
+                return AuthService::jsonErr("FIELDS_REQUIRED", "expires_days 需在 0-3650");
+            if (prefix.size() > 6)
+                return AuthService::jsonErr("FIELDS_REQUIRED", "prefix 需为 1-6 位字母数字");
+            for (char c : prefix)
+                if (!std::isalnum((unsigned char)c))
+                    return AuthService::jsonErr("FIELDS_REQUIRED", "prefix 只能包含字母数字");
+
+            auto g = pool.acquire(5000);
+            if (!g) return AuthService::jsonErr("DB_ERROR", "db busy");
+            MYSQL *db = g->get();
+
+            static const std::string ALPHA = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; // 去掉 0O1IL 易混字符
+            static std::mt19937_64 rng(
+                std::random_device{}() ^ (uint64_t)std::chrono::steady_clock::now().time_since_epoch().count());
+
+            std::vector<std::string> codes;
+            char q[1024]; char eesc[64];
+            for (uint64_t i = 0; i < count; i++) {
+                bool inserted = false;
+                for (int attempt = 0; attempt < 3 && !inserted; attempt++) {
+                    std::string code = prefix + "-";
+                    for (int k = 0; k < 12; k++)
+                        code += ALPHA[rng() % ALPHA.size()];
+                    uint64_t id = Snowflake::generate();
+                    std::string expPart = expDays > 0
+                        ? "DATE_ADD(NOW(), INTERVAL " + std::to_string(expDays) + " DAY)" : "NULL";
+                    mysql_real_escape_string(db, eesc, code.c_str(), code.size());
+                    snprintf(q, sizeof(q),
+                        "INSERT INTO redeem_codes (id, code, days, max_uses, used_count, is_active, expires_at) "
+                        "VALUES (%llu,'%s',%llu,%llu,0,1,%s)",
+                        id, eesc, days, maxUses, expPart.c_str());
+                    if (mysql_query(db, q) == 0) { inserted = true; codes.push_back(code); }
+                }
+                if (!inserted) {
+                    return AuthService::jsonErr("GEN_FAILED",
+                        "生成失败: 随机码碰撞, 请重试 (已生成 " + std::to_string(codes.size()) + " 个)");
+                }
+            }
+
+            std::string json = "{\"success\":true,\"message\":\"已生成 " + std::to_string(codes.size())
+                             + " 个兑换码\",\"codes\":[";
+            for (size_t i = 0; i < codes.size(); i++) {
+                if (i) json += ",";
+                json += "\"" + AuthService::jsonEscape(codes[i]) + "\"";
+            }
+            json += "]}";
+            return json;
+        });
+
+    // ── 兑换码管理: 列表 (每页50条, created_at 倒序) ──
+    server.route("GET", "/api/admin/redeem/list",
+        [&](const std::string &, const std::string &query, const std::string &headers) {
+            auto tp = auth.authenticate(headers);
+            if (!tp) return AuthService::jsonErr("UNAUTHORIZED", "请先登录");
+            if (tp->email != "admin@solohomie.top")
+                return AuthService::jsonErr("FORBIDDEN", "无管理员权限");
+            std::string pageStr = StringUtils::queryVal(query, "page");
+            uint64_t page = 1;
+            if (!pageStr.empty()) { try { page = std::stoull(pageStr); } catch (...) { page = 1; } }
+            if (page < 1) page = 1;
+            uint64_t offset = (page - 1) * 50;
+
+            auto g = pool.acquire(5000);
+            if (!g) return AuthService::jsonErr("DB_ERROR", "db busy");
+            MYSQL *db = g->get();
+            char q[512];
+            snprintf(q, sizeof(q),
+                "SELECT id, code, days, max_uses, used_count, is_active, expires_at, created_at "
+                "FROM redeem_codes ORDER BY created_at DESC, id DESC LIMIT 50 OFFSET %llu", offset);
+            mysql_query(db, q);
+            MYSQL_RES *res = mysql_store_result(db);
+            std::string json = "{\"success\":true,\"codes\":[";
+            bool first = true;
+            MYSQL_ROW row;
+            while (res && (row = mysql_fetch_row(res))) {
+                if (!first) json += ","; first = false;
+                json += "{\"code\":\"" + AuthService::jsonEscape(row[1] ? row[1] : "")
+                     + "\",\"days\":" + std::string(row[2] ? row[2] : "0")
+                     + ",\"max_uses\":" + std::string(row[3] ? row[3] : "0")
+                     + ",\"used_count\":" + std::string(row[4] ? row[4] : "0")
+                     + ",\"is_active\":" + std::string(row[5] ? row[5] : "0")
+                     + ",\"expires_at\":\"" + AuthService::jsonEscape(row[6] ? row[6] : "") + "\""
+                     + ",\"created_at\":\"" + AuthService::jsonEscape(row[7] ? row[7] : "") + "\"}";
+            }
+            json += "]";
+            if (res) mysql_free_result(res);
+            // 汇总: 总数 / 生效数 / 总使用次数
+            snprintf(q, sizeof(q),
+                "SELECT COUNT(*), COALESCE(SUM(is_active=1),0), COALESCE(SUM(used_count),0) FROM redeem_codes");
+            mysql_query(db, q);
+            MYSQL_RES *res2 = mysql_store_result(db);
+            if (res2) {
+                MYSQL_ROW r2 = mysql_fetch_row(res2);
+                if (r2) {
+                    json += ",\"total\":" + std::string(r2[0] ? r2[0] : "0")
+                         +  ",\"active\":" + std::string(r2[1] ? r2[1] : "0")
+                         +  ",\"total_used\":" + std::string(r2[2] ? r2[2] : "0");
+                }
+                mysql_free_result(res2);
+            }
+            json += "}";
+            return json;
+        });
+
+    // ── 兑换码管理: 停用 (不影响已兑换用户) ──
+    server.route("POST", "/api/admin/redeem/disable",
+        [&](const std::string &body, const std::string &, const std::string &headers) {
+            auto tp = auth.authenticate(headers);
+            if (!tp) return AuthService::jsonErr("UNAUTHORIZED", "请先登录");
+            if (tp->email != "admin@solohomie.top")
+                return AuthService::jsonErr("FORBIDDEN", "无管理员权限");
+            std::string code = StringUtils::jsonVal(body, "code");
+            size_t bs = code.find_first_not_of(" \t"), be = code.find_last_not_of(" \t");
+            code = (bs == std::string::npos) ? "" : code.substr(bs, be - bs + 1);
+            for (char &c : code) c = (char)std::toupper((unsigned char)c);
+            if (code.empty())
+                return AuthService::jsonErr("FIELDS_REQUIRED", "code 必填");
+            auto g = pool.acquire(5000);
+            if (!g) return AuthService::jsonErr("DB_ERROR", "db busy");
+            MYSQL *db = g->get();
+            char q[512]; char eesc[64];
+            mysql_real_escape_string(db, eesc, code.c_str(), code.size());
+            snprintf(q, sizeof(q), "UPDATE redeem_codes SET is_active=0 WHERE code='%s'", eesc);
+            if (mysql_query(db, q) != 0)
+                return AuthService::jsonErr("DB_ERROR", mysql_error(db));
+            if (mysql_affected_rows(db) == 0)
+                return AuthService::jsonErr("NOT_FOUND", "兑换码不存在: " + code);
+            return AuthService::jsonOk("已停用兑换码: " + code);
+        });
+
     server.route("POST", "/api/admin/unban",
         [&](const std::string &body, const std::string &, const std::string &headers) {
             auto tp = auth.authenticate(headers);

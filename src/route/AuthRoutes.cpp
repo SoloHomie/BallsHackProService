@@ -276,6 +276,7 @@ void registerAuthRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
                 resp << ",\"username\":\"" << AuthService::jsonEscape(refUser->username) << "\"";
             }
             resp << ",\"provider\":\"" << AuthService::jsonEscape(provider) << "\"";
+            resp << auth.subFieldsJson(email);
             resp << "}";
             return resp.str();
         });

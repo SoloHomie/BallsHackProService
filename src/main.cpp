@@ -18,6 +18,7 @@
 #include "route/SystemRoutes.h"
 #include "route/PaymentRoutes.h"
 #include "route/WelfareRoutes.h"
+#include "route/RedeemRoutes.h"
 #include "route/WalletRoutes.h"
 #include "route/SyncRoutes.h"
 #include "route/AssetRoutes.h"
@@ -98,6 +99,7 @@ int main() {
     registerSystemRoutes(server, auth, pool);
     registerPaymentRoutes(server, auth, pool);
     registerWelfareRoutes(server, auth, pool);
+    registerRedeemRoutes(server, auth, pool);
     registerWalletRoutes(server, auth, pool);
     registerPeerRoutes(server, auth, pool);
     // 6. 同步服务 + 路由

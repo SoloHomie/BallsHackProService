@@ -39,6 +39,8 @@ static std::string extractClientIp(const std::string &headers) {
 // 文件级指针供对账任务使用
 static VPayService *g_payService = nullptr;
 
+VPayService *paymentService() { return g_payService; }
+
 // ── 对账任务: 每 60s 由 main 循环调用 ──
 // 扫描近2小时 pending 订单 → 向平台查单 → 已付即补账。
 // 不依赖客户端轮询: 回调丢失 + 客户端关闭也能保证付了钱必发货。
@@ -85,6 +87,17 @@ void registerPaymentRoutes(HttpServer &server, AuthService &auth, DbPool &pool) 
                    + ",\"amount\":"+std::to_string(p.amount)
                    + ",\"days\":"+std::to_string(p.days)+"}";
             }
+            // ── 可用支付方式 (PAY_TYPES 环境变量, 默认 alipay) — 客户端下拉框由此驱动 ──
+            // 注: 渠道可用性由 PAY_TYPES 控制; wxpay 已开通(ikunpay 拉卡拉固定金额码, 2026-08-19 实测)
+            static const char *kTypes[] = {"alipay", "wxpay", "douyinpay"};
+            static const char *kNames[] = {"支付宝", "微信支付", "抖音支付"};
+            std::string ts = "," + Env::get("PAY_TYPES", "alipay") + ",";
+            j += "],\"methods\":["; bool m=true;
+            for (size_t i = 0; i < sizeof(kTypes)/sizeof(kTypes[0]); i++) {
+                if (ts.find(std::string(kTypes[i]) + ",") == std::string::npos) continue;
+                if (!m) j += ","; m = false;
+                j += "{\"pay_type\":\"" + std::string(kTypes[i]) + "\",\"name\":\"" + kNames[i] + "\"}";
+            }
             j += "]}"; return j;
         });
 
@@ -97,9 +110,13 @@ void registerPaymentRoutes(HttpServer &server, AuthService &auth, DbPool &pool) 
             std::string pid = StringUtils::jsonVal(body, "product_id");
             if (pid.empty()) return AuthService::jsonErr("FIELDS_REQUIRED", "请选择套餐");
             std::string payType = StringUtils::jsonVal(body, "pay_type");
-            // 微信渠道为个人收款码+手动输金额, 违反"固定金额"要求 → 服务端硬拦截
-            if (payType == "wxpay")
-                return AuthService::jsonErr("PAY_TYPE_UNAVAILABLE", "微信支付暂不可用，请选择支付宝或抖音支付");
+            // wxpay 已开通: ikunpay 拉卡拉固定金额码 (2026-08-19 实测 amount 绑定订单)
+            // ikunpay 无抖音渠道 (2026-08-17 切通道) → 服务端硬拦截
+            if (payType == "douyinpay")
+                return AuthService::jsonErr("PAY_TYPE_UNAVAILABLE", "抖音支付暂不可用，请选择支付宝支付");
+            // 支付通道维护中 (平台切换/故障) — PAY_MAINTENANCE=1 时下单直接拦下
+            if (Env::get("PAY_MAINTENANCE", "") == "1")
+                return AuthService::jsonErr("PAY_MAINTENANCE", "支付通道维护中，请稍后再试");
             std::string clientIp = extractClientIp(headers);
             auto [ok, result] = payService.createOrder(uid, pid, clientIp, payType);
             if (!ok) return AuthService::jsonErr("ORDER_FAILED", result);

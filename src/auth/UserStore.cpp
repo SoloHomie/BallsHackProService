@@ -7,16 +7,16 @@
 #include <algorithm>
 #include <cctype>
 
-// ©¤©¤ ¸¨Öú£ºÔ¤´¦ÀíÓï¾ä RAII ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
+// â”€â”€ è¾…åŠ©ï¼šé¢„å¤„ç†è¯­å¥ RAII â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 struct StmtGuard {
     MYSQL_STMT* stmt;
     ~StmtGuard() { if (stmt) mysql_stmt_close(stmt); }
     operator MYSQL_STMT*() const { return stmt; }
 };
 
-// ©¤©¤ ¸¨Öú£ºMySQL datetime ¡ú ¼æÈİ¾É¸ñÊ½ ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
+// â”€â”€ è¾…åŠ©ï¼šMySQL datetime â†’ å…¼å®¹æ—§æ ¼å¼ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 static std::string fmtTime(const char* mysqlDt) {
-    // "2024-06-26 14:02:03" ¡ú "2024-06-26T14:02:03Z"
+    // "2024-06-26 14:02:03" â†’ "2024-06-26T14:02:03Z"
     if (!mysqlDt) return {};
     std::string s(mysqlDt);
     if (s.size() >= 10) s[10] = 'T';
@@ -24,9 +24,9 @@ static std::string fmtTime(const char* mysqlDt) {
     return s;
 }
 
-// ¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //  exists
-// ¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 bool UserStore::exists(const std::string& email) const {
     auto guard = m_pool.acquire(5000);
     if (!guard) return false;
@@ -55,9 +55,9 @@ bool UserStore::exists(const std::string& email) const {
     return ok;
 }
 
-// ¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //  findByEmail
-// ¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 std::optional<UserStore::UserInfo>
 UserStore::findByEmail(const std::string& email) const {
     auto guard = m_pool.acquire(5000);
@@ -132,7 +132,7 @@ UserStore::findByEmail(const std::string& email) const {
     if (!isNullSubExp) info.subscription_expires = dbSubExp;
     if (!isNullStatus) info.status = dbStatus;
 
-    // ²é OAuth °ó¶¨£¨ĞÂ×÷ÓÃÓò£¬ÈÃ stmt Îö¹¹ÏÈÊÍ·Å£©
+    // æŸ¥ OAuth ç»‘å®šï¼ˆæ–°ä½œç”¨åŸŸï¼Œè®© stmt ææ„å…ˆé‡Šæ”¾ï¼‰
     {
         MYSQL_STMT* stmt2 = mysql_stmt_init(db);
         const char* sql2 =
@@ -168,9 +168,9 @@ UserStore::findByEmail(const std::string& email) const {
     return info;
 }
 
-// ¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T
-//  create (×¢²á)
-// ¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  create (æ³¨å†Œ)
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 bool UserStore::create(const std::string& email,
                         const std::string& password,
                         const std::string& username) {
@@ -178,16 +178,16 @@ bool UserStore::create(const std::string& email,
     if (!guard) return false;
     MYSQL* db = guard->get();
 
-    std::string salt = PasswordHash::generateSalt();       // ¶ÀÁ¢ÑÎ
+    std::string salt = PasswordHash::generateSalt();       // ç‹¬ç«‹ç›
     std::string name = username.empty()
         ? email.substr(0, email.find('@')) : username;
 
-    uint64_t uid = Snowflake::generate();                  // Ñ©»¨ ID
+    uint64_t uid = Snowflake::generate();                  // é›ªèŠ± ID
 
-    // ¼ÆËã PBKDF2£¨¹«Ê½: ÑÎ + ÃÜÂë + uid£©
+    // è®¡ç®— PBKDF2ï¼ˆå…¬å¼: ç› + å¯†ç  + uidï¼‰
     std::string hash = PasswordHash::hash(salt, password, uid);
 
-    // INSERT£¨Ò»´ÎĞÔĞ´Èë£¬ÎŞĞè¶ş´Î UPDATE£©
+    // INSERTï¼ˆä¸€æ¬¡æ€§å†™å…¥ï¼Œæ— éœ€äºŒæ¬¡ UPDATEï¼‰
     {
         StmtGuard stmt{mysql_stmt_init(db)};
         const char* sql =
@@ -220,16 +220,16 @@ bool UserStore::create(const std::string& email,
     return true;
 }
 
-// ¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //  updatePassword
-// ¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 bool UserStore::updatePassword(const std::string& email,
                                  const std::string& newPassword) {
     auto guard = m_pool.acquire(5000);
     if (!guard) return false;
     MYSQL* db = guard->get();
 
-    // ²é³ö uid ºÍ salt
+    // æŸ¥å‡º uid å’Œ salt
     uint64_t uid = 0;
     char salt[65] = {};
     unsigned long saltLen = 0;
@@ -255,15 +255,15 @@ bool UserStore::updatePassword(const std::string& email,
         mysql_stmt_bind_result(stmt, res);
         mysql_stmt_store_result(stmt);
 
-        if (mysql_stmt_fetch(stmt) != 0) return false;  // ÓÃ»§²»´æÔÚ
+        if (mysql_stmt_fetch(stmt) != 0) return false;  // ç”¨æˆ·ä¸å­˜åœ¨
         salt[saltLen] = '\0';
     }
 
-    // OAuth ÓÃ»§Ê×´ÎÉèÃÜÂë£ºÉú³ÉĞÂÑÎ£»ÒÑÓĞÃÜÂëÔò±£ÁôÔ­ÑÎ
+    // OAuth ç”¨æˆ·é¦–æ¬¡è®¾å¯†ç ï¼šç”Ÿæˆæ–°ç›ï¼›å·²æœ‰å¯†ç åˆ™ä¿ç•™åŸç›
     std::string newSalt(salt);
     if (newSalt.empty() || newSalt.size() < 16) {
         newSalt = PasswordHash::generateSalt();
-        // Í¬Ê±¸üĞÂÑÎÖµ
+        // åŒæ—¶æ›´æ–°ç›å€¼
         StmtGuard us{mysql_stmt_init(db)};
         const char* usql = "UPDATE users SET salt = ? WHERE id = ?";
         mysql_stmt_prepare(us, usql, (unsigned long)strlen(usql));
@@ -277,10 +277,10 @@ bool UserStore::updatePassword(const std::string& email,
         mysql_stmt_execute(us);
     }
 
-    // ÖØËã¹şÏ£
+    // é‡ç®—å“ˆå¸Œ
     std::string hash = PasswordHash::hash(newSalt, newPassword, uid);
 
-    // ¸üĞÂ
+    // æ›´æ–°
     StmtGuard stmt{mysql_stmt_init(db)};
     const char* sql = "UPDATE users SET password_hash = ? WHERE id = ?";
     mysql_stmt_prepare(stmt, sql, (unsigned long)strlen(sql));
@@ -296,16 +296,16 @@ bool UserStore::updatePassword(const std::string& email,
     return mysql_stmt_execute(stmt) == 0;
 }
 
-// ¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //  verifyPassword
-// ¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 bool UserStore::verifyPassword(const std::string& email,
                                  const std::string& password) const {
     auto guard = m_pool.acquire(5000);
     if (!guard) return false;
     MYSQL* db = guard->get();
 
-    // ²é³ö uid, salt, password_hash
+    // æŸ¥å‡º uid, salt, password_hash
     StmtGuard stmt{mysql_stmt_init(db)};
     const char* sql =
         "SELECT id, salt, password_hash FROM users WHERE LOWER(email) = LOWER(?)";
@@ -341,13 +341,13 @@ bool UserStore::verifyPassword(const std::string& email,
     salt[saltLen] = '\0';
     hash[hashLen] = '\0';
 
-    // Í¬Ñù¹«Ê½ÖØËã²¢±È½Ï
+    // åŒæ ·å…¬å¼é‡ç®—å¹¶æ¯”è¾ƒ
     return PasswordHash::verify(salt, password, uid, hash);
 }
 
-// ¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T
-//  findAuthByEmail (µÇÂ¼×¨ÓÃ: exists+verifyPassword+findByEmail ºÏ²¢ÎªÒ»´Î²éÑ¯)
-// ¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  findAuthByEmail (ç™»å½•ä¸“ç”¨: exists+verifyPassword+findByEmail åˆå¹¶ä¸ºä¸€æ¬¡æŸ¥è¯¢)
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 std::optional<UserStore::AuthCred>
 UserStore::findAuthByEmail(const std::string& email) const {
     auto guard = m_pool.acquire(5000);
@@ -428,9 +428,9 @@ UserStore::findAuthByEmail(const std::string& email) const {
     return cred;
 }
 
-// ¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //  findByOAuth
-// ¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 std::optional<UserStore::UserInfo>
 UserStore::findByOAuth(const std::string& provider,
                         const std::string& providerId) const {
@@ -487,14 +487,14 @@ UserStore::findByOAuth(const std::string& provider,
     info.email     = dbEmail;
     info.username  = dbName;
     info.createdAt = fmtTime(dbCreated);
-    // ²»ÖØĞÂ²é oauth_links£¨µ÷ÓÃ·½²»ĞèÒªÍêÕûÁĞ±í¼´¿É¹¤×÷£©
+    // ä¸é‡æ–°æŸ¥ oauth_linksï¼ˆè°ƒç”¨æ–¹ä¸éœ€è¦å®Œæ•´åˆ—è¡¨å³å¯å·¥ä½œï¼‰
     info.oauthLinks[provider] = providerId;
     return info;
 }
 
-// ¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //  linkOAuth
-// ¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 bool UserStore::linkOAuth(const std::string& email,
                            const std::string& provider,
                            const std::string& providerId) {
@@ -502,7 +502,7 @@ bool UserStore::linkOAuth(const std::string& email,
     if (!guard) return false;
     MYSQL* db = guard->get();
 
-    // ²é user_id
+    // æŸ¥ user_id
     StmtGuard stmt{mysql_stmt_init(db)};
     const char* sql = "SELECT id FROM users WHERE LOWER(email) = LOWER(?)";
     mysql_stmt_prepare(stmt, sql, (unsigned long)strlen(sql));
@@ -522,9 +522,9 @@ bool UserStore::linkOAuth(const std::string& email,
     mysql_stmt_store_result(stmt);
 
     if (mysql_stmt_fetch(stmt) != 0) return false;
-    // stmt ÓÉ StmtGuard ×Ô¶¯ÊÍ·Å£¨×÷ÓÃÓò½áÊøÊ±£©
+    // stmt ç”± StmtGuard è‡ªåŠ¨é‡Šæ”¾ï¼ˆä½œç”¨åŸŸç»“æŸæ—¶ï¼‰
 
-    // INSERT °ó¶¨£¨ER_DUP_ENTRY = ÒÑ°ó¶¨£¬Ëã³É¹¦£©
+    // INSERT ç»‘å®šï¼ˆER_DUP_ENTRY = å·²ç»‘å®šï¼Œç®—æˆåŠŸï¼‰
     uint64_t linkId = Snowflake::generate();
     MYSQL_STMT* stmt2 = mysql_stmt_init(db);
     const char* sql2 =
@@ -548,12 +548,12 @@ bool UserStore::linkOAuth(const std::string& email,
     int err = mysql_stmt_execute(stmt2);
     mysql_stmt_close(stmt2);
 
-    return err == 0 || mysql_errno(db) == 1062;  // 1062 = ÒÑ´æÔÚ
+    return err == 0 || mysql_errno(db) == 1062;  // 1062 = å·²å­˜åœ¨
 }
 
-// ¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //  createFromOAuth
-// ¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 bool UserStore::createFromOAuth(const std::string& email,
                                  const std::string& name,
                                  const std::string& provider,
@@ -562,7 +562,7 @@ bool UserStore::createFromOAuth(const std::string& email,
     if (!guard) return false;
     MYSQL* db = guard->get();
 
-    // ÏÈ¿´ÓÊÏäÊÇ·ñÒÑ´æÔÚ
+    // å…ˆçœ‹é‚®ç®±æ˜¯å¦å·²å­˜åœ¨
     {
         StmtGuard stmt{mysql_stmt_init(db)};
         const char* sql =
@@ -583,12 +583,12 @@ bool UserStore::createFromOAuth(const std::string& email,
         mysql_stmt_fetch(stmt);
 
         if (cnt > 0)
-            return linkOAuth(email, provider, providerId);  // ÒÑÓĞÓÃ»§£¬Ö»°ó¶¨
+            return linkOAuth(email, provider, providerId);  // å·²æœ‰ç”¨æˆ·ï¼Œåªç»‘å®š
     }
 
-    // ĞÂ½¨ÓÃ»§£¨OAuth ÓÃ»§ÎŞÃÜÂë£©
+    // æ–°å»ºç”¨æˆ·ï¼ˆOAuth ç”¨æˆ·æ— å¯†ç ï¼‰
     {
-        uint64_t uid = Snowflake::generate();              // Ñ©»¨ ID
+        uint64_t uid = Snowflake::generate();              // é›ªèŠ± ID
 
         StmtGuard stmt{mysql_stmt_init(db)};
         const char* sql =
@@ -613,7 +613,7 @@ bool UserStore::createFromOAuth(const std::string& email,
             return false;
         }
 
-        // °ó¶¨ OAuth
+        // ç»‘å®š OAuth
         uint64_t linkId = Snowflake::generate();
         MYSQL_STMT* stmt2 = mysql_stmt_init(db);
         const char* sql2 =
@@ -640,11 +640,11 @@ bool UserStore::createFromOAuth(const std::string& email,
     }
 }
 
-// ¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //  count
-// ¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T
-// isBanned: ·â½û²éÑ¯ - µ¥Ò»Êı¾İÔ´ MySQL users.status, ÎŞ»º´æ,
-// ½â·â(UPDATE status=0)±ØÈ»Á¢¼´ÉúĞ§, ²»´æÔÚ"½â·âÁË½â²»ÁË"µÄ²ĞÁô×´Ì¬
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// isBanned: å°ç¦æŸ¥è¯¢ - å•ä¸€æ•°æ®æº MySQL users.status, æ— ç¼“å­˜,
+// è§£å°(UPDATE status=0)å¿…ç„¶ç«‹å³ç”Ÿæ•ˆ, ä¸å­˜åœ¨"è§£å°äº†è§£ä¸äº†"çš„æ®‹ç•™çŠ¶æ€
 bool UserStore::isBanned(uint64_t id) const {
     auto guard = m_pool.acquire(3000);
     if (!guard) return false;   // DB busy -> fail-open
@@ -675,9 +675,9 @@ int UserStore::count() const {
     return n;
 }
 
-// ¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //  findById
-// ¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 std::optional<UserStore::UserInfo> UserStore::findById(uint64_t id) const {
     auto guard = m_pool.acquire(5000);
     if (!guard) return {};
@@ -705,9 +705,9 @@ std::optional<UserStore::UserInfo> UserStore::findById(uint64_t id) const {
     return UserInfo{uid, email, name, "", ca};
 }
 
-// ¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T
-//  listOAuthLinks ¡ª ·µ»Ø provider ¡ú {provider_id, username}
-// ¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  listOAuthLinks â€” è¿”å› provider â†’ {provider_id, username}
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 std::vector<std::tuple<std::string,std::string,std::string>>
 UserStore::listOAuthLinks(const std::string &email) const {
     std::vector<std::tuple<std::string,std::string,std::string>> links;
@@ -743,9 +743,9 @@ UserStore::listOAuthLinks(const std::string &email) const {
     return links;
 }
 
-// ¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //  unlinkOAuth
-// ¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 bool UserStore::unlinkOAuth(const std::string &email, const std::string &provider) {
     auto guard = m_pool.acquire(5000);
     if (!guard) return false;

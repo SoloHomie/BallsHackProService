@@ -5,6 +5,7 @@
 #include "SmtpClient.h"
 #include "../core/config/EmailConfig.h"
 #include "../core/config/Env.h"
+#include "../common/Logger.h"
 
 #include <curl/curl.h>
 #include <ctime>
@@ -154,6 +155,7 @@ bool SmtpClient::sendMail(const std::string &to,
 
     if (res != CURLE_OK) {
         m_lastError = std::string("SMTP: ") + curl_easy_strerror(res);
+        Logger::err("Email", "SMTP send failed to " + to + ": " + m_lastError);
         if (logFn) logFn(m_lastError);
         return false;
     }

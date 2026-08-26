@@ -13,22 +13,22 @@ public:
         uint64_t    id = 0;
         std::string email;
         std::string username;
-        std::string passwordHash;   // PBKDF2 hex£¨²»ÔÙ±©Â¶£¬µ«±£Áô¼æÈİ£©
+        std::string passwordHash;   // PBKDF2 hexï¼ˆä¸å†æš´éœ²ï¼Œä½†ä¿ç•™å…¼å®¹ï¼‰
         std::string createdAt;
         std::string subscription_expires;  // NULL if not subscribed
         int         status = 0;            // 0=normal, 1=banned
-        // OAuth bindings: provider ¡ú providerId
+        // OAuth bindings: provider â†’ providerId
         std::unordered_map<std::string, std::string> oauthLinks;
     };
 
     explicit UserStore(DbPool& pool) : m_pool(pool) {}
 
-    // ©¤©¤ Password-based ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
+    // â”€â”€ Password-based â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     bool exists(const std::string &email) const;
     std::optional<UserInfo> findByEmail(const std::string &email) const;
 
-    // ©¤©¤ µÇÂ¼×¨ÓÃ: Ò»´Î²éÑ¯ÄÃ»Ø uid/salt/hash/ÓÃ»§ĞÅÏ¢ ©¤©¤
-    // (Ô­ exists+verifyPassword+findByEmail Èı´Î²éÑ¯ºÏ²¢, ÔÆÅÌ¿¨¶ÙÃüÖĞÃæ¼õ°ë)
+    // â”€â”€ ç™»å½•ä¸“ç”¨: ä¸€æ¬¡æŸ¥è¯¢æ‹¿å› uid/salt/hash/ç”¨æˆ·ä¿¡æ¯ â”€â”€
+    // (åŸ exists+verifyPassword+findByEmail ä¸‰æ¬¡æŸ¥è¯¢åˆå¹¶, äº‘ç›˜å¡é¡¿å‘½ä¸­é¢å‡åŠ)
     struct AuthCred {
         uint64_t    id = 0;
         std::string email;
@@ -46,13 +46,13 @@ public:
     bool updatePassword(const std::string &email, const std::string &newPassword);
     bool verifyPassword(const std::string &email, const std::string &password) const;
 
-    // ©¤©¤ OAuth-based ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
+    // â”€â”€ OAuth-based â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     std::optional<UserInfo> findByOAuth(const std::string &provider,
                                         const std::string &providerId) const;
     bool linkOAuth(const std::string &email,
                    const std::string &provider, const std::string &providerId);
     bool unlinkOAuth(const std::string &email, const std::string &provider);
-    // ·µ»Ø provider ¡ú {provider_id, provider_username}
+    // è¿”å› provider â†’ {provider_id, provider_username}
     std::vector<std::tuple<std::string,std::string,std::string>>
         listOAuthLinks(const std::string &email) const;
     std::optional<UserInfo> findById(uint64_t id) const;
@@ -63,7 +63,7 @@ public:
 
     int count() const;
 
-    // ·â½û²éÑ¯ (DB fail-open: ²éÑ¯Ê§°ÜÊÓÎªÎ´·â½û, ±ÜÃâÎóÉËÈ«Ô±)
+    // å°ç¦æŸ¥è¯¢ (DB fail-open: æŸ¥è¯¢å¤±è´¥è§†ä¸ºæœªå°ç¦, é¿å…è¯¯ä¼¤å…¨å‘˜)
     bool isBanned(uint64_t id) const;
 
 private:

@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS welfare_events (
     name            VARCHAR(128) NOT NULL,
     description     VARCHAR(512) NOT NULL DEFAULT '',
     event_type      VARCHAR(32)  NOT NULL DEFAULT 'general' COMMENT 'new_user|holiday|general',
+    target_email    VARCHAR(128) DEFAULT NULL COMMENT 'NULL=全员福利, 非空=专属该用户',
     reward_amount   INT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'Surety 数量',
     starts_at       DATETIME     NOT NULL,
     expires_at      DATETIME     NOT NULL,
@@ -106,6 +107,36 @@ CREATE TABLE IF NOT EXISTS welfare_claims (
     claimed_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY uk_user_event (user_id, event_id),
     INDEX idx_user_id (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+)SQL";
+
+    // 兑换码库存 (2026-08-16)
+    constexpr const char* REDEEM_CODES = R"SQL(
+CREATE TABLE IF NOT EXISTS redeem_codes (
+    id              BIGINT UNSIGNED PRIMARY KEY,
+    code            CHAR(20)     NOT NULL,
+    days            INT UNSIGNED NOT NULL DEFAULT 0,
+    max_uses        INT UNSIGNED NOT NULL DEFAULT 1 COMMENT '0=unlimited',
+    used_count      INT UNSIGNED NOT NULL DEFAULT 0,
+    is_active       TINYINT(1)   NOT NULL DEFAULT 1,
+    expires_at      DATETIME     NULL,
+    created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_code (code),
+    INDEX idx_active (is_active)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+)SQL";
+
+    // 兑换流水: 唯一键防同一用户重复兑换同一码 (2026-08-16)
+    constexpr const char* REDEEM_RECORDS = R"SQL(
+CREATE TABLE IF NOT EXISTS redeem_records (
+    id              BIGINT UNSIGNED PRIMARY KEY,
+    user_id         BIGINT UNSIGNED NOT NULL,
+    code_id         BIGINT UNSIGNED NOT NULL,
+    code            CHAR(20)     NOT NULL,
+    days            INT UNSIGNED NOT NULL DEFAULT 0,
+    redeemed_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_user_code (user_id, code_id),
+    INDEX idx_code_id (code_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 )SQL";
 

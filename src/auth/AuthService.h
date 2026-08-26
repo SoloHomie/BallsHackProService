@@ -43,6 +43,8 @@ public:
     static std::string extractBearerToken(const std::string &headers);
     // 绑定会话: 新登录时调用, 使旧设备 token 失效
     void bindSession(const std::string &uid, const std::string &jti);
+    // subscribed + subscription_expires JSON fields (MySQL direct query) for login/refresh responses
+    std::string subFieldsJson(const std::string &email) const;
 
     // ── JSON response builders ─────────────────────
     static std::string jsonOk(const std::string &msg);

@@ -341,7 +341,7 @@ std::pair<bool,std::string> VPayService::createOrder(uint64_t uid,const std::str
     std::string ip=clientIp.empty()?"127.0.0.1":clientIp;
     std::string ts=std::to_string((long long)time(nullptr));
     std::vector<std::pair<std::string,std::string>> pr={
-        {"pid",m_appId},{"method","jump"},{"type",t},{"out_trade_no",ono},
+        {"pid",m_appId},{"method","qr"},{"type",t},{"out_trade_no",ono},
         {"notify_url",m_notifyUrl},{"return_url",m_returnUrl},
         {"name",nm},{"money",money},{"clientip",ip},{"timestamp",ts}};
     std::string ss=buildSignStr(pr);
@@ -420,6 +420,31 @@ bool VPayService::applyPayment(uint64_t oid, const std::string &tradeNo){
 }
 
 // ── 对账扫描用: 未支付订单ID列表 (雪花ID作时间下界) ──
+bool VPayService::refundOrder(uint64_t orderId, const std::string &moneyYuan, std::string &err) {
+    auto order = queryOrder(orderId);
+    if (!order) { err = "ORDER_NOT_FOUND"; return false; }
+    if (order->tradeNo.empty()) { err = "NO_TRADE_NO"; return false; }
+    long long ts = (long long)time(nullptr);
+    std::string refundNo = "RF" + std::to_string(orderId) + "_" + std::to_string(ts);
+    std::vector<std::pair<std::string,std::string>> pr = {
+        {"pid", m_appId}, {"trade_no", order->tradeNo},
+        {"money", moneyYuan}, {"out_refund_no", refundNo},
+        {"timestamp", std::to_string(ts)}};
+    std::string ss = buildSignStr(pr);
+    std::string sign = rsaSignSha256(ss);
+    if (sign.empty()) { err = "SIGN_FAIL"; return false; }
+    std::ostringstream bd; bool first = true;
+    for (auto &kv : pr) { if (!first) bd << "&"; first = false; bd << kv.first << "=" << StringUtils::urlEncode(kv.second); }
+    bd << "&sign=" << StringUtils::urlEncode(sign) << "&sign_type=RSA";
+    std::string resp = httpPost(m_apiUrl + "/api/pay/refund", bd.str());
+    std::string code = StringUtils::jsonVal(resp, "code");
+    if (code != "0") {
+        std::string msg = StringUtils::jsonVal(resp, "msg");
+        err = msg.empty() ? "PLATFORM_REFUND_FAIL" : msg;
+        return false;
+    }
+    return true;
+}
 std::vector<uint64_t> VPayService::pendingOrdersSince(uint64_t cutoffId, int limit){
     std::vector<uint64_t> out;
     auto g=m_pool.acquire(5000);if(!g)return out;MYSQL*db=g->get();

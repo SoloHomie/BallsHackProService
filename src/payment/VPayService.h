@@ -23,6 +23,7 @@ public:
     bool handleCallback(const std::string &query);
     bool syncOrderStatus(uint64_t orderId);   // 平台查单 + 已付补账 (幂等)
     std::optional<PayOrder> queryOrder(uint64_t orderId);
+    bool refundOrder(uint64_t orderId, const std::string &moneyYuan, std::string &err);  // ikunpay refund
     // 对账扫描: 返回 cutoffId (雪花ID时间下界) 之后创建的未支付订单ID
     std::vector<uint64_t> pendingOrdersSince(uint64_t cutoffId, int limit);
     static const std::vector<PricePlan>& plans();
