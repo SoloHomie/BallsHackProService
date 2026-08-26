@@ -643,6 +643,7 @@ void registerSystemRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
             std::string email = StringUtils::jsonVal(body, "email");
             std::string daysStr = StringUtils::jsonVal(body, "days");
             std::string name = StringUtils::jsonVal(body, "name");
+            std::string desc = StringUtils::jsonVal(body, "description");
             std::string expStr = StringUtils::jsonVal(body, "expires_days");
             // 2026-08-26 修复: 空串直接 stoi 抛异常 → 500; 先判空再解析
             if (email.empty() || daysStr.empty() ||
@@ -651,22 +652,24 @@ void registerSystemRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
             int days = std::stoi(daysStr);
             int expiresDays = expStr.empty() ? 0 : std::stoi(expStr);
             if (name.empty()) name = "专属福利";
+            if (desc.empty()) desc = "管理员定向发放";
             if (expiresDays <= 0) expiresDays = 30;
             auto u = auth.userStore().findByEmail(email);
             if (!u) return AuthService::jsonErr("NOT_FOUND", "用户不存在");
             auto g = pool.acquire(5000);
             if (!g) return AuthService::jsonErr("DB_ERROR", "db busy");
             MYSQL *db = g->get();
-            char q[1024]; char eesc[256]; char neesc[128];
+            char q[1024]; char eesc[256]; char neesc[128]; char descsc[512];
             mysql_real_escape_string(db, eesc, email.c_str(), email.size());
             mysql_real_escape_string(db, neesc, name.c_str(), name.size());
+            mysql_real_escape_string(db, descsc, desc.c_str(), desc.size());
             uint64_t eid = Snowflake::generate();
             snprintf(q, sizeof(q),
                 "INSERT INTO welfare_events (id, name, description, event_type, target_email,"
                 " reward_amount, starts_at, expires_at, is_active)"
-                " VALUES (%llu, '%s', '管理员定向发放', 'general', '%s', %d,"
+                " VALUES (%llu, '%s', '%s', 'general', '%s', %d,"
                 " NOW(), DATE_ADD(NOW(), INTERVAL %d DAY), 1)",
-                eid, neesc, eesc, days, expiresDays);
+                eid, neesc, descsc, eesc, days, expiresDays);
             if (mysql_query(db, q) != 0)
                 return AuthService::jsonErr("DB_ERROR", mysql_error(db));
             return AuthService::jsonOk("已向 " + email + " 发放专属福利: " + name
