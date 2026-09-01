@@ -1,7 +1,14 @@
 {
-  "latest_version": "1.3.0",
-  "min_version": "1.3.0",
+  "latest_version": "1.4.8",
+  "min_version": "1.4.8",
   "download_url": "https://api.solohomie.top:8443/api/update/download",
-  "direct_download_url": "https://38.92.9.178/api/download",
-  "changelog": "v1.3.0 (2026-08-15)\n\nBug Fixes:\n• 修复启动游戏导致无法录屏的问题\n• 修复切换账号后无法显示验证码的问题\n\nFeatures:\n• 过检测方案可在线切换 — 无需重新安装、重新登录, 登录信息全保留\n• 自研更精准的锁球算法 — 提供更多可调参数, 球宝们可根据实际情况自行调整 (使用说明见 Problem)\n• 球体箭头获取排名 — 详细使用步骤见 Problem\n• 排名卡点 — 使用前需先加入球宝飞升计划\n• 新增美化功能 — 玩法请球宝们自行探索\n• 合球参数内置初始值 — 开箱即用\n\nImprovements:\n• Windows 10 / 11 适配 (部分专业版可能出现问题, 欢迎反馈)\n• 登录/注册/重置密码/自动登录/断线重连增加更长的等待容错\n• 优化多端同步进出房间与退出房间的容错, 提升中转模式稳定性\n\nGitHub: https://github.com/SoloHomie/BallsHackPro-Public/releases/tag/v1.3.0"
+  "direct_download_url": "https://38.92.9.73/api/download",
+  "changelog": "- 修复部分设备更新异常导致反复回滚、无法启动的问题\n- 修复服务器公告换内容不换标题时客户端不弹窗的问题\n- 过检测文件缺失时自动从服务器补齐, 启动更可靠\n- 版本 1.4.8",
+  "release_notes": [
+    "- 修复更新异常反复回滚、无法启动的问题",
+    "- 修复公告内容更新后客户端不提示的问题",
+    "- 过检测文件缺失自动修复",
+    "- 版本 1.4.8"
+  ],
+  "silent_update": "true"
 }

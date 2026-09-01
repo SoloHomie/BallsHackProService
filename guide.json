@@ -1,0 +1,46 @@
+{
+  "enabled": true,
+  "version": 5,
+  "steps": [
+    {
+      "target": "guideLoginBtn",
+      "title": "登录账号",
+      "text": "欢迎来到球宝家园！点击右上角「登录」按钮，登录账号后才能使用全部功能哦~"
+    },
+    {
+      "target": "guideProBtn",
+      "title": "订阅 Pro",
+      "text": "订阅 Pro 会员，解锁全部高级功能，畅玩无忧！"
+    },
+    {
+      "target": "guideLaunchBtn",
+      "title": "启动游戏",
+      "text": "在高级设置里一键启动球球大作战，自动适配环境~"
+    },
+    {
+      "target": "guideScanBtn",
+      "title": "注入神力",
+      "text": "在技战室吐球、分身后，点击此处初始化内存功能，扫描模拟器里的游戏进程！"
+    },
+    {
+      "target": "guideFlyBtn",
+      "title": "飞升部署",
+      "text": "进入「球宝飞升计划」，一键推送并注入实体组件——锁球/取排名等高级功能生效的必经一步！"
+    },
+    {
+      "target": "guideWelfareBtn",
+      "title": "福利领取",
+      "text": "点击「咯洛洛的宝藏盒子」领取新人福利，白嫖福利礼包！"
+    },
+    {
+      "target": "guideSpitKey",
+      "title": "设置吐球键",
+      "text": "点击设置吐球键，对局中按住即可持续吐球~"
+    },
+    {
+      "target": "guideSplitKey",
+      "title": "设置分身键",
+      "text": "点击设置分身键，对局中点击即可分身，是操作的基础！"
+    }
+  ]
+}

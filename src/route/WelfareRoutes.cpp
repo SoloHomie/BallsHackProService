@@ -1,4 +1,5 @@
 #include "WelfareRoutes.h"
+#include <exception>
 #include "../core/server/HttpServer.h"
 #include "../auth/AuthService.h"
 #include "../common/StringUtils.h"
@@ -162,7 +163,10 @@ void registerWelfareRoutes(HttpServer &server, AuthService &auth, DbPool &pool) 
                     try {
                         auto &r = RedisClient::instance();
                         r.setex("sub:" + tp->sub, ttl, newExp);
-                    } catch(...) {}
+                    } catch (const std::exception &e) {
+                        fprintf(stderr, "[SubSync] setex FAILED sub:%s: %s\n", tp->sub.c_str(), e.what());
+                    }
+                    printf("[Welfare] claim uid=%llu days=%llu\n", (unsigned long long)uid, (unsigned long long)days);
                 }
             }
 

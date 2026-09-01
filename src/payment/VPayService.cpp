@@ -6,6 +6,7 @@
 #pragma comment(lib, "winhttp.lib")
 #endif
 #include "VPayService.h"
+#include <exception>
 #include "../core/database/DbPool.h"
 #include "../common/Snowflake.h"
 #include "../common/StringUtils.h"
@@ -413,8 +414,14 @@ bool VPayService::applyPayment(uint64_t oid, const std::string &tradeNo){
     }
     // 只有抢占成功者才写订阅/余额
     snprintf(qb,sizeof(qb),"UPDATE users SET subscription_expires=DATE_ADD(GREATEST(COALESCE(subscription_expires,NOW()),NOW()),INTERVAL %u DAY), balance=balance+%llu WHERE id=%llu",dd,amt,du);
-    mysql_query(db,qb);
-    try{RedisClient::instance().del("sub:"+std::to_string(du));RedisClient::instance().del("pay:order:"+std::to_string(oid));}catch(...){}
+    if (mysql_query(db,qb) != 0) {
+        fprintf(stderr,"[VPay] users UPDATE FAILED order=%llu user=%llu: %s, rollback to pending\n",(unsigned long long)oid,(unsigned long long)du,mysql_error(db));
+        snprintf(qb,sizeof(qb),"UPDATE payment_orders SET status='pending',zp_trade_no=NULL WHERE id=%llu AND status='paid'",oid);
+        mysql_query(db,qb);
+        return false;
+    }
+    try{RedisClient::instance().del("sub:"+std::to_string(du));RedisClient::instance().del("pay:order:"+std::to_string(oid));}
+    catch(const std::exception &e){fprintf(stderr,"[VPay] redis del sub:%llu FAILED: %s\n",(unsigned long long)du,e.what());}
     printf("[VPay] order %llu -> paid, user %llu +%u days +%llu balance\n",(unsigned long long)oid,(unsigned long long)du,dd,(unsigned long long)amt);
     return true;
 }
@@ -506,8 +513,14 @@ bool VPayService::handleCallback(const std::string &q){
     // 平台公钥验签 (全部字段参与, 兼容平台扩展字段)
     std::string ss=buildSignStr(pr);
     if(!rsaVerifySha256(ss,sign)){
-        printf("[VPay] callback RSA verify FAILED\n");
-        return false;
+        // ikunpay callback sign=0 (platform unsigned): do not ship on trust, fallback to active query
+        printf("[VPay] callback RSA verify FAILED, fallback to active query\n");
+        std::string fon;
+        for(auto &kv:pr) if(kv.first=="out_trade_no") fon=kv.second;
+        if(fon.empty()) return false;
+        uint64_t foid=0; try{foid=std::stoull(fon);}catch(...){return false;}
+        if(!syncOrderStatus(foid)) return false;
+        return true;
     }
 
     // pid / 状态 / 订单号检查

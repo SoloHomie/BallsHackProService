@@ -8,25 +8,25 @@
   {
     "id": "2",
     "name": "周会员",
-    "amount": 2500,
+    "amount": 2200,
     "days": 7
   },
   {
     "id": "3",
     "name": "月会员",
-    "amount": 8800,
+    "amount": 7600,
     "days": 30
   },
   {
     "id": "4",
     "name": "季会员",
-    "amount": 19800,
+    "amount": 16600,
     "days": 90
   },
   {
     "id": "5",
     "name": "年会员",
-    "amount": 28800,
+    "amount": 24600,
     "days": 365
   }
 ]

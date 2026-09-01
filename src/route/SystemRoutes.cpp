@@ -1,4 +1,6 @@
 #include "SystemRoutes.h"
+#include <iostream>
+#include <exception>
 #include "PaymentRoutes.h"
 #include "../payment/VPayService.h"
 
@@ -27,6 +29,7 @@
 #include <cstdint>
 #include <cctype>
 #include <chrono>
+#include <iomanip>
 #include <random>
 #include "../common/Snowflake.h"
 #include <cstring>
@@ -107,15 +110,94 @@ std::string md5File(const std::string &path) {
         md5.update((const uint8_t*)buf, (size_t)f.gcount());
     return md5.hex();
 }
+
+// ── 检查用户订阅状态 (与 AssetRoutes.cpp 同款, 2026-08-29 载荷密钥门控) ──
+static bool checkSubscribed(AuthService &auth, const std::optional<TokenPayload> &tp,
+                            std::string &subExpires) {
+    if (!tp) return false;
+    auto user = auth.userStore().findByEmail(tp->email);
+    if (!user) return false;
+    if (user->subscription_expires.empty()) return false;
+    subExpires = user->subscription_expires;
+    auto now = std::chrono::system_clock::now();
+    auto nowT = std::chrono::system_clock::to_time_t(now);
+    struct tm expireTm = {};
+    std::istringstream ss(subExpires);
+    ss >> std::get_time(&expireTm, "%Y-%m-%d %H:%M:%S");
+    auto expireT = std::mktime(&expireTm);
+    return (expireT > nowT);
+}
 } // anonymous namespace
 
 void registerSystemRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
+    // ── 载荷密钥下发 (仅订阅用户, 2026-08-29 密钥服务器化) ──────
+    server.route("GET", "/api/payload/key",
+        [&](const std::string &, const std::string &, const std::string &headers) {
+            auto tp = auth.authenticate(headers);
+            if (!tp) return AuthService::jsonErr("UNAUTHORIZED", "请先登录");
+
+            std::string subExpires;
+            if (!checkSubscribed(auth, tp, subExpires))
+                return AuthService::jsonErr("FORBIDDEN", "此功能需要Pro订阅。如需订阅请联系开发者。");
+
+            // ── 设备风控: 每账号 7 天内最多 8 台设备 (防批量养号拿密钥, 2026-08-29) ──
+            std::string devId;
+            {
+                std::string k = "X-Dev-Id:";
+                auto pos = headers.find(k);
+                if (pos == std::string::npos) { k = "x-dev-id:"; pos = headers.find(k); }
+                if (pos != std::string::npos) {
+                    pos += k.size();
+                    while (pos < headers.size() && (headers[pos] == 9 || headers[pos] == 32)) pos++;
+                    while (pos < headers.size() && headers[pos] != 13 && headers[pos] != 10)
+                        devId += headers[pos++];
+                }
+            }
+            // 缺/异常指纹 → 拒绝 (正常客户端必带; 裸 curl 直接拿不到密钥)
+            if (devId.size() < 32 || devId.size() > 128)
+                return AuthService::jsonErr("FORBIDDEN", "设备指纹缺失, 请更新客户端");
+
+            {
+                auto g = pool.acquire(5000);
+                if (!g) return AuthService::jsonErr("DB_ERROR", "db busy");
+                MYSQL *db = g->get();
+                char q[1024]; char eesc[160];
+                mysql_real_escape_string(db, eesc, devId.c_str(), devId.size());
+                snprintf(q, sizeof(q),
+                    "SELECT COUNT(*) FROM device_bind WHERE uid=%s AND first_seen > NOW() - INTERVAL 7 DAY",
+                    tp->sub.c_str());
+                if (mysql_query(db, q) != 0)
+                    return AuthService::jsonErr("DB_ERROR", mysql_error(db));
+                MYSQL_RES *res = mysql_store_result(db);
+                bool over = false;
+                if (res) {
+                    MYSQL_ROW row = mysql_fetch_row(res);
+                    if (row && row[0]) over = (strtoull(row[0], nullptr, 10) > 8);
+                    mysql_free_result(res);
+                }
+                if (over)
+                    return AuthService::jsonErr("FORBIDDEN", "设备数量超限, 请清理后重试");
+                snprintf(q, sizeof(q),
+                    "INSERT INTO device_bind(uid,device_id,first_seen,last_seen) VALUES(%s,'%s',NOW(),NOW()) "
+                    "ON DUPLICATE KEY UPDATE last_seen=NOW()", tp->sub.c_str(), eesc);
+                if (mysql_query(db, q) != 0)
+                    return AuthService::jsonErr("DB_ERROR", mysql_error(db));
+            }
+
+            std::string key = Env::get("BH_PAYLOAD_KEY", "");
+            if (key.empty())
+                return AuthService::jsonErr("SERVER_ERROR", "载荷密钥未配置");
+
+            return "{\"success\":true,\"key\":\"" + key + "\"}";
+
+        });
 
     // ── 版本检查 / 自动更新 ────────────────────────
     server.route("GET", "/api/version",
         [&](const std::string &, const std::string &query, const std::string &) {
             std::string clientVer = StringUtils::queryVal(query, "current");
             std::string latestVer = "1.0.0", minVer = "1.0.0", changelog = "";
+            std::string su = "";   // silent_update: 空串 → 默认 true (兼容无字段旧配置)
 
             // 读取 version.json：尝试 exe 目录 + 向上查找（兼容 VS 调试路径）
             std::ifstream vf;
@@ -158,6 +240,7 @@ void registerSystemRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
                 std::string lv = extract("latest_version");
                 std::string mv = extract("min_version");
                 std::string cl = extract("changelog");
+                su = extract("silent_update");
                 if (!lv.empty()) latestVer = lv;
                 if (!mv.empty()) minVer = mv;
                 if (!cl.empty()) changelog = cl;
@@ -234,6 +317,7 @@ void registerSystemRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
                 + ",\"min_version\":\"" + minVer + "\""
                 + ",\"force_update\":" + (force ? "true" : "false")
                 + ",\"update_type\":\"" + (force ? "force" : "recommended") + "\""
+                + ",\"silent_update\":" + (su.empty() || su == "true" ? "true" : "false")
                 + ",\"download_url\":\"" + cloudDl + "\""
                 + ",\"direct_download_url\":\"" + directDl + "\""
                 + ",\"changelog\":\"" + jsonEscape(changelog) + "\""
@@ -275,8 +359,9 @@ void registerSystemRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
         });
 
     // ── 更新文件下载: /api/dl?file=xxx → releases/xxx ──
-    server.routeStream("GET", "/api/dl",
-        [](socket_t sock, TlsConnection *tls, const std::string &query) {
+    // 更新文件下载: /api/dl?file=xxx → releases/xxx
+    // GET 下载本体; HEAD 供探测(同 handler, body 客户端忽略) 2026-08-29
+    auto dlHandler = [](socket_t sock, TlsConnection *tls, const std::string &query) {
             std::string file = StringUtils::queryVal(query, "file");
             if (file.empty() || file.find("..") != std::string::npos) {
                 std::string err = "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
@@ -310,7 +395,9 @@ void registerSystemRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
             { const char *p = h.data(); size_t left = h.size(); while (left > 0) { auto sent = tls ? tls->write(p, (int)left) : send(sock, p, (int)left, 0); if (sent <= 0) return; left -= sent; p += sent; } }
             // 发送 body
             { const char *p = fileBuf.data(); size_t left = fsize; while (left > 0) { auto sent = tls ? tls->write(p, (int)left) : send(sock, p, (int)left, 0); if (sent <= 0) break; left -= sent; p += sent; } }
-        });
+    };
+    server.routeStream("GET", "/api/dl", dlHandler);
+    server.routeStream("HEAD", "/api/dl", dlHandler);
 
     // ── 下载更新包 (满带宽发送) ──
     server.routeStream("GET", "/api/download",
@@ -431,9 +518,12 @@ void registerSystemRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
                     try {
                         RedisClient::instance().setex(
                             "sub:" + std::to_string(u->id), ttl, u->subscription_expires);
-                    } catch(...) {}
+                    } catch (const std::exception &e) {
+                        std::cerr << "[SubSync] setex FAILED sub:" << u->id << ": " << e.what() << std::endl;
+                    }
                 }
             }
+            std::cout << "[Admin] subscription email=" << email << " days=" << days << std::endl;
             return AuthService::jsonOk(days > 0
                 ? "已添加 " + std::to_string(days) + " 天"
                 : "已减少 " + std::to_string(-days) + " 天");
@@ -626,8 +716,11 @@ void registerSystemRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
                         if (ttl < 60) ttl = 60;
                         r.setex("sub:" + std::to_string(nu->id), ttl, nu->subscription_expires);
                     }
-                } catch (...) {}
+                } catch (const std::exception &e) {
+                    std::cerr << "[SubSync] setex FAILED sub:" << nu->id << ": " << e.what() << std::endl;
+                }
             }
+            std::cout << "[Admin] set-subscription email=" << email << " expires=" << expires << std::endl;
             return AuthService::jsonOk(expires == "clear"
                 ? "已清除订阅到期时间"
                 : "已设置到期时间: " + expires);
@@ -674,6 +767,86 @@ void registerSystemRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
                 return AuthService::jsonErr("DB_ERROR", mysql_error(db));
             return AuthService::jsonOk("已向 " + email + " 发放专属福利: " + name
                 + " (+" + std::to_string(days) + "天 Pro, " + std::to_string(expiresDays) + " 天内可领)");
+        });
+
+    // ── 管理: 按累计充值金额定向发福利 (2026-08-26) ──
+    // 筛选 paid 订单聚合 ≥ min_amount 元的用户, 每人插一条定向 welfare_events
+    // 幂等: 同用户+同福利名且未过期 → 跳过 (防 bot 重复执行重复发)
+    server.route("POST", "/api/admin/welfare-grant-by-amount",
+        [&](const std::string &body, const std::string &, const std::string &headers) {
+            auto tp = auth.authenticate(headers);
+            if (!tp) return AuthService::jsonErr("UNAUTHORIZED", "请先登录");
+            if (tp->email != "admin@solohomie.top")
+                return AuthService::jsonErr("FORBIDDEN", "无管理员权限");
+            std::string minStr = StringUtils::jsonVal(body, "min_amount");
+            std::string daysStr = StringUtils::jsonVal(body, "days");
+            std::string name = StringUtils::jsonVal(body, "name");
+            std::string desc = StringUtils::jsonVal(body, "description");
+            std::string expStr = StringUtils::jsonVal(body, "expires_days");
+            // 先判空再解析 (2026-08-26 修复风格: 空串 stoi 抛异常 → 500)
+            if (minStr.empty() || daysStr.empty() ||
+                minStr.find_first_not_of("0123456789") != std::string::npos ||
+                daysStr.find_first_not_of("0123456789") != std::string::npos)
+                return AuthService::jsonErr("FIELDS_REQUIRED", "min_amount(元)和days必填(正整数)");
+            long long minYuan = std::stoll(minStr);
+            int days = std::stoi(daysStr);
+            int expiresDays = expStr.empty() ? 0 : std::stoi(expStr);
+            if (name.empty()) name = "用户反馈礼包";
+            if (desc.empty()) desc = "感谢您的充值支持！请填写反馈问卷，福利已发放";
+            if (expiresDays <= 0) expiresDays = 30;
+            if (minYuan <= 0 || days <= 0)
+                return AuthService::jsonErr("FIELDS_REQUIRED", "min_amount和days须为正数");
+            auto g = pool.acquire(5000);
+            if (!g) return AuthService::jsonErr("DB_ERROR", "db busy");
+            MYSQL *db = g->get();
+            // 1) 累计充值 ≥ 门槛的用户 (amount 单位=分)
+            char q[2048];
+            snprintf(q, sizeof(q),
+                "SELECT u.id, u.email, SUM(p.amount) FROM payment_orders p "
+                "JOIN users u ON u.id=p.user_id WHERE p.status='paid' "
+                "GROUP BY u.id HAVING SUM(p.amount) >= %lld", minYuan * 100);
+            if (mysql_query(db, q) != 0)
+                return AuthService::jsonErr("DB_ERROR", mysql_error(db));
+            MYSQL_RES *res = mysql_store_result(db);
+            if (!res) return AuthService::jsonErr("DB_ERROR", "no result");
+            MYSQL_ROW row;
+            int granted = 0, skipped = 0;
+            char neesc[128]; char descsc[512]; char eesc[256];
+            while ((row = mysql_fetch_row(res)) != nullptr) {
+                uint64_t uid = strtoull(row[0], nullptr, 10);
+                std::string email = row[1] ? row[1] : "";
+                if (email.empty()) { skipped++; continue; }
+                mysql_real_escape_string(db, eesc, email.c_str(), email.size());
+                mysql_real_escape_string(db, neesc, name.c_str(), name.size());
+                mysql_real_escape_string(db, descsc, desc.c_str(), desc.size());
+                // 2) 幂等: 同用户同福利名未过期 → 跳过
+                snprintf(q, sizeof(q),
+                    "SELECT COUNT(*) FROM welfare_events WHERE target_email='%s' "
+                    "AND name='%s' AND is_active=1 AND expires_at>NOW()", eesc, neesc);
+                if (mysql_query(db, q) != 0) { skipped++; continue; }
+                MYSQL_RES *cres = mysql_store_result(db);
+                bool dup = false;
+                if (cres && mysql_num_rows(cres) > 0) {
+                    MYSQL_ROW crow = mysql_fetch_row(cres);
+                    dup = crow && crow[0] && atoll(crow[0]) > 0;
+                }
+                if (cres) mysql_free_result(cres);
+                if (dup) { skipped++; continue; }
+                // 3) 插入定向福利
+                uint64_t eid = Snowflake::generate();
+                snprintf(q, sizeof(q),
+                    "INSERT INTO welfare_events (id, name, description, event_type, target_email,"
+                    " reward_amount, starts_at, expires_at, is_active)"
+                    " VALUES (%llu, '%s', '%s', 'general', '%s', %d,"
+                    " NOW(), DATE_ADD(NOW(), INTERVAL %d DAY), 1)",
+                    eid, neesc, descsc, eesc, days, expiresDays);
+                if (mysql_query(db, q) != 0) { skipped++; continue; }
+                granted++;
+            }
+            mysql_free_result(res);
+            return AuthService::jsonOk("已按累计充值≥" + minStr + "元发放福利 " + name
+                + " (+" + std::to_string(days) + "天 Pro, " + std::to_string(expiresDays) + "天内可领): 发放 "
+                + std::to_string(granted) + " 人, 跳过 " + std::to_string(skipped) + " 人");
         });
 
     // ── 管理: 退款 (仅限有付费记录用户; 全额退, 标记订单 refunded + 取消订阅) ──
@@ -768,12 +941,14 @@ void registerSystemRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
             snprintf(q, sizeof(q),
                 "UPDATE users SET subscription_expires=NULL WHERE id=%llu", (unsigned long long)u->id);
             mysql_query(db, q);
-            try { RedisClient::instance().del("sub:" + std::to_string(u->id)); } catch (...) {}
+            try { RedisClient::instance().del("sub:" + std::to_string(u->id)); }
+            catch (const std::exception &e) { std::cerr << "[SubSync] del FAILED sub:" << u->id << ": " << e.what() << std::endl; }
             char buf[160];
             if (forceRefund)
                 snprintf(buf, sizeof(buf), "已标记退款 %lld 笔订单共 %lld 分 (人工已退款), 订阅已取消", cnt, total);
             else
                 snprintf(buf, sizeof(buf), "已退款 %lld 笔订单共 %lld 分, 订阅已取消", cnt, total);
+            std::cout << "[Admin] refund email=" << email << " orders=" << cnt << " total_cents=" << total << (forceRefund ? " force" : "") << std::endl;
             return AuthService::jsonOk(buf);
         });
 

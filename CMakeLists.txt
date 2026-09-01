@@ -82,6 +82,7 @@ set(SOURCES
     src/route/SystemRoutes.cpp
     src/route/PaymentRoutes.cpp
     src/route/WelfareRoutes.cpp
+    src/route/RedeemRoutes.cpp
     src/route/SyncRoutes.cpp
     src/route/AssetRoutes.cpp
     src/route/PeerRoutes.cpp
@@ -122,6 +123,7 @@ set(HEADERS
     src/route/SystemRoutes.h
     src/route/PaymentRoutes.h
     src/route/WelfareRoutes.h
+    src/route/RedeemRoutes.h
     src/route/SyncRoutes.h
     src/route/AssetRoutes.h
     src/route/PeerRoutes.h

@@ -4,206 +4,156 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BallsHackPro</title>
+<link rel="icon" type="image/png" href="/favicon.png?v=2">
 <style>
   :root {
-    --bg: #0a0a14;
-    --surface: #111122;
-    --primary: #7C3AED;
-    --primary-soft: rgba(124, 58, 237, 0.15);
-    --accent: #F43F5E;
-    --text: #e8e8f0;
-    --muted: #8b8ba0;
-    --muted-2: #5a5a72;
-    --border: rgba(255,255,255,0.05);
-    --radius: 10px;
+    --bg: #0b0d12;
+    --surface: #11141c;
+    --border: #1f2430;
+    --text: #e6e8ee;
+    --text-2: #9aa1b0;
+    --text-3: #5c6472;
+    --accent: #7c5cff;
+    --accent-hover: #8d72ff;
+    --radius: 8px;
   }
-  * { margin:0; padding:0; box-sizing:border-box; }
-  html { scroll-behavior: smooth; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
   body {
     background: var(--bg);
     color: var(--text);
-    font-family: -apple-system, 'Microsoft YaHei UI', 'PingFang SC', sans-serif;
-    min-height: 100vh;
+    font-family: -apple-system, "Segoe UI", "Microsoft YaHei UI", "PingFang SC", sans-serif;
     -webkit-font-smoothing: antialiased;
-    background-image:
-      radial-gradient(ellipse 600px 300px at 50% 0%, rgba(124, 58, 237, 0.06), transparent),
-      radial-gradient(ellipse 400px 200px at 50% 100%, rgba(244, 63, 94, 0.03), transparent);
-  }
-
-  .page {
-    max-width: 600px;
-    margin: 0 auto;
-    padding: 0 24px;
-  }
-
-  /* ── Hero ── */
-  .hero {
-    text-align: center;
-    padding: 100px 0 64px;
-  }
-  .hero .icon {
-    width: 72px; height: 72px;
-    border-radius: 18px;
-    margin: 0 auto 28px;
-    display: block;
-    filter: drop-shadow(0 8px 24px rgba(124, 58, 237, 0.3));
-  }
-  .hero h1 {
-    font-size: 36px;
-    font-weight: 800;
-    letter-spacing: -1px;
-    margin-bottom: 8px;
-    background: linear-gradient(135deg, #e8e8f0 0%, #c4b5fd 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-  .hero .tagline {
-    font-size: 15px;
-    color: var(--muted);
-    margin-bottom: 32px;
-  }
-
-  .meta-row {
-    display: flex;
-    justify-content: center;
-    gap: 12px;
-    flex-wrap: wrap;
-    margin-bottom: 32px;
-  }
-  .meta-item {
-    font-size: 12px;
-    font-weight: 600;
-    padding: 4px 14px;
-    border-radius: 99px;
-    background: rgba(255,255,255,0.03);
-    border: 1px solid var(--border);
-    color: var(--muted);
-    letter-spacing: 0.3px;
-  }
-  .meta-item.live {
-    background: rgba(34, 197, 94, 0.07);
-    border-color: rgba(34, 197, 94, 0.18);
-    color: #4ade80;
-  }
-  .meta-item.live::before {
-    content: "";
-    display: inline-block;
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: #4ade80;
-    margin-right: 6px;
-    vertical-align: middle;
-    box-shadow: 0 0 6px rgba(74, 222, 128, 0.5);
-  }
-
-  .btns {
-    display: flex;
-    gap: 12px;
-    justify-content: center;
-    flex-wrap: wrap;
-  }
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 14px 32px;
-    border-radius: var(--radius);
-    font-size: 15px;
-    font-weight: 600;
-    text-decoration: none;
-    cursor: pointer;
-    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
-  }
-  .btn:hover { transform: translateY(-1px); }
-  .btn:active { transform: translateY(0); }
-
-  .btn-primary {
-    background: var(--primary);
-    color: #fff;
-    box-shadow: 0 4px 20px rgba(124, 58, 237, 0.35);
-  }
-  .btn-primary:hover {
-    background: #8b5cf6;
-    box-shadow: 0 6px 28px rgba(124, 58, 237, 0.45);
-  }
-
-  .btn-ghost {
-    background: transparent;
-    border: 1px solid rgba(255,255,255,0.08);
-    color: var(--muted);
-  }
-  .btn-ghost:hover {
-    border-color: rgba(255,255,255,0.15);
-    color: var(--text);
-    background: rgba(255,255,255,0.03);
-  }
-
-  .file-info {
-    margin-top: 16px;
-    font-size: 12px;
-    color: var(--muted-2);
-  }
-
-  /* ── Features ── */
-  .features {
-    padding: 0 0 64px;
-  }
-  .features .section-label {
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    color: var(--primary);
-    margin-bottom: 24px;
-  }
-  .feature-item {
-    display: flex;
-    gap: 16px;
-    padding: 10px 0;
-    align-items: flex-start;
-  }
-  .feature-item .dot {
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: var(--primary);
-    margin-top: 7px;
-    flex-shrink: 0;
-    opacity: 0.5;
-  }
-  .feature-item .body {
-    font-size: 14px;
     line-height: 1.6;
   }
-  .feature-item .name {
-    color: var(--text);
-    font-weight: 600;
+  a { color: inherit; text-decoration: none; }
+  .page { max-width: 720px; margin: 0 auto; padding: 0 24px; }
+
+  /* ── 顶部 ── */
+  .nav {
+    position: sticky; top: 0; z-index: 10;
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 24px;
+    margin: 0 -24px;
+    font-size: 14px;
+    background: rgba(11,13,18,.82);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
   }
-  .feature-item .desc {
-    color: var(--muted);
+  .nav .slogan {
+    font-style: italic;
+    font-weight: 500;
+    color: var(--accent);
+    font-size: 13px;
+    letter-spacing: .4px;
+  }
+  .nav .links { margin-left: auto; display: flex; align-items: center; gap: 22px; }
+  .nav .links a { color: var(--text-2); font-size: 13px; position: relative; transition: color .15s; }
+  .nav .links a::after {
+    content: ""; position: absolute; left: 0; right: 0; bottom: -4px;
+    height: 1px; background: var(--accent);
+    transform: scaleX(0); transform-origin: left;
+    transition: transform .2s;
+  }
+  .nav .links a:hover { color: var(--text); }
+  .nav .links a:hover::after { transform: scaleX(1); }
+  .btn.btn-sm {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 12px;
+    height: 24px;
+    font-size: 12px;
+    line-height: 1;
+    margin-left: 18px;
+    border-radius: 6px;
   }
 
-  /* ── Footer ── */
-  .footer {
-    text-align: center;
-    padding: 40px 0 56px;
-    border-top: 1px solid var(--border);
-    font-size: 12px;
-    color: var(--muted-2);
+  /* ── 主区 ── */
+  .hero { padding: 64px 0 56px; }
+  .hero .app-icon {
+    width: 88px; height: 88px;
+    border-radius: 18px;
+    margin-bottom: 22px;
   }
-  .footer a {
-    color: var(--muted);
-    text-decoration: none;
-    transition: color 0.15s;
+  .hero h1 {
+    font-size: clamp(34px, 7.5vw, 46px);
+    font-weight: 700;
+    font-style: italic;
+    letter-spacing: -.5px;
+    background: linear-gradient(90deg, var(--text) 40%, var(--accent));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
-  .footer a:hover { color: var(--primary); }
-  .footer .sep {
+  .hero .sub { margin-top: 10px; font-size: 15px; color: var(--text-2); }
+  .cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
+  .btn {
     display: inline-block;
-    width: 3px; height: 3px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.1);
-    margin: 0 10px;
-    vertical-align: middle;
+    padding: 10px 20px;
+    border-radius: var(--radius);
+    font-size: 14px; font-weight: 500;
+    border: 1px solid transparent;
+    cursor: pointer;
+    text-align: center;
+    transition: background .15s, border-color .15s, box-shadow .15s;
+  }
+  .btn-primary { background: var(--accent); color: #fff; box-shadow: 0 0 0 rgba(124,92,255,0); }
+  .btn-primary:hover { background: var(--accent-hover); box-shadow: 0 4px 24px rgba(124,92,255,.35); }
+  .btn-ghost { background: transparent; color: var(--text-2); border-color: var(--border); }
+  .btn-ghost:hover { color: var(--text); border-color: #2c3342; }
+  .hint { margin-top: 14px; font-size: 12px; color: var(--text-3); }
+
+  /* ── 功能 ── */
+  .features { border-top: 1px solid var(--border); padding: 44px 0 56px; }
+  .features h2 { font-size: 15px; font-weight: 600; margin-bottom: 22px; }
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .cell {
+    display: flex; gap: 12px; align-items: flex-start;
+    padding: 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    transition: border-color .15s, background .15s;
+  }
+  .cell:hover { border-color: #2c3342; background: #141824; }
+  .cell .icon { width: 18px; height: 18px; color: var(--accent); margin-top: 2px; flex-shrink: 0; }
+  .cell .body { min-width: 0; }
+  .cell .name { font-size: 14px; font-weight: 550; }
+  .cell .desc { margin-top: 2px; font-size: 12.5px; color: var(--text-2); }
+  .cell.wide { grid-column: 1 / -1; }
+
+  /* ── 底部 ── */
+  .footer { border-top: 1px solid var(--border); padding: 22px 0 40px; font-size: 12.5px; color: var(--text-3); }
+  .footer a { color: var(--text-2); }
+  .footer a:hover { color: var(--text); }
+  .footer .copy { margin-top: 6px; }
+
+  @media (max-width: 560px) {
+    .grid { grid-template-columns: 1fr; }
+    .cell.wide { grid-column: auto; }
+  }
+  @media (max-width: 480px) {
+    .page { padding: 0 16px; }
+    .nav { margin: 0 -16px; padding: 12px 16px; }
+    .nav .links { gap: 10px; }
+    .nav .links a { font-size: 12px; }
+    .btn.btn-sm { padding: 0 10px; }
+    .hero { padding: 40px 0 36px; }
+    .hero .app-icon { width: 72px; height: 72px; border-radius: 15px; }
+    .hero .sub { font-size: 14px; line-height: 1.55; }
+    .cell { padding: 14px; }
+  }
+  @media (max-width: 420px) {
+    .hero { padding: 36px 0 32px; }
+    .cta { flex-direction: column; align-items: stretch; }
+    .btn { text-align: center; }
+    .nav .links { gap: 12px; }
+    .nav .slogan { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .btn, .cell, a { transition: none; }
   }
 </style>
 </head>
@@ -211,71 +161,55 @@
 
 <div class="page">
 
-  <!-- Hero -->
-  <section class="hero">
-    <img class="icon" src="/logo.png" alt="">
-    <h1>BallsHackPro</h1>
-    <p class="tagline">球球大作战 · 球宝の秘密武器</p>
-
-    <div class="meta-row">
-      <span class="meta-item live">服务在线</span>
-      <span class="meta-item">v1.3.0</span>
-      <span class="meta-item">Windows 10 / 11</span>
+  <div class="nav">
+    <span class="slogan">支持绿色球球，重建球宝家园</span>
+    <div class="links">
+      <a href="https://github.com/SoloHomie/BallsHackPro-Public" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://discord.gg/YtvJrFvcC5" target="_blank" rel="noopener">Discord</a>
+      <a class="btn btn-primary btn-sm" href="/api/download">Windows 下载</a>
     </div>
-
-    <div class="btns">
-      <a href="/api/download" class="btn btn-primary" download="BallsHackPro-setup.exe">下载安装包</a>
-      <a href="https://github.com/SoloHomie/BallsHackPro-Public/releases" class="btn btn-ghost" target="_blank">GitHub 下载</a>
-    </div>
-    <p class="file-info">~76 MB · 支持 Windows 10 及以上</p>
-  </section>
-
-  <!-- Features -->
-  <section class="features">
-    <p class="section-label">功能</p>
-
-    <div class="feature-item">
-      <span class="dot"></span>
-      <span class="body"><span class="name">锁定</span> <span class="desc">— 自动追着目标咬，锁就完了</span></span>
-    </div>
-    <div class="feature-item">
-      <span class="dot"></span>
-      <span class="body"><span class="name">分身</span> <span class="desc">— 目标被扎刺，一秒分身糊脸</span></span>
-    </div>
-    <div class="feature-item">
-      <span class="dot"></span>
-      <span class="body"><span class="name">合球</span> <span class="desc">— 三角 · 冲球 · 四分 · 中分 · 后仰 · 旋转 · 半旋 · 蛇手</span></span>
-    </div>
-    <div class="feature-item">
-      <span class="dot"></span>
-      <span class="body"><span class="name">救球</span> <span class="desc">— 黑屏了自动帮你分身出来</span></span>
-    </div>
-    <div class="feature-item">
-      <span class="dot"></span>
-      <span class="body"><span class="name">调控</span> <span class="desc">— 调视野 · 改速度 · 拉摇杆，内存级调参</span></span>
-    </div>
-    <div class="feature-item">
-      <span class="dot"></span>
-      <span class="body"><span class="name">同步</span> <span class="desc">— 开个房间，两个人互相看对方视角</span></span>
-    </div>
-    <div class="feature-item">
-      <span class="dot"></span>
-      <span class="body"><span class="name">界面</span> <span class="desc">— 深色浅色随便换，Win11 毛玻璃特效</span></span>
-    </div>
-    <div class="feature-item">
-      <span class="dot"></span>
-      <span class="body"><span class="name">更新</span> <span class="desc">— 暂时弃坑，下次更新增相关功能</span></span>
-    </div>
-  </section>
-
-  <!-- Footer -->
-  <div class="footer">
-    <a href="https://github.com/SoloHomie">SoloHomie</a>
-    <span class="sep"></span>
-    <a href="https://github.com/SoloHomie/BallsHackPro-Public">GitHub</a>
-    <span class="sep"></span>
-    <a href="https://discord.gg/YtvJrFvcC5">Discord</a>
   </div>
+
+  <header class="hero">
+    <img class="app-icon" src="/favicon.png?v=2" alt="BallsHackPro 图标">
+    <h1>BallsHackPro</h1>
+    <p class="sub">为球宝而生。锁定目标、流畅合球、精准调控，游戏体验全面升级。</p>
+    <div class="cta">
+      <a class="btn btn-ghost" href="https://github.com/SoloHomie/BallsHackPro-Public/releases" target="_blank" rel="noopener">查看发布记录</a>
+    </div>
+    <p class="hint">启动器约 26 MB，首次启动自动下载完整客户端。仅支持 Windows 10 及以上版本。</p>
+  </header>
+
+  <section class="features" id="features">
+    <h2>主要功能</h2>
+    <div class="grid">
+      <div class="cell">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
+        <div class="body"><div class="name">锁定</div><div class="desc">自动追踪目标，跟随移动</div></div>
+      </div>
+      <div class="cell">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 8h4a4 4 0 0 1 4 4v8"/><path d="M20 8h-4a4 4 0 0 0-4 4"/><path d="M4 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM20 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></svg>
+        <div class="body"><div class="name">合球</div><div class="desc">三角、四分、冲刺、旋转等八种合球动作</div></div>
+      </div>
+      <div class="cell">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3"/><path d="M1 14h6M9 8h6M17 16h6"/></svg>
+        <div class="body"><div class="name">调控</div><div class="desc">视野、速度等参数，内存级调参</div></div>
+      </div>
+      <div class="cell">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+        <div class="body"><div class="name">同步</div><div class="desc">双端同步与远程协助</div></div>
+      </div>
+      <div class="cell wide">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15z"/></svg>
+        <div class="body"><div class="name">美化</div><div class="desc">皮肤、光环等外观自由定制</div></div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <a href="https://github.com/SoloHomie" target="_blank" rel="noopener">SoloHomie</a>
+    <div class="copy">© 2026 BallsHackPro</div>
+  </footer>
 
 </div>
 
