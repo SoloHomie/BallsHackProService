@@ -4,7 +4,7 @@
 #include "../common/StringUtils.h"
 #include "../common/Snowflake.h"
 #include "../core/database/DbPool.h"
-#include "../core/cache/RedisClient.h"
+#include "../core/cache/SubCache.h"
 #include <mysql/mysql.h>
 #include <cctype>
 #include <ctime>
@@ -159,15 +159,7 @@ void registerRedeemRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
                 mysql_free_result(res2);
             }
             if (!newExp.empty()) {
-                struct tm et = {};
-                std::istringstream iss(newExp);
-                iss >> std::get_time(&et, "%Y-%m-%d %H:%M:%S");
-                int ttl = (int)(std::mktime(&et) - std::time(nullptr));
-                if (ttl < 60) ttl = 60;
-                try {
-                    auto &r = RedisClient::instance();
-                    r.setex("sub:" + tp->sub, ttl, newExp);
-                } catch (...) {}
+                SubCache::write(uid, newExp);   // 唯一实现 (2026-09-06 收敛)
             }
 
             std::string msg = "兑换成功！获得 " + std::to_string(days) + " 天 Pro 会员~";

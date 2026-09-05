@@ -765,3 +765,28 @@ bool UserStore::unlinkOAuth(const std::string &email, const std::string &provide
     mysql_stmt_bind_param(stmt, b);
     return mysql_stmt_execute(stmt) == 0;
 }
+
+// ═══════════════════════════════════════════════════════
+//  balanceOf (2026-09-06 收敛自 WalletRoutes 直连 SQL)
+// ═══════════════════════════════════════════════════════
+unsigned long long UserStore::balanceOf(uint64_t id) const {
+    auto guard = m_pool.acquire(5000);
+    if (!guard) return 0;
+    MYSQL* db = guard->get();
+
+    StmtGuard stmt{mysql_stmt_init(db)};
+    const char* sql = "SELECT balance FROM users WHERE id=?";
+    mysql_stmt_prepare(stmt, sql, (unsigned long)strlen(sql));
+    MYSQL_BIND b[1] = {};
+    b[0].buffer_type = MYSQL_TYPE_LONGLONG; b[0].buffer = &id;
+    mysql_stmt_bind_param(stmt, b);
+    mysql_stmt_execute(stmt);
+    mysql_stmt_store_result(stmt);
+
+    unsigned long long bal = 0;
+    MYSQL_BIND r[1] = {};
+    r[0].buffer_type = MYSQL_TYPE_LONGLONG; r[0].buffer = &bal;
+    mysql_stmt_bind_result(stmt, r);
+    mysql_stmt_fetch(stmt);
+    return bal;
+}

@@ -63,6 +63,9 @@ public:
 
     int count() const;
 
+    // 钱包余额 (2026-09-06 收敛自 WalletRoutes 直连 SQL)
+    unsigned long long balanceOf(uint64_t id) const;
+
     // 封禁查询 (DB fail-open: 查询失败视为未封禁, 避免误伤全员)
     bool isBanned(uint64_t id) const;
 

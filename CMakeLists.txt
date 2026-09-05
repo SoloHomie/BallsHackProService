@@ -89,6 +89,7 @@ set(SOURCES
     src/payment/VPayService.cpp
     src/sync/SyncService.cpp
     src/common/StringUtils.cpp
+    src/welfare/WelfareStore.cpp
 )
 
 set(HEADERS
@@ -117,6 +118,7 @@ set(HEADERS
     src/view/OAuthPage.h
     src/view/EmailPage.h
     src/core/cache/RedisClient.h
+    src/core/cache/SubCache.h
     src/core/database/DbPool.h
     src/core/database/Schema.h
     src/core/database/DbMigration.h
@@ -131,6 +133,7 @@ set(HEADERS
     src/route/PeerRoutes.h
     src/payment/VPayService.h
     src/sync/SyncService.h
+    src/welfare/WelfareStore.h
 )
 
 # ── Executable ────────────────────────────────────────

@@ -13,6 +13,7 @@
 #include "../common/TimeUtils.h"
 #include "../common/Snowflake.h"
 #include "../core/cache/RedisClient.h"
+#include "../core/cache/SubCache.h"
 #include "../core/database/DbPool.h"
 #include "../core/config/ServerConfig.h"
 #include "../core/config/Env.h"
@@ -503,19 +504,10 @@ void registerSystemRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
                 return AuthService::jsonErr("DB_ERROR", mysql_error(db));
             if (mysql_affected_rows(db) == 0)
                 return AuthService::jsonErr("NOT_FOUND", "用户不存在或未订阅");
-            // 读出新过期时间，直接写回 Redis（避免 DEL+GET 竞态）
+            // 同步订阅缓存 (唯一实现 SubCache::write, 2026-09-06 收敛)
             {
                 auto u = auth.userStore().findByEmail(email);
-                if (u && !u->subscription_expires.empty()) {
-                    int ttl = TimeUtils::subTtlSeconds(u->subscription_expires);
-                    if (ttl < 60) ttl = 60;
-                    try {
-                        RedisClient::instance().setex(
-                            "sub:" + std::to_string(u->id), ttl, u->subscription_expires);
-                    } catch (const std::exception &e) {
-                        std::cerr << "[SubSync] setex FAILED sub:" << u->id << ": " << e.what() << std::endl;
-                    }
-                }
+                if (u) SubCache::write(u->id, u->subscription_expires);
             }
             std::cout << "[Admin] subscription email=" << email << " days=" << days << std::endl;
             return AuthService::jsonOk(days > 0
@@ -692,22 +684,9 @@ void registerSystemRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
             }
             if (mysql_query(db, q) != 0)
                 return AuthService::jsonErr("DB_ERROR", mysql_error(db));
-            // 回写 Redis 缓存 (与加天数接口同款逻辑; clear 时删缓存)
+            // 回写订阅缓存 (唯一实现 SubCache::write; 空串=清除)
             auto nu = auth.userStore().findByEmail(email);
-            if (nu) {
-                try {
-                    auto &r = RedisClient::instance();
-                    if (nu->subscription_expires.empty()) {
-                        r.del("sub:" + std::to_string(nu->id));
-                    } else {
-                        int ttl = TimeUtils::subTtlSeconds(nu->subscription_expires);
-                        if (ttl < 60) ttl = 60;
-                        r.setex("sub:" + std::to_string(nu->id), ttl, nu->subscription_expires);
-                    }
-                } catch (const std::exception &e) {
-                    std::cerr << "[SubSync] setex FAILED sub:" << nu->id << ": " << e.what() << std::endl;
-                }
-            }
+            if (nu) SubCache::write(nu->id, nu->subscription_expires);
             std::cout << "[Admin] set-subscription email=" << email << " expires=" << expires << std::endl;
             return AuthService::jsonOk(expires == "clear"
                 ? "已清除订阅到期时间"

@@ -104,6 +104,12 @@
   <ItemGroup Label="common (source)">
     <ClCompile Include="src\common\StringUtils.cpp" />
   </ItemGroup>
+  <ItemGroup Label="welfare (source)">
+    <ClCompile Include="src\welfare\WelfareStore.cpp" />
+  </ItemGroup>
+  <ItemGroup Label="welfare (header)">
+    <ClInclude Include="src\welfare\WelfareStore.h" />
+  </ItemGroup>
   <!-- ===== Header Files ===== -->
   <ItemGroup Label="auth (header)">
     <ClInclude Include="src\auth\AuthService.h" />
@@ -140,6 +146,7 @@
   </ItemGroup>
   <ItemGroup Label="core\cache (header)">
     <ClInclude Include="src\core\cache\RedisClient.h" />
+    <ClInclude Include="src\core\cache\SubCache.h" />
   </ItemGroup>
   <ItemGroup Label="data (header)">
   </ItemGroup>
