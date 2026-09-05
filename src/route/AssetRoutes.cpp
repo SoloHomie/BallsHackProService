@@ -4,6 +4,7 @@
 #include "../auth/TokenService.h"
 #include "../core/database/DbPool.h"
 #include "../common/StringUtils.h"
+#include "../common/TimeUtils.h"
 #include <fstream>
 #include <sstream>
 #include <chrono>
@@ -15,16 +16,9 @@ static bool checkSubscribed(AuthService &auth, const std::optional<TokenPayload>
                             std::string &subExpires) {
     if (!tp) return false;
     auto user = auth.userStore().findByEmail(tp->email);
-    if (!user) return false;
-    if (user->subscription_expires.empty()) return false;
+    if (!user || user->subscription_expires.empty()) return false;
     subExpires = user->subscription_expires;
-    auto now = std::chrono::system_clock::now();
-    auto nowT = std::chrono::system_clock::to_time_t(now);
-    struct tm expireTm = {};
-    std::istringstream ss(subExpires);
-    ss >> std::get_time(&expireTm, "%Y-%m-%d %H:%M:%S");
-    auto expireT = std::mktime(&expireTm);
-    return (expireT > nowT);
+    return TimeUtils::subActive(subExpires);   // 判定统一走 TimeUtils
 }
 
 // ── JSON 转义 ──

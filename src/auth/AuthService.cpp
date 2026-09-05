@@ -6,6 +6,7 @@
 #include "SessionManager.h"
 #include "../core/database/DbPool.h"
 #include "../common/Snowflake.h"
+#include "../common/TimeUtils.h"
 #include "../email/EmailService.h"
 #include "../auth/OAuthService.h"
 #include "../core/config/ServerConfig.h"
@@ -29,13 +30,7 @@ std::string AuthService::subFieldsJson(const std::string &email) const {
     auto user = m_users.findByEmail(email);
     if (user && !user->subscription_expires.empty()) {
         expires = user->subscription_expires;
-        struct tm expireTm = {};
-        std::istringstream ss(expires);
-        ss >> std::get_time(&expireTm, "%Y-%m-%d %H:%M:%S");
-        if (!ss.fail()) {
-            std::time_t nowT = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-            sub = (std::mktime(&expireTm) > nowT);
-        }
+        sub = TimeUtils::subActive(expires);   // 订阅判定唯一实现 (TimeUtils)
     }
     std::ostringstream s;
     s << ",\"subscribed\":" << (sub ? "true" : "false")

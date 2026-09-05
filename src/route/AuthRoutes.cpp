@@ -5,6 +5,7 @@
 #include "../auth/SessionManager.h"
 #include "../auth/TokenService.h"
 #include "../common/StringUtils.h"
+#include "../common/TimeUtils.h"
 #include "../view/OAuthPage.h"
 #include "../core/cache/RedisClient.h"
 #include "../core/database/DbPool.h"
@@ -111,14 +112,9 @@ void registerAuthRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
     // ── 注册 ──────────────────────────────────────
     server.route("POST", "/api/auth/register",
         [&](const std::string &body, const std::string &, const std::string &) {
-            auto result = auth.doRegister(StringUtils::jsonVal(body, "email"),
-                                          StringUtils::jsonVal(body, "password"),
-                                          StringUtils::jsonVal(body, "code"));
-            if (result.find("\"success\":true") != std::string::npos) {
-                auto user = auth.userStore().findByEmail(
-                    StringUtils::jsonVal(body, "email"));
-            }
-            return result;
+            return auth.doRegister(StringUtils::jsonVal(body, "email"),
+                                   StringUtils::jsonVal(body, "password"),
+                                   StringUtils::jsonVal(body, "code"));
         });
 
     // ── 重置密码 ──────────────────────────────────
@@ -189,10 +185,6 @@ void registerAuthRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
             data.token        = StringUtils::jsonVal(result, "access_token");
             data.refreshToken = StringUtils::jsonVal(result, "refresh_token");
             data.uid          = StringUtils::jsonVal(result, "uid");
-
-            if (success) {
-                auto oauthUser = auth.userStore().findByEmail(data.email);
-            }
 
             return OAuthPage::render(data, "html/OAuthCallback.html", cbport);
         });
@@ -330,30 +322,18 @@ void registerAuthRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
                     }
                 } catch (...) {}
                 if (cached) {
-                    auto now = std::chrono::system_clock::now();
-                    auto nowT = std::chrono::system_clock::to_time_t(now);
-                    struct tm expireTm = {};
-                    std::istringstream ss(subExpires);
-                    ss >> std::get_time(&expireTm, "%Y-%m-%d %H:%M:%S");
-                    auto expireT = std::mktime(&expireTm);
-                    subscribed = (expireT > nowT);
+                    subscribed = TimeUtils::subActive(subExpires);
                 }
                 // 2. 缓存未命中 → 查 MySQL 并回写 Redis
                 if (!cached) {
                     auto user = auth.userStore().findByEmail(tp->email);
                     if (user && !user->subscription_expires.empty()) {
                         subExpires = user->subscription_expires;
-                        auto now = std::chrono::system_clock::now();
-                        auto nowT = std::chrono::system_clock::to_time_t(now);
-                        struct tm expireTm = {};
-                        std::istringstream ss(subExpires);
-                        ss >> std::get_time(&expireTm, "%Y-%m-%d %H:%M:%S");
-                        auto expireT = std::mktime(&expireTm);
-                        subscribed = (expireT > nowT);
-                        // 回写 Redis，TTL = 距过期秒数
+                        subscribed = TimeUtils::subActive(subExpires);
+                        // 回写 Redis，TTL = 距过期秒数 (至少 60s)
                         try {
-                            int d = (int)(expireT - nowT);
-                            int ttl = subscribed ? (d > 60 ? d : 60) : 60;
+                            int ttl = TimeUtils::subTtlSeconds(subExpires);
+                            if (ttl < 60) ttl = 60;
                             RedisClient::instance().setex("sub:" + tp->sub, ttl, subExpires);
                         } catch (...) {}
                     }

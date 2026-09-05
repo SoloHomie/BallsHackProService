@@ -1,6 +1,8 @@
 #include "SystemRoutes.h"
 #include <iostream>
 #include <exception>
+// PaymentRoutes.h 提供 paymentService() 全局访问器 (admin 退款路由使用);
+// VPayService.h 提供其方法调用的完整类型定义
 #include "PaymentRoutes.h"
 #include "../payment/VPayService.h"
 
@@ -8,6 +10,7 @@
 #include "../core/server/TlsConnection.h"
 #include "../auth/AuthService.h"
 #include "../common/StringUtils.h"
+#include "../common/TimeUtils.h"
 #include "../common/Snowflake.h"
 #include "../core/cache/RedisClient.h"
 #include "../core/database/DbPool.h"
@@ -116,16 +119,9 @@ static bool checkSubscribed(AuthService &auth, const std::optional<TokenPayload>
                             std::string &subExpires) {
     if (!tp) return false;
     auto user = auth.userStore().findByEmail(tp->email);
-    if (!user) return false;
-    if (user->subscription_expires.empty()) return false;
+    if (!user || user->subscription_expires.empty()) return false;
     subExpires = user->subscription_expires;
-    auto now = std::chrono::system_clock::now();
-    auto nowT = std::chrono::system_clock::to_time_t(now);
-    struct tm expireTm = {};
-    std::istringstream ss(subExpires);
-    ss >> std::get_time(&expireTm, "%Y-%m-%d %H:%M:%S");
-    auto expireT = std::mktime(&expireTm);
-    return (expireT > nowT);
+    return TimeUtils::subActive(subExpires);   // 判定统一走 TimeUtils
 }
 } // anonymous namespace
 
@@ -511,10 +507,7 @@ void registerSystemRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
             {
                 auto u = auth.userStore().findByEmail(email);
                 if (u && !u->subscription_expires.empty()) {
-                    struct tm et = {};
-                    std::istringstream iss(u->subscription_expires);
-                    iss >> std::get_time(&et, "%Y-%m-%d %H:%M:%S");
-                    int ttl = (int)(std::mktime(&et) - std::time(nullptr));
+                    int ttl = TimeUtils::subTtlSeconds(u->subscription_expires);
                     if (ttl < 60) ttl = 60;
                     try {
                         RedisClient::instance().setex(
@@ -549,10 +542,7 @@ void registerSystemRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
                  << ",\"subscription_expires\":\"" << AuthService::jsonEscape(user->subscription_expires) << "\"";
             // 计算剩余天数
             if (!user->subscription_expires.empty()) {
-                struct tm et = {}; std::istringstream ss(user->subscription_expires);
-                ss >> std::get_time(&et, "%Y-%m-%d %H:%M:%S");
-                auto now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-                int rem = (int)(std::mktime(&et) - now) / 86400;
+                int rem = TimeUtils::subTtlSeconds(user->subscription_expires) / 86400;
                 resp << ",\"remaining_days\":" << rem;
             } else { resp << ",\"remaining_days\":0"; }
             resp << "}";
@@ -710,10 +700,7 @@ void registerSystemRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
                     if (nu->subscription_expires.empty()) {
                         r.del("sub:" + std::to_string(nu->id));
                     } else {
-                        struct tm et = {};
-                        std::istringstream iss(nu->subscription_expires);
-                        iss >> std::get_time(&et, "%Y-%m-%d %H:%M:%S");
-                        int ttl = (int)(std::mktime(&et) - std::time(nullptr));
+                        int ttl = TimeUtils::subTtlSeconds(nu->subscription_expires);
                         if (ttl < 60) ttl = 60;
                         r.setex("sub:" + std::to_string(nu->id), ttl, nu->subscription_expires);
                     }
