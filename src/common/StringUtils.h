@@ -6,33 +6,10 @@
 
 namespace StringUtils {
 
-/// Extract any JSON value for a given key — string, number, or boolean.
-/// Returns empty string if key is not found.
-inline std::string jsonVal(const std::string &json, const std::string &key) {
-    std::string pat = "\"" + key + "\":";
-    auto pos = json.find(pat);
-    if (pos == std::string::npos) return {};
-    pos += pat.size();
-
-    // Skip whitespace
-    while (pos < json.size() && (json[pos] == ' ' || json[pos] == '\t')) ++pos;
-    if (pos >= json.size()) return {};
-
-    // String value: "value"
-    if (json[pos] == '"') {
-        ++pos;
-        auto end = json.find('"', pos);
-        if (end == std::string::npos) return {};
-        return json.substr(pos, end - pos);
-    }
-
-    // Number or boolean: read until , } ] or whitespace
-    auto end = json.find_first_of(",}\n\r]", pos);
-    std::string val = json.substr(pos, end - pos);
-    // Trim trailing whitespace
-    while (!val.empty() && (val.back() == ' ' || val.back() == '\t')) val.pop_back();
-    return val;
-}
+/// Extract a top-level JSON value for a given key — string, number, or boolean.
+/// Returns empty string if key is not found or JSON is invalid.
+/// 实现见 StringUtils.cpp (2026-09-06 起用 nlohmann/json 解析, 替换手写子串匹配)
+std::string jsonVal(const std::string &json, const std::string &key);
 
 /// URL-decode %XX and '+' sequences per RFC 3986 / form-urlencoded.
 inline std::string urlDecode(const std::string &s) {

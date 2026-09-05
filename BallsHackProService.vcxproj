@@ -44,7 +44,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <AdditionalIncludeDirectories>$(ProjectDir)src;$(VcpkgRoot)installed\x64-windows\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)third_party;$(VcpkgRoot)installed\x64-windows\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
@@ -101,6 +101,9 @@
   <ItemGroup Label="sync (source)">
     <ClCompile Include="src\sync\SyncService.cpp" />
   </ItemGroup>
+  <ItemGroup Label="common (source)">
+    <ClCompile Include="src\common\StringUtils.cpp" />
+  </ItemGroup>
   <!-- ===== Header Files ===== -->
   <ItemGroup Label="auth (header)">
     <ClInclude Include="src\auth\AuthService.h" />
@@ -115,6 +118,7 @@
     <ClInclude Include="src\common\Logger.h" />
     <ClInclude Include="src\common\Snowflake.h" />
     <ClInclude Include="src\common\StringUtils.h" />
+    <ClInclude Include="src\common\TimeUtils.h" />
     <ClInclude Include="src\common\JsonConfig.h" />
   </ItemGroup>
   <ItemGroup Label="core\config (header)">

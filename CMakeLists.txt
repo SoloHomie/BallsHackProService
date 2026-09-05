@@ -88,6 +88,7 @@ set(SOURCES
     src/route/PeerRoutes.cpp
     src/payment/VPayService.cpp
     src/sync/SyncService.cpp
+    src/common/StringUtils.cpp
 )
 
 set(HEADERS
@@ -109,6 +110,7 @@ set(HEADERS
     src/email/SmtpClient.h
     src/email/EmailService.h
     src/common/StringUtils.h
+    src/common/TimeUtils.h
     src/common/Snowflake.h
     src/common/Logger.h
     src/common/JsonConfig.h
@@ -135,7 +137,8 @@ set(HEADERS
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
 
 target_include_directories(${PROJECT_NAME} PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src)
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
     OpenSSL::SSL
