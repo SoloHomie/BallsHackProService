@@ -14,12 +14,13 @@ public:
     explicit AuthService(DbPool& pool);
     ~AuthService();
 
-    std::string sendCode(const std::string &email, const std::string &purpose);
-    std::string login(const std::string &email, const std::string &password);
-    std::string loginWithCode(const std::string &email, const std::string &code);
-    std::string doRegister(const std::string &email, const std::string &password,
+    // email 均按值传入并在入口归一化 (trim + 小写, 见 normalizeEmail)
+    std::string sendCode(std::string email, const std::string &purpose);
+    std::string login(std::string email, const std::string &password);
+    std::string loginWithCode(std::string email, const std::string &code);
+    std::string doRegister(std::string email, const std::string &password,
                            const std::string &code, const std::string &username = {});
-    std::string resetPassword(const std::string &email, const std::string &code,
+    std::string resetPassword(std::string email, const std::string &code,
                               const std::string &newPassword);
 
     // ── OAuth ──────────────────────────────────────
@@ -45,6 +46,9 @@ public:
     void bindSession(const std::string &uid, const std::string &jti);
     // subscribed + subscription_expires JSON fields (MySQL direct query) for login/refresh responses
     std::string subFieldsJson(const std::string &email) const;
+
+    // 邮箱归一化: 去首尾空白 + 小写 (复制粘贴常带尾部换行, 会导致 exists 查无账号)
+    static std::string normalizeEmail(const std::string &email);
 
     // ── JSON response builders ─────────────────────
     static std::string jsonOk(const std::string &msg);

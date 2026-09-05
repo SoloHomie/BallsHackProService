@@ -54,12 +54,14 @@ void registerAuthRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
             std::string purpose = StringUtils::jsonVal(body, "purpose");
             if (purpose.empty()) purpose = "register";
             if (email.empty()) return AuthService::jsonErr("FIELDS_REQUIRED", "请输入邮箱");
+            email = AuthService::normalizeEmail(email);  // 限流键与下发统一走归一化邮箱
 
             try {
                 auto &r = RedisClient::instance();
                 // 同邮箱限制: 60秒内只能发1次
+                // (首请求可能在校验阶段失败, 此时验证码并未发出, 文案不说"已发送")
                 if (r.exists("rl:code:" + email))
-                    return AuthService::jsonErr("RATE_LIMIT", "验证码已发送，请60秒后再试");
+                    return AuthService::jsonErr("RATE_LIMIT", "请求过于频繁，请60秒后再试");
                 r.setex("rl:code:" + email, 60, "1");
 
                 // 同IP限制: 每小时最多5次
@@ -87,7 +89,8 @@ void registerAuthRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
     // ── 密码登录 ──────────────────────────────────
     server.route("POST", "/api/auth/login",
         [&](const std::string &body, const std::string &, const std::string &) {
-            std::string email = StringUtils::jsonVal(body, "email");
+            std::string email = AuthService::normalizeEmail(
+                StringUtils::jsonVal(body, "email"));  // 归一化后再查封禁, 防尾部空白绕过
             auto u = auth.userStore().findByEmail(email);
             if (u && u->status != 0)
                 return AuthService::jsonErr("BANNED", "账号已被封禁，请联系管理员");
@@ -97,7 +100,8 @@ void registerAuthRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
     // ── 验证码登录 ────────────────────────────────
     server.route("POST", "/api/auth/verify-login",
         [&](const std::string &body, const std::string &, const std::string &) {
-            std::string email = StringUtils::jsonVal(body, "email");
+            std::string email = AuthService::normalizeEmail(
+                StringUtils::jsonVal(body, "email"));  // 归一化后再查封禁, 防尾部空白绕过
             auto u = auth.userStore().findByEmail(email);
             if (u && u->status != 0)
                 return AuthService::jsonErr("BANNED", "账号已被封禁，请联系管理员");

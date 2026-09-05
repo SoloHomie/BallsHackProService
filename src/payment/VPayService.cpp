@@ -4,6 +4,9 @@
 #include <windows.h>
 #include <winhttp.h>
 #pragma comment(lib, "winhttp.lib")
+// MSVC 无 POSIX 名 popen/pclose, 映射到 _popen/_pclose
+#define popen _popen
+#define pclose _pclose
 #endif
 #include "VPayService.h"
 #include <exception>
@@ -22,7 +25,9 @@
 #include <fstream>
 #include <ctime>
 #include <algorithm>
+#ifndef _WIN32
 #include <unistd.h>
+#endif
 #include <mutex>
 
 // ── base64 编码 ──
@@ -156,7 +161,11 @@ static std::string httpReq(const std::string &url, const std::string &postData, 
         if(fp){char bf[4096];while(fgets(bf,sizeof(bf),fp))r+=bf;pclose(fp);}
         if (!r.empty()) break;
         printf("[VPay] http empty resp (attempt %d), retrying...\n", i + 1);
-        usleep(600 * 1000);
+#ifdef _WIN32
+        Sleep(600);                 // Windows 毫秒
+#else
+        usleep(600 * 1000);         // Linux 微秒
+#endif
     }
     return r;
 }

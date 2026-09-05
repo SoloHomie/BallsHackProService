@@ -17,6 +17,8 @@
 #include <iomanip>
 #include <chrono>
 #include <ctime>
+#include <algorithm>
+#include <cctype>
 
 static std::string JWT_SECRET = Env::required("BH_JWT_SECRET");
 
@@ -79,11 +81,25 @@ std::string AuthService::jsonErr(const std::string &code, const std::string &msg
            "\",\"message\":\"" + jsonEscape(msg) + "\"}";
 }
 
+// ── normalizeEmail ─────────────────────────────────────
+// 去首尾空白 + 小写。客户端复制粘贴邮箱常带尾部换行/空格,
+// 原样比对会导致 exists() 查无账号 → 误报"该账号不存在"。
+std::string AuthService::normalizeEmail(const std::string &email) {
+    size_t b = 0, e = email.size();
+    while (b < e && std::isspace(static_cast<unsigned char>(email[b]))) ++b;
+    while (e > b && std::isspace(static_cast<unsigned char>(email[e - 1]))) --e;
+    std::string out = email.substr(b, e - b);
+    std::transform(out.begin(), out.end(), out.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return out;
+}
+
 // ── sendCode ─────────────────────────────────────────
-std::string AuthService::sendCode(const std::string &email,
+std::string AuthService::sendCode(std::string email,
                                    const std::string &purpose) {
     if (email.empty())
         return jsonErr("EMAIL_REQUIRED", "请输入邮箱地址");
+    email = normalizeEmail(email);
     if (!validEmail(email))
         return jsonErr("INVALID_EMAIL", "邮箱格式不正确");
 
@@ -130,9 +146,10 @@ std::string AuthService::sendCode(const std::string &email,
 }
 
 // ── login (password) ────────────────────────────────
-std::string AuthService::login(const std::string &email, const std::string &password) {
+std::string AuthService::login(std::string email, const std::string &password) {
     if (email.empty() || password.empty())
         return jsonErr("FIELDS_REQUIRED", "请输入邮箱和密码");
+    email = normalizeEmail(email);
     if (!validEmail(email))
         return jsonErr("INVALID_EMAIL", "邮箱格式不正确");
 
@@ -172,10 +189,11 @@ std::string AuthService::login(const std::string &email, const std::string &pass
 }
 
 // ── loginWithCode ────────────────────────────────────
-std::string AuthService::loginWithCode(const std::string &email,
+std::string AuthService::loginWithCode(std::string email,
                                         const std::string &code) {
     if (email.empty() || code.empty())
         return jsonErr("FIELDS_REQUIRED", "请输入邮箱和验证码");
+    email = normalizeEmail(email);
     if (!validEmail(email))
         return jsonErr("INVALID_EMAIL", "邮箱格式不正确");
     if (!m_users.exists(email))
@@ -212,10 +230,11 @@ std::string AuthService::loginWithCode(const std::string &email,
 }
 
 // ── register ────────────────────────────────────────
-std::string AuthService::doRegister(const std::string &email, const std::string &password,
+std::string AuthService::doRegister(std::string email, const std::string &password,
                                      const std::string &code, const std::string &username) {
     if (email.empty() || password.empty() || code.empty())
         return jsonErr("FIELDS_REQUIRED", "请填写邮箱、密码和验证码");
+    email = normalizeEmail(email);
     if (!validEmail(email))
         return jsonErr("INVALID_EMAIL", "邮箱格式不正确");
     if (!validPassword(password))
@@ -234,10 +253,11 @@ std::string AuthService::doRegister(const std::string &email, const std::string 
 }
 
 // ── resetPassword ───────────────────────────────────
-std::string AuthService::resetPassword(const std::string &email, const std::string &code,
+std::string AuthService::resetPassword(std::string email, const std::string &code,
                                         const std::string &newPassword) {
     if (email.empty() || code.empty() || newPassword.empty())
         return jsonErr("FIELDS_REQUIRED", "请填写邮箱、验证码和新密码");
+    email = normalizeEmail(email);
     if (!validEmail(email))
         return jsonErr("INVALID_EMAIL", "邮箱格式不正确");
     if (!validPassword(newPassword))

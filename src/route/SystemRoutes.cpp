@@ -300,7 +300,8 @@ void registerSystemRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
                     return parts;
                 };
                 auto av = split(a), bv = split(b);
-                size_t maxLen = std::max(av.size(), bv.size());
+                // (std::max) 加括号: 防 windows.h 的 max 宏冲突 (Linux 无此问题)
+                size_t maxLen = (std::max)(av.size(), bv.size());
                 av.resize(maxLen, 0);
                 bv.resize(maxLen, 0);
                 for (size_t i = 0; i < maxLen; ++i) {
