@@ -80,6 +80,8 @@ set(SOURCES
     src/route/AuthRoutes.cpp
     src/route/WalletRoutes.cpp
     src/route/SystemRoutes.cpp
+    src/route/AdminRoutes.cpp
+    src/route/UpdateRoutes.cpp
     src/route/PaymentRoutes.cpp
     src/route/WelfareRoutes.cpp
     src/route/RedeemRoutes.cpp
@@ -87,9 +89,10 @@ set(SOURCES
     src/route/AssetRoutes.cpp
     src/route/PeerRoutes.cpp
     src/payment/VPayService.cpp
-    src/sync/SyncService.cpp
     src/common/StringUtils.cpp
     src/welfare/WelfareStore.cpp
+    src/redeem/RedeemStore.cpp
+    src/peer/PeerStore.cpp
 )
 
 set(HEADERS
@@ -125,15 +128,19 @@ set(HEADERS
     src/route/AuthRoutes.h
     src/route/WalletRoutes.h
     src/route/SystemRoutes.h
+    src/route/AdminRoutes.h
+    src/route/UpdateRoutes.h
     src/route/PaymentRoutes.h
     src/route/WelfareRoutes.h
     src/route/RedeemRoutes.h
     src/route/SyncRoutes.h
     src/route/AssetRoutes.h
     src/route/PeerRoutes.h
+    src/route/RouteGuard.h
     src/payment/VPayService.h
-    src/sync/SyncService.h
     src/welfare/WelfareStore.h
+    src/redeem/RedeemStore.h
+    src/peer/PeerStore.h
 )
 
 # ── Executable ────────────────────────────────────────

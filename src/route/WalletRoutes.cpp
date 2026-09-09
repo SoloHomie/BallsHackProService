@@ -1,5 +1,6 @@
 #include "WalletRoutes.h"
 
+#include "RouteGuard.h"
 #include "../core/server/HttpServer.h"
 #include "../auth/AuthService.h"
 #include <string>
@@ -11,10 +12,9 @@ void registerWalletRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
 
     // ── 钱包余额 ──────────────────────────────────
     server.route("GET", "/api/wallet/balance",
-        [&](const std::string &, const std::string &, const std::string &headers) {
-            auto tp = auth.authenticate(headers);
-            if (!tp) return AuthService::jsonErr("UNAUTHORIZED", "请先登录");
-            unsigned long long bal = auth.userStore().balanceOf(std::stoull(tp->sub));
+        [&](const std::string &, const std::string &, const std::string &) {
+            const auto &tp = route::currentUser();
+            unsigned long long bal = auth.userStore().balanceOf(std::stoull(tp.sub));
             return "{\"success\":true,\"balance\":" + std::to_string(bal) + "}";
-        });
+        }, route::requireAuth(auth));
 }

@@ -92,11 +92,15 @@ bool SmtpClient::sendMail(const std::string &to,
                           const std::string &subject,
                           const std::string &htmlBody,
                           std::function<void(const std::string &)> onLog) {
-    m_lastError.clear();
+    {
+        std::lock_guard<std::mutex> lk(m_lastErrorMtx);
+        m_lastError.clear();
+    }
     std::function<void(const std::string &)> logFn = onLog;
 
     CURL *curl = curl_easy_init();
     if (!curl) {
+        std::lock_guard<std::mutex> lk(m_lastErrorMtx);
         m_lastError = "curl_easy_init() failed";
         return false;
     }
@@ -154,9 +158,14 @@ bool SmtpClient::sendMail(const std::string &to,
     curl_easy_cleanup(curl);
 
     if (res != CURLE_OK) {
-        m_lastError = std::string("SMTP: ") + curl_easy_strerror(res);
-        Logger::err("Email", "SMTP send failed to " + to + ": " + m_lastError);
-        if (logFn) logFn(m_lastError);
+        std::string err;
+        {
+            std::lock_guard<std::mutex> lk(m_lastErrorMtx);
+            m_lastError = std::string("SMTP: ") + curl_easy_strerror(res);
+            err = m_lastError;
+        }
+        Logger::err("Email", "SMTP send failed to " + to + ": " + err);
+        if (logFn) logFn(err);
         return false;
     }
 

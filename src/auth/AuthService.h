@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <memory>
+#include <vector>
 #include "CodeManager.h"
 #include "UserStore.h"
 #include "TokenService.h"
@@ -49,6 +50,13 @@ public:
 
     // 邮箱归一化: 去首尾空白 + 小写 (复制粘贴常带尾部换行, 会导致 exists 查无账号)
     static std::string normalizeEmail(const std::string &email);
+
+    // ── 在线管理 (2026-09-09 收敛自 SystemRoutes admin 直连 Redis) ──
+    struct OnlineUser { std::string uid; std::string email; };
+    std::vector<OnlineUser> onlineUsers() const;         // 扫描 Redis online:* (heartbeat 写入)
+    void kickUser(const std::string &uid, const std::string &email);
+        // 写 kicked:<uid> 5 分钟窗口 (客户端 5s 心跳必能收到); uid 空则按 email 查
+    void clearKick(uint64_t uid);                        // 解封后清踢标记 (幂等)
 
     // ── JSON response builders ─────────────────────
     static std::string jsonOk(const std::string &msg);

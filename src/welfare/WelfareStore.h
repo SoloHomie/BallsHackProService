@@ -35,6 +35,16 @@ public:
     // 领取: 校验活动有效/未领过 → 插入 welfare_claims → 发放订阅天数 → 返回新到期时间
     ClaimResult claim(uint64_t uid, uint64_t eventId, const std::string &email);
 
+    // ── 管理定向发放 (2026-09-09 收敛自 SystemRoutes admin 直连 SQL) ──
+    // 定向专属福利: 发到指定用户, 仅该用户可见可领; 领取=加 N 天 Pro
+    bool grantTargeted(const std::string &email, int days, const std::string &name,
+                       const std::string &desc, int expiresDays);
+
+    // 按累计充值金额批量发福利; 幂等: 同用户+同福利名且未过期 → 跳过
+    struct GrantByAmountResult { int granted = 0; int skipped = 0; };
+    GrantByAmountResult grantByAmount(long long minYuan, int days, const std::string &name,
+                                      const std::string &desc, int expiresDays);
+
 private:
     DbPool &m_pool;
 };

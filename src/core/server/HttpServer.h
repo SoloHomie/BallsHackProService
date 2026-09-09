@@ -35,6 +35,7 @@
 #include <memory>
 #include <mutex>
 #include <condition_variable>
+#include <optional>
 
 class TlsContext;
 class TlsConnection;
@@ -50,13 +51,18 @@ public:
     using StreamHandler = std::function<void(socket_t sock, TlsConnection *tls,
                                              const std::string &query)>;
 
+    // ── 鉴权守卫: handler 执行前统一拦截 (2026-09-09 收敛 42 处鉴权样板) ──
+    // 返回 nullopt=通过; 返回 string=错误响应体 (按 422 发送)。
+    using AuthFn = std::function<std::optional<std::string>(const std::string &headers)>;
+
     HttpServer();
     ~HttpServer();
 
     bool start(uint16_t port, bool useTls = true);
     void stop();
 
-    void route(const std::string &method, const std::string &path, Handler h);
+    void route(const std::string &method, const std::string &path, Handler h,
+               AuthFn guard = nullptr);
     void routeStream(const std::string &method, const std::string &path, StreamHandler h);
 
 private:
@@ -67,9 +73,8 @@ private:
     std::string    readRequest(socket_t sock, TlsConnection *tls);
     void           sendResponse(socket_t sock, TlsConnection *tls,
                                 int status, const std::string &body,
-                                const std::string &redirectUrl = "");
-    void           sendStreamHeader(socket_t sock, TlsConnection *tls,
-                                    const std::string &contentType, size_t fileSize);
+                                const std::string &redirectUrl = "",
+                                const std::string &reqId = "");
 
     struct Parsed {
         std::string method;
@@ -84,10 +89,19 @@ private:
     std::atomic<bool> m_running{false};
     std::thread m_acceptThread;
     bool m_useTls = false;
+    // 活跃连接计数 (2026-09-09: 兑现 ServerConfig::MAX_CONN 上限,
+    // 此前定义存在但从未引用, 无限 detach 线程是 DoS 敞口)
+    std::atomic<int> m_activeConns{0};
 
     std::unique_ptr<TlsContext> m_tlsCtx;
 
-    struct Route { std::string method, path; Handler handler; bool isStream = false; StreamHandler streamHandler; };
+    struct Route {
+        std::string method, path;
+        Handler handler;
+        bool isStream = false;
+        StreamHandler streamHandler;
+        AuthFn guard;   // 鉴权守卫 (nullptr=公开接口)
+    };
     std::vector<Route> m_routes;
 
 #ifdef _WIN32

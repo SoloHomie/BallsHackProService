@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <optional>
 #include <vector>
+#include <memory>
 
 class DbPool;
 struct PayOrder { uint64_t orderId, userId, amount; uint32_t durationDays; std::string status, tradeNo; };
@@ -26,7 +27,18 @@ public:
     bool refundOrder(uint64_t orderId, const std::string &moneyYuan, std::string &err);  // ikunpay refund
     // 对账扫描: 返回 cutoffId (雪花ID时间下界) 之后创建的未支付订单ID
     std::vector<uint64_t> pendingOrdersSince(uint64_t cutoffId, int limit);
-    static const std::vector<PricePlan>& plans();
+
+    // ── 退款全流程 (2026-09-09 收敛自 SystemRoutes admin/refund 直连 SQL) ──
+    // 查 paid 订单 → (非 force) 平台逐笔退款 → 标记 refunded → 清订阅+缓存
+    struct RefundResult {
+        bool ok = false; std::string errcode, msg;
+        long long cnt = 0, totalCents = 0;   // paid 订单数与总额(分)
+        bool noPaidOrders = false;           // 无付费记录 (未做任何变更)
+    };
+    RefundResult refundUserOrders(uint64_t uid, bool forceRefund);
+
+    // 套餐列表 (copy-on-write: 2026-09-09 修复无锁缓存, 读者持有旧快照安全遍历)
+    static std::shared_ptr<const std::vector<PricePlan>> plans();
 private:
     std::string readFile(const std::string &path) const;
     std::string buildSignStr(const std::vector<std::pair<std::string,std::string>> &params) const;

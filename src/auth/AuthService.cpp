@@ -7,6 +7,7 @@
 #include "../core/database/DbPool.h"
 #include "../common/Snowflake.h"
 #include "../common/TimeUtils.h"
+#include "../common/StringUtils.h"
 #include "../email/EmailService.h"
 #include "../auth/OAuthService.h"
 #include "../core/config/ServerConfig.h"
@@ -20,6 +21,7 @@
 #include <ctime>
 #include <algorithm>
 #include <cctype>
+#include <iterator>
 
 static std::string JWT_SECRET = Env::required("BH_JWT_SECRET");
 
@@ -47,20 +49,10 @@ AuthService::AuthService(DbPool& pool)
 AuthService::~AuthService() = default;
 
 // ── JSON utilities ──────────────────────────────────
+// jsonEscape 唯一实现已下移 common/StringUtils (2026-09-09);
+// 此转发保留旧调用点, 新代码直接用 StringUtils::jsonEscape。
 std::string AuthService::jsonEscape(const std::string &s) {
-    std::string r;
-    r.reserve(s.size() + 4);
-    for (char c : s) {
-        switch (c) {
-        case '"':  r += "\\\""; break;
-        case '\\': r += "\\\\"; break;
-        case '\n': r += "\\n";  break;
-        case '\r': r += "\\r";  break;
-        case '\t': r += "\\t";  break;
-        default:   r += c;
-        }
-    }
-    return r;
+    return StringUtils::jsonEscape(s);
 }
 
 std::string AuthService::jsonOk(const std::string &msg) {
@@ -491,4 +483,42 @@ bool AuthService::validPassword(const std::string &pw) const {
         if (std::isdigit(static_cast<unsigned char>(c))) hasD = true;
     }
     return hasL && hasD;
+}
+
+// ═══════════════════════════════════════════════════════
+//  在线管理 (2026-09-09 收敛自 SystemRoutes admin 直连 Redis)
+// ═══════════════════════════════════════════════════════
+std::vector<AuthService::OnlineUser> AuthService::onlineUsers() const {
+    std::vector<OnlineUser> out;
+    try {
+        auto &r = RedisClient::instance();
+        std::vector<std::string> keys;
+        r.keys("online:*", std::back_inserter(keys));
+        for (const auto &k : keys) {
+            auto email = r.get(k);
+            if (!email) continue;
+            out.push_back({k.substr(7), *email});
+        }
+    } catch (...) {}
+    return out;
+}
+
+void AuthService::kickUser(const std::string &uid, const std::string &email) {
+    try {
+        auto &r = RedisClient::instance();
+        if (!uid.empty()) {
+            // 5分钟窗口: 客户端5s心跳必能收到; 覆盖短暂离线/重启场景
+            r.setex("kicked:" + uid, 300, "1");
+        } else {
+            // 通过 email 找 uid
+            auto user = m_users.findByEmail(email);
+            if (user) r.setex("kicked:" + std::to_string(user->id), 300, "1");
+        }
+    } catch (...) {}
+}
+
+void AuthService::clearKick(uint64_t uid) {
+    try {
+        RedisClient::instance().del("kicked:" + std::to_string(uid));
+    } catch (...) {}
 }

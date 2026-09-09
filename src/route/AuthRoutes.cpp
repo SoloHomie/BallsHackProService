@@ -1,4 +1,5 @@
 #include "AuthRoutes.h"
+#include "RouteGuard.h"
 
 #include "../core/server/HttpServer.h"
 #include "../auth/AuthService.h"
@@ -10,10 +11,6 @@
 #include "../core/cache/RedisClient.h"
 #include "../core/database/DbPool.h"
 
-#include <chrono>
-#include <cstring>
-#include <ctime>
-#include <iomanip>
 #include <sstream>
 
 // ── OAuth URL 构建辅助（github / discord 共用）────────────
@@ -191,10 +188,9 @@ void registerAuthRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
 
     // ── OAuth 绑定列表 ────────────────────────────
     server.route("GET", "/api/auth/oauth/links",
-        [&](const std::string &, const std::string &, const std::string &headers) {
-            auto tp = auth.authenticate(headers);
-            if (!tp) return AuthService::jsonErr("UNAUTHORIZED", "请先登录");
-            auto links = auth.userStore().listOAuthLinks(tp->email);
+        [&](const std::string &, const std::string &, const std::string &) {
+            const auto &tp = route::currentUser();
+            auto links = auth.userStore().listOAuthLinks(tp.email);
             std::ostringstream json;
             json << "{\"success\":true,\"links\":[";
             for (size_t i = 0; i < links.size(); ++i) {
@@ -206,20 +202,19 @@ void registerAuthRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
             }
             json << "]}";
             return json.str();
-        });
+        }, route::requireAuth(auth));
 
     // ── OAuth 解绑 ────────────────────────────────
     server.route("POST", "/api/auth/oauth/unlink",
-        [&](const std::string &body, const std::string &, const std::string &headers) {
-            auto tp = auth.authenticate(headers);
-            if (!tp) return AuthService::jsonErr("UNAUTHORIZED", "请先登录");
+        [&](const std::string &body, const std::string &, const std::string &) {
+            const auto &tp = route::currentUser();
             std::string provider = StringUtils::jsonVal(body, "provider");
             if (provider.empty())
                 return AuthService::jsonErr("FIELDS_REQUIRED", "请指定要解绑的平台");
-            if (auth.userStore().unlinkOAuth(tp->email, provider))
+            if (auth.userStore().unlinkOAuth(tp.email, provider))
                 return AuthService::jsonOk("解绑成功");
             return AuthService::jsonErr("UNLINK_FAILED", "解绑失败，请稍后重试");
-        });
+        }, route::requireAuth(auth));
 
     // ── Token 刷新 ────────────────────────────────
     server.route("POST", "/api/auth/refresh",
@@ -389,59 +384,34 @@ void registerAuthRoutes(HttpServer &server, AuthService &auth, DbPool &pool) {
     // username update
     // ── 获取用户信息 ────────────────────────────────
     server.route("GET", "/api/user/profile",
-        [&](const std::string &, const std::string &, const std::string &h) {
-            auto tp = auth.authenticate(h);
-            if (!tp) return AuthService::jsonErr("UNAUTHORIZED", "login required");
-            uint64_t uid = std::stoull(tp->sub);
-            auto g = pool.acquire(5000);
-            if (!g) return AuthService::jsonErr("DB_ERROR", "db busy");
-            char qb[512];
-            snprintf(qb, sizeof(qb),
-                "SELECT email, username, COALESCE(avatar_url,'') AS av, provider, "
-                "UNIX_TIMESTAMP(GREATEST(COALESCE(subscription_expires, NOW()), NOW())) AS sub_exp, "
-                "balance FROM users WHERE id=%llu", uid);
-            mysql_query(g->get(), qb);
-            MYSQL_RES *res = mysql_store_result(g->get());
-            if (!res || mysql_num_rows(res) == 0) {
-                if (res) mysql_free_result(res);
-                return AuthService::jsonErr("NOT_FOUND", "user not found");
-            }
-            MYSQL_ROW r = mysql_fetch_row(res);
+        [&](const std::string &, const std::string &, const std::string &) {
+            const auto &tp = route::currentUser();
+            // SQL 已收敛到 UserStore::profileOf (2026-09-09)
+            auto p = auth.userStore().profileOf(std::stoull(tp.sub));
+            if (!p) return AuthService::jsonErr("NOT_FOUND", "user not found");
             std::ostringstream j;
             j << "{\"success\":true,\"user\":{"
-              << "\"email\":\"" << AuthService::jsonEscape(r[0]?r[0]:"") << "\""
-              << ",\"username\":\"" << AuthService::jsonEscape(r[1]?r[1]:"") << "\""
-              << ",\"avatar_url\":\"" << AuthService::jsonEscape(r[2]?r[2]:"") << "\""
-              << ",\"provider\":\"" << AuthService::jsonEscape(r[3]?r[3]:"local") << "\""
-              << ",\"subscription_expires\":" << (r[4]?r[4]:"0")
-              << ",\"balance\":" << (r[5]?r[5]:"0")
+              << "\"email\":\"" << AuthService::jsonEscape(p->email) << "\""
+              << ",\"username\":\"" << AuthService::jsonEscape(p->username) << "\""
+              << ",\"avatar_url\":\"" << AuthService::jsonEscape(p->avatarUrl) << "\""
+              << ",\"provider\":\"" << AuthService::jsonEscape(p->provider.empty() ? "local" : p->provider) << "\""
+              << ",\"subscription_expires\":" << p->subExpiresTs
+              << ",\"balance\":" << (p->balance.empty() ? "0" : p->balance)
               << "}}";
-            mysql_free_result(res);
             return j.str();
-        });
+        }, route::requireAuth(auth));
 
     server.route("POST", "/api/user/update-profile",
-        [&](const std::string &body, const std::string &, const std::string &h) {
-            auto tp = auth.authenticate(h);
-            if (!tp) return AuthService::jsonErr("UNAUTHORIZED", "login required");
+        [&](const std::string &body, const std::string &, const std::string &) {
+            const auto &tp = route::currentUser();
             std::string nn = StringUtils::jsonVal(body, "username");
             if (nn.empty()) return AuthService::jsonErr("FIELDS_REQUIRED", "username required");
             if (nn.size() < 2 || nn.size() > 20) return AuthService::jsonErr("INVALID_NAME", "2-20 chars");
             // 过滤特殊字符, 防SQL注入
             for (char c : nn) { if (!isalnum((unsigned char)c) && c != '_' && c != '-') return AuthService::jsonErr("INVALID_NAME", "only a-z 0-9 _ -"); }
-            auto g = pool.acquire(5000);
-            if (!g) return AuthService::jsonErr("DB_ERROR", "db busy");
-            // 参数化查询
-            MYSQL_STMT *stmt = mysql_stmt_init(g->get());
-            const char* q = "UPDATE users SET username=? WHERE id=?";
-            mysql_stmt_prepare(stmt, q, strlen(q));
-            MYSQL_BIND b[2] = {};
-            b[0].buffer_type = MYSQL_TYPE_STRING; b[0].buffer = (void*)nn.c_str(); b[0].buffer_length = nn.size();
-            unsigned long long uid = std::stoull(tp->sub);
-            b[1].buffer_type = MYSQL_TYPE_LONGLONG; b[1].buffer = &uid;
-            mysql_stmt_bind_param(stmt, b);
-            mysql_stmt_execute(stmt);
-            mysql_stmt_close(stmt);
+            // SQL 收敛到 UserStore::updateUsername (2026-09-09)
+            if (!auth.userStore().updateUsername(std::stoull(tp.sub), nn))
+                return AuthService::jsonErr("DB_ERROR", "db busy");
             return AuthService::jsonOk("ok");
-        });
+        }, route::requireAuth(auth));
 }

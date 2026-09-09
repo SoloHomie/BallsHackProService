@@ -85,6 +85,8 @@
     <ClCompile Include="src\route\PaymentRoutes.cpp" />
     <ClCompile Include="src\route\WelfareRoutes.cpp" />
     <ClCompile Include="src\route\SystemRoutes.cpp" />
+    <ClCompile Include="src\route\AdminRoutes.cpp" />
+    <ClCompile Include="src\route\UpdateRoutes.cpp" />
     <ClCompile Include="src\route\WalletRoutes.cpp" />
     <ClCompile Include="src\route\SyncRoutes.cpp" />
     <ClCompile Include="src\route\PeerRoutes.cpp" />
@@ -99,7 +101,6 @@
     <ClCompile Include="src\payment\VPayService.cpp" />
   </ItemGroup>
   <ItemGroup Label="sync (source)">
-    <ClCompile Include="src\sync\SyncService.cpp" />
   </ItemGroup>
   <ItemGroup Label="common (source)">
     <ClCompile Include="src\common\StringUtils.cpp" />
@@ -109,6 +110,18 @@
   </ItemGroup>
   <ItemGroup Label="welfare (header)">
     <ClInclude Include="src\welfare\WelfareStore.h" />
+  </ItemGroup>
+  <ItemGroup Label="redeem (source)">
+    <ClCompile Include="src\redeem\RedeemStore.cpp" />
+  </ItemGroup>
+  <ItemGroup Label="redeem (header)">
+    <ClInclude Include="src\redeem\RedeemStore.h" />
+  </ItemGroup>
+  <ItemGroup Label="peer (source)">
+    <ClCompile Include="src\peer\PeerStore.cpp" />
+  </ItemGroup>
+  <ItemGroup Label="peer (header)">
+    <ClInclude Include="src\peer\PeerStore.h" />
   </ItemGroup>
   <!-- ===== Header Files ===== -->
   <ItemGroup Label="auth (header)">
@@ -158,10 +171,15 @@
     <ClInclude Include="src\route\AuthRoutes.h" />
     <ClInclude Include="src\route\PaymentRoutes.h" />
     <ClInclude Include="src\route\SystemRoutes.h" />
+    <ClInclude Include="src\route\AdminRoutes.h" />
+    <ClInclude Include="src\route\UpdateRoutes.h" />
     <ClInclude Include="src\route\WalletRoutes.h" />
     <ClInclude Include="src\route\WelfareRoutes.h" />
+    <ClInclude Include="src\route\RedeemRoutes.h" />
+    <ClInclude Include="src\route\AssetRoutes.h" />
     <ClInclude Include="src\route\SyncRoutes.h" />
     <ClInclude Include="src\route\PeerRoutes.h" />
+    <ClInclude Include="src\route\RouteGuard.h" />
   </ItemGroup>
   <ItemGroup Label="view (header)">
     <ClInclude Include="src\view\EmailPage.h" />
@@ -171,7 +189,6 @@
     <ClInclude Include="src\payment\VPayService.h" />
   </ItemGroup>
   <ItemGroup Label="sync (header)">
-    <ClInclude Include="src\sync\SyncService.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="announcement.json" />

@@ -1,4 +1,5 @@
 #include "WelfareRoutes.h"
+#include "RouteGuard.h"
 #include "../core/server/HttpServer.h"
 #include "../auth/AuthService.h"
 #include "../common/StringUtils.h"
@@ -13,12 +14,11 @@ void registerWelfareRoutes(HttpServer &server, AuthService &auth, DbPool &pool) 
 
     // ── 可领取列表 ──
     server.route("GET", "/api/welfare/available",
-        [&](const std::string &, const std::string &, const std::string &headers) {
-            auto tp = auth.authenticate(headers);
-            if (!tp) return AuthService::jsonErr("UNAUTHORIZED", "请先登录");
-            uint64_t uid = std::stoull(tp->sub);
+        [&](const std::string &, const std::string &, const std::string &) {
+            const auto &tp = route::currentUser();
+            uint64_t uid = std::stoull(tp.sub);
 
-            auto events = store.listAvailable(uid, tp->email);
+            auto events = store.listAvailable(uid, tp.email);
             std::string json = "{\"success\":true,\"events\":[";
             bool first = true;
             for (const auto &e : events) {
@@ -35,19 +35,18 @@ void registerWelfareRoutes(HttpServer &server, AuthService &auth, DbPool &pool) 
             }
             json += "]}";
             return json;
-        });
+        }, route::requireAuth(auth));
 
     // ── 领取福利 ──
     server.route("POST", "/api/welfare/claim",
-        [&](const std::string &body, const std::string &, const std::string &headers) {
-            auto tp = auth.authenticate(headers);
-            if (!tp) return AuthService::jsonErr("UNAUTHORIZED", "请先登录");
-            uint64_t uid = std::stoull(tp->sub);
+        [&](const std::string &body, const std::string &, const std::string &) {
+            const auto &tp = route::currentUser();
+            uint64_t uid = std::stoull(tp.sub);
             std::string eidStr = StringUtils::jsonVal(body, "event_id");
             if (eidStr.empty()) return AuthService::jsonErr("FIELDS_REQUIRED", "请选择福利");
             uint64_t eid = std::stoull(eidStr);
 
-            auto res = store.claim(uid, eid, tp->email);
+            auto res = store.claim(uid, eid, tp.email);
             if (!res.ok) return AuthService::jsonErr(res.errcode, res.msg);
 
             // 同步订阅缓存 (唯一实现 SubCache::write)
@@ -56,5 +55,5 @@ void registerWelfareRoutes(HttpServer &server, AuthService &auth, DbPool &pool) 
 
             return AuthService::jsonOk("领取成功！获得 " + std::to_string(res.days) + " 天 Pro 会员~",
                                        "days", std::to_string(res.days));
-        });
+        }, route::requireAuth(auth));
 }

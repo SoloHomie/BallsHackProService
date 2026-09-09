@@ -52,19 +52,24 @@ BallsHackProService/
 │   │   └── config/            # 环境变量读取 (Env) / 服务端常量 (ServerConfig)
 │   ├── auth/                  # ★ 认证核心
 │   │   ├── AuthService        # 注册/登录/验证码登录/重置密码/OAuth/封禁
-│   │   ├── UserStore          # users 表全部读写 (exists/findByEmail/create/封禁)
+│   │   ├── UserStore          # users 表全部读写 (exists/findByEmail/create/封禁/管理操作/设备绑定)
 │   │   ├── CodeManager        # 邮箱验证码 (Redis code:/cooldown:/used: 键)
 │   │   ├── SessionManager     # 会话/单设备登录/refresh token
 │   │   ├── TokenService       # JWT 生成与校验
 │   │   ├── PasswordHash       # 密码哈希 (salt + hash)
 │   │   └── OAuthService       # GitHub/Discord 第三方登录
 │   ├── route/                 # ★ API 路由（一个文件一组接口，见 §三）
-│   ├── payment/               # ikunpay 支付 (VPayService: 下单/回调验签/订单表)
-│   ├── sync/                  # 房间/双端远程控制 (控制方-受控方坐标流转)
+│   │   └── RouteGuard.h       # 统一鉴权守卫 (requireAuth/Admin/Subscribed, 2026-09-09)
+│   ├── payment/               # ikunpay 支付 (VPayService: 下单/回调验签/退款/对账)
+│   ├── peer/                  # 房间统一存储 (PeerStore: 纯 Redis 键族; sync+peer 两套接口共用, 2026-09-10 合并)
+│   ├── redeem/                # 兑换码 (RedeemStore: 事务+管理操作, 2026-09-09 收敛)
+│   ├── welfare/               # 福利 (WelfareStore)
 │   ├── email/                 # SMTP 验证码邮件 (resend)
 │   ├── view/                  # OAuth 回调页 / 邮件 HTML 模板
 │   ├── data/                  # (预留) 数据文件
 │   └── common/                # JSON 解析、Snowflake ID、字符串工具
+├── docs/                      # ★ 模块业务文档 (auth/payment/sync-peer/core/ROUTES, 2026-09-09)
+├── CODING_STANDARDS.md        # 编码规范 (8 条, 2026-09-09)
 ├── bot/                       # Discord 管理机器人 (python, main.py)
 ├── tools/                     # gen_beautify.ps1 (美化资源清单生成)
 ├── html/                      # 静态模板 (OAuth 回调页等)
@@ -87,7 +92,7 @@ BallsHackProService/
 | 支付 | `/api/payment/*` | route/PaymentRoutes.cpp | 下单、回调、订单查询 |
 | 福利 | `/api/welfare/*` | route/WelfareRoutes.cpp | 福利活动列表、领取 |
 | 钱包 | `/api/wallet/*` | route/WalletRoutes.cpp | 余额查询 |
-| 同步/远程 | `/api/sync/*`、`/api/peer/*` | route/SyncRoutes.cpp / PeerRoutes.cpp | 房间生命周期、双端远程控制坐标流转 |
+| 同步/远程 | `/api/sync/*`、`/api/peer/*` | route/SyncRoutes.cpp / PeerRoutes.cpp → peer/PeerStore | 房间生命周期、双端远程控制坐标流转（2026-09-10 统一 Redis 存储） |
 | 资产 | `/api/assets/*` | route/AssetRoutes.cpp | 美化资源清单、下载 |
 | 载荷 | `/api/payload/key` | route/SystemRoutes.cpp | 载荷解密密钥下发（订阅+设备风控门控） |
 | 系统 | `/api/announcement` 等 | route/SystemRoutes.cpp | 公告、版本检查（heartbeat 合并）、设备绑定 |
@@ -162,9 +167,9 @@ docker compose up -d --build        # 服务容器 (bhpro-app) + MySQL + Redis
 - 打开 `BallsHackProService.sln`，Debug x64。依赖 vcpkg（mysql/hiredis/openssl/curl）。
 - **已知 Windows 编译坑（都修过，改码时保持）**：
   - 无 `unistd.h` → 用 `#ifndef _WIN32` 守卫，`usleep` 换 `Sleep`
-  - 无 `popen/pclose` → MSVC 用 `_popen/_pclose`（见 VPayService.cpp 顶部映射）
   - `std::max/min` 与 windows.h 宏冲突 → 写 `(std::max)(...)`
-  - 新增 .cpp 记得加进 `BallsHackProService.vcxproj`（Linux CMake 是自动收集的，不会漏）
+  - 新增 .cpp/.h 记得**同时**加进 `BallsHackProService.vcxproj` 和 `CMakeLists.txt`（都是显式列表，漏了不编）
+  - 支付 HTTP 调用走 libcurl（2026-09-09 移除 popen curl，证书校验开启）
 
 ### 环境变量（全部必填，见 .env 模板；**勿提交真实值**）
 `BH_JWT_SECRET` `BH_DB_HOST/USER/PASSWORD` `BH_SMTP_*` `BH_OAUTH_GITHUB_*` `BH_OAUTH_DISCORD_*` `BH_PAYLOAD_KEY` `PAY_API_URL/APP_ID/APP_KEY/NOTIFY_URL/RETURN_URL` `PAY_TYPES` `PAY_MAINTENANCE`

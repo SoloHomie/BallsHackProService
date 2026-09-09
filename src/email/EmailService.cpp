@@ -47,9 +47,15 @@ bool EmailService::sendVerifyCode(const std::string &to, const std::string &code
     std::string subject = mimeEncode(std::string("BallsHackPro ") + label + "验证码");
     std::string html = buildHtml(code, ttlMin, label, desc);
 
-    m_lastError.clear();
+    {
+        std::lock_guard<std::mutex> lk(m_lastErrorMtx);
+        m_lastError.clear();
+    }
     return m_smtp->sendMail(to, subject, html,
-        [this](const std::string &msg) { m_lastError = msg; });
+        [this](const std::string &msg) {
+            std::lock_guard<std::mutex> lk(m_lastErrorMtx);
+            m_lastError = msg;
+        });
 }
 
 std::string EmailService::buildHtml(const std::string& code, int ttlMin,

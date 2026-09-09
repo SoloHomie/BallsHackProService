@@ -2,18 +2,16 @@
 #define WIN32_LEAN_AND_MEAN
 #include <winsock2.h>
 #include <windows.h>
-#include <winhttp.h>
-#pragma comment(lib, "winhttp.lib")
-// MSVC 无 POSIX 名 popen/pclose, 映射到 _popen/_pclose
-#define popen _popen
-#define pclose _pclose
 #endif
 #include "VPayService.h"
 #include <exception>
+#include <curl/curl.h>
 #include "../core/database/DbPool.h"
 #include "../common/Snowflake.h"
 #include "../common/StringUtils.h"
 #include "../core/cache/RedisClient.h"
+#include "../core/cache/SubCache.h"
+#include "../common/Logger.h"
 #include "../core/config/Env.h"
 #include <mysql/mysql.h>
 #include <openssl/evp.h>
@@ -29,6 +27,18 @@
 #include <unistd.h>
 #endif
 #include <mutex>
+
+// ── VPay 日志 (2026-09-10 收敛 39 处 printf → Logger: 带时间戳+模块名,
+//    格式串与参数原样保留, 仅输出目标改变) ──
+template<typename... Args>
+static void vlog(const char *fmt, Args... args) {
+    char buf[1024];
+    snprintf(buf, sizeof(buf), fmt, args...);
+    std::string msg(buf);
+    while (!msg.empty() && (msg.back() == '\n' || msg.back() == '\r'))
+        msg.pop_back();   // Logger 自带换行, 剥掉格式串里的
+    Logger::info("VPay", msg);
+}
 
 // ── base64 编码 ──
 static std::string b64enc(const unsigned char *d, int n) {
@@ -53,65 +63,71 @@ static std::vector<std::pair<std::string,std::string>> splitQuery(const std::str
     return out;
 }
 
-const std::vector<PricePlan>& VPayService::plans(){
-    static std::vector<PricePlan> s;
+std::shared_ptr<const std::vector<PricePlan>> VPayService::plans(){
+    static std::shared_ptr<const std::vector<PricePlan>> s;
     static time_t lastLoad = 0;
+    static std::mutex mtx;   // 2026-09-09: 原无锁缓存多线程 clear/refill 竞争
     time_t now = time(nullptr);
-    if (now - lastLoad < 5) return s;  // 5s cache
-    lastLoad = now;
+    {
+        std::lock_guard<std::mutex> lk(mtx);
+        if (now - lastLoad < 5 && s) return s;  // 5s cache
+        lastLoad = now;
 
-    s.clear();
-    std::string dir = Env::exeDir();
-    std::ifstream f(dir + "/pricing.json");
-    if (!f) {
-        s = {{"1","体验会员",500,1},{"2","周会员",2500,7},{"3","月会员",8800,30},
-             {"4","季会员",19800,90},{"5","年会员",28800,365}};
-        return s;
+        auto out = std::make_shared<std::vector<PricePlan>>();
+        std::string dir = Env::exeDir();
+        std::ifstream f(dir + "/pricing.json");
+        if (!f) {
+            *out = {{"1","体验会员",500,1},{"2","周会员",2500,7},{"3","月会员",8800,30},
+                    {"4","季会员",19800,90},{"5","年会员",28800,365}};
+            s = out;
+            return s;
+        }
+        std::ostringstream ss; ss << f.rdbuf();
+        std::string raw = ss.str();
+
+        // Simple manual JSON array parser (avoids Qt dependency)
+        auto extractStr = [](const std::string &src, const std::string &key) -> std::string {
+            auto pos = src.find("\"" + key + "\"");
+            if (pos == std::string::npos) return "";
+            pos = src.find(':', pos + key.size() + 2);
+            if (pos == std::string::npos) return "";
+            pos = src.find('"', pos + 1);
+            if (pos == std::string::npos) return "";
+            size_t end = src.find('"', pos + 1);
+            if (end == std::string::npos) return "";
+            return src.substr(pos + 1, end - pos - 1);
+        };
+        auto extractInt = [](const std::string &src, const std::string &key) -> int64_t {
+            auto pos = src.find("\"" + key + "\"");
+            if (pos == std::string::npos) return 0;
+            pos = src.find(':', pos + key.size() + 2);
+            if (pos == std::string::npos) return 0;
+            pos++; // skip ':'
+            while (pos < src.size() && (src[pos] == ' ' || src[pos] == '\t' || src[pos] == '\n')) pos++;
+            size_t end = pos;
+            while (end < src.size() && (isdigit(src[end]) || src[end] == '-')) end++;
+            if (end == pos) return 0;
+            return std::stoll(src.substr(pos, end - pos));
+        };
+
+        // Find each {...} object in the array
+        size_t p = raw.find('[');
+        if (p == std::string::npos) { *out = {{"1","fallback",500,1}}; s = out; return s; }
+        while (true) {
+            size_t objStart = raw.find('{', p);
+            if (objStart == std::string::npos) break;
+            size_t objEnd = raw.find('}', objStart);
+            if (objEnd == std::string::npos) break;
+            std::string obj = raw.substr(objStart, objEnd - objStart + 1);
+            out->push_back({extractStr(obj, "id"),
+                            extractStr(obj, "name"),
+                            (uint64_t)extractInt(obj, "amount"),
+                            (uint32_t)extractInt(obj, "days")});
+            p = objEnd + 1;
+        }
+        if (out->empty()) *out = {{"1","fallback",500,1}};
+        s = out;
     }
-    std::ostringstream ss; ss << f.rdbuf();
-    std::string raw = ss.str();
-
-    // Simple manual JSON array parser (avoids Qt dependency)
-    auto extractStr = [](const std::string &src, const std::string &key) -> std::string {
-        auto pos = src.find("\"" + key + "\"");
-        if (pos == std::string::npos) return "";
-        pos = src.find(':', pos + key.size() + 2);
-        if (pos == std::string::npos) return "";
-        pos = src.find('"', pos + 1);
-        if (pos == std::string::npos) return "";
-        size_t end = src.find('"', pos + 1);
-        if (end == std::string::npos) return "";
-        return src.substr(pos + 1, end - pos - 1);
-    };
-    auto extractInt = [](const std::string &src, const std::string &key) -> int64_t {
-        auto pos = src.find("\"" + key + "\"");
-        if (pos == std::string::npos) return 0;
-        pos = src.find(':', pos + key.size() + 2);
-        if (pos == std::string::npos) return 0;
-        pos++; // skip ':'
-        while (pos < src.size() && (src[pos] == ' ' || src[pos] == '\t' || src[pos] == '\n')) pos++;
-        size_t end = pos;
-        while (end < src.size() && (isdigit(src[end]) || src[end] == '-')) end++;
-        if (end == pos) return 0;
-        return std::stoll(src.substr(pos, end - pos));
-    };
-
-    // Find each {...} object in the array
-    size_t p = raw.find('[');
-    if (p == std::string::npos) { s = {{"1","fallback",500,1}}; return s; }
-    while (true) {
-        size_t objStart = raw.find('{', p);
-        if (objStart == std::string::npos) break;
-        size_t objEnd = raw.find('}', objStart);
-        if (objEnd == std::string::npos) break;
-        std::string obj = raw.substr(objStart, objEnd - objStart + 1);
-        s.push_back({extractStr(obj, "id"),
-                     extractStr(obj, "name"),
-                     (uint64_t)extractInt(obj, "amount"),
-                     (uint32_t)extractInt(obj, "days")});
-        p = objEnd + 1;
-    }
-    if (s.empty()) s = {{"1","fallback",500,1}};
     return s;
 }
 
@@ -134,11 +150,11 @@ std::string VPayService::buildSignStr(const std::vector<std::pair<std::string,st
 // ── RSA-SHA256 签名 (商户私钥 rsa_private.pem) ──
 std::string VPayService::rsaSignSha256(const std::string &data) const {
     std::string pem = readFile("rsa_private.pem");
-    if (pem.empty()) { printf("[VPay] rsa_private.pem missing\n"); return ""; }
+    if (pem.empty()) { vlog("[VPay] rsa_private.pem missing\n"); return ""; }
     BIO *b = BIO_new_mem_buf(pem.data(), (int)pem.size());
     EVP_PKEY *pk = PEM_read_bio_PrivateKey(b, nullptr, nullptr, nullptr);
     BIO_free(b);
-    if (!pk) { printf("[VPay] merchant private key parse FAILED\n"); return ""; }
+    if (!pk) { vlog("[VPay] merchant private key parse FAILED\n"); return ""; }
     EVP_MD_CTX *c = EVP_MD_CTX_new();
     std::string sig;
     if (EVP_DigestSignInit(c, nullptr, EVP_sha256(), nullptr, pk) == 1) {
@@ -152,15 +168,50 @@ std::string VPayService::rsaSignSha256(const std::string &data) const {
     return sig.empty() ? "" : b64enc((const unsigned char*)sig.data(), (int)sig.size());
 }
 
+// ── libcurl 封装 (2026-09-09 重构: 原 popen("curl -sk") 有两处隐患 ——
+//    1) URL/body 拼进 shell 命令行有注入面; 2) -k 关闭证书校验。
+//    改 libcurl 直调后 证书校验恢复 (VERIFYPEER+VERIFYHOST), 无 shell 中转) ──
+static size_t curlWriteCb(char *ptr, size_t size, size_t nmemb, void *userdata) {
+    size_t n = size * nmemb;
+    static_cast<std::string*>(userdata)->append(ptr, n);
+    return n;
+}
+
+static bool curlOnce(const std::string &url, const std::string &postData,
+                     bool isPost, long timeoutSec, const std::string &contentType,
+                     const std::string &extraHdr,
+                     std::string &out) {
+    CURL *c = curl_easy_init();
+    if (!c) return false;
+    struct curl_slist *hl = nullptr;
+    if (!contentType.empty())
+        hl = curl_slist_append(hl, ("Content-Type: " + contentType).c_str());
+    if (!extraHdr.empty())
+        hl = curl_slist_append(hl, extraHdr.c_str());
+    curl_easy_setopt(c, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(c, CURLOPT_TIMEOUT, timeoutSec);
+    curl_easy_setopt(c, CURLOPT_CONNECTTIMEOUT, 6L);
+    curl_easy_setopt(c, CURLOPT_WRITEFUNCTION, curlWriteCb);
+    curl_easy_setopt(c, CURLOPT_WRITEDATA, &out);
+    curl_easy_setopt(c, CURLOPT_SSL_VERIFYPEER, 1L);   // 恢复证书校验 (原 -k 关闭)
+    curl_easy_setopt(c, CURLOPT_SSL_VERIFYHOST, 2L);
+    if (isPost) {
+        curl_easy_setopt(c, CURLOPT_POST, 1L);
+        curl_easy_setopt(c, CURLOPT_POSTFIELDS, postData.c_str());
+    }
+    if (hl) curl_easy_setopt(c, CURLOPT_HTTPHEADER, hl);
+    CURLcode rc = curl_easy_perform(c);
+    if (hl) curl_slist_free_all(hl);
+    curl_easy_cleanup(c);
+    return rc == CURLE_OK;
+}
+
 static std::string httpReq(const std::string &url, const std::string &postData, bool isPost){
     std::string r;
     for (int i = 0; i < 3 && r.empty(); ++i) {
-        std::string cmd = "curl -sk --max-time 15 --connect-timeout 6 "
-            + (isPost ? std::string("-X POST \"") + url + "\" -d \"" + postData + "\"" : std::string("\"") + url + "\"");
-        FILE*fp=popen(cmd.c_str(),"r");
-        if(fp){char bf[4096];while(fgets(bf,sizeof(bf),fp))r+=bf;pclose(fp);}
+        curlOnce(url, postData, isPost, 15, "", "", r);
         if (!r.empty()) break;
-        printf("[VPay] http empty resp (attempt %d), retrying...\n", i + 1);
+        vlog("[VPay] http empty resp (attempt %d), retrying...\n", i + 1);
 #ifdef _WIN32
         Sleep(600);                 // Windows 毫秒
 #else
@@ -175,20 +226,12 @@ static std::string httpGet(const std::string &url){return httpReq(url,"",false);
 // ── 短超时 GET/POST (穿透链路用, 失败快速回退 jump 链接) ──
 static std::string httpReqT(const std::string &url, const std::string &data, bool isPost){
     std::string r;
-    std::string cmd = "curl -sk --max-time 8 --connect-timeout 6 "
-        + (isPost ? std::string("-X POST \"") + url + "\" -d \"" + data + "\"" : std::string("\"") + url + "\"");
-    FILE*fp=popen(cmd.c_str(),"r");
-    if(fp){char bf[4096];while(fgets(bf,sizeof(bf),fp))r+=bf;pclose(fp);}
+    curlOnce(url, data, isPost, 8, "", "", r);
     return r;
 }
 static std::string httpPostJsonT(const std::string &url, const std::string &json){
     std::string r;
-    // json 用单引号包裹: 双引号会被 shell 剥掉导致非法 JSON (上游报"订单号不能为空")
-    std::string cmd = "curl -sk --max-time 8 --connect-timeout 6 -X POST \"" + url + "\" "
-        "-H \"Content-Type: application/json; charset=utf-8\" -H \"X-Requested-With: XMLHttpRequest\" "
-        "--data-raw '" + json + "'";
-    FILE*fp=popen(cmd.c_str(),"r");
-    if(fp){char bf[4096];while(fgets(bf,sizeof(bf),fp))r+=bf;pclose(fp);}
+    curlOnce(url, json, true, 8, "application/json; charset=utf-8", "X-Requested-With: XMLHttpRequest", r);
     return r;
 }
 
@@ -274,7 +317,7 @@ static std::string resolveRealPayCode(const std::string &jumpUrl){
     std::string html=httpReqT(jumpUrl,"",false);
     std::string action; std::vector<std::pair<std::string,std::string>> fields;
     if(!extractForm(html,action,fields)){
-        printf("[VPay] jump page form parse FAILED, html(%.160s)\n",html.c_str());
+        vlog("[VPay] jump page form parse FAILED, html(%.160s)\n",html.c_str());
         return"";
     }
     // action 相对路径 → 相对 jumpUrl 解析
@@ -290,25 +333,41 @@ static std::string resolveRealPayCode(const std::string &jumpUrl){
     for(auto &kv:fields){ if(!first)bd<<"&"; first=false; bd<<kv.first<<"="<<StringUtils::urlEncode(kv.second); }
     std::string finalUrl;
     {
-        std::string cmd="curl -sk --max-time 8 --connect-timeout 6 -L -o /dev/null -w \"%{url_effective}\" "
-            "-X POST \""+action+"\" -d \""+bd.str()+"\"";
-        FILE*fp=popen(cmd.c_str(),"r");
-        if(fp){char bf[1024];while(fgets(bf,sizeof(bf),fp))finalUrl+=bf;pclose(fp);}
+        // POST + 跟随重定向, 取最终 URL (libcurl, 2026-09-09 替换 popen curl)
+        CURL *c = curl_easy_init();
+        char *eff = nullptr;
+        if (c) {
+            std::string discard;
+            curl_easy_setopt(c, CURLOPT_URL, action.c_str());
+            curl_easy_setopt(c, CURLOPT_POST, 1L);
+            curl_easy_setopt(c, CURLOPT_POSTFIELDS, bd.str().c_str());
+            curl_easy_setopt(c, CURLOPT_FOLLOWLOCATION, 1L);
+            curl_easy_setopt(c, CURLOPT_TIMEOUT, 8L);
+            curl_easy_setopt(c, CURLOPT_CONNECTTIMEOUT, 6L);
+            curl_easy_setopt(c, CURLOPT_SSL_VERIFYPEER, 1L);
+            curl_easy_setopt(c, CURLOPT_SSL_VERIFYHOST, 2L);
+            curl_easy_setopt(c, CURLOPT_WRITEFUNCTION, curlWriteCb);
+            curl_easy_setopt(c, CURLOPT_WRITEDATA, &discard);
+            curl_easy_perform(c);
+            curl_easy_getinfo(c, CURLINFO_EFFECTIVE_URL, &eff);
+            if (eff) finalUrl = eff;
+            curl_easy_cleanup(c);
+        }
         while(!finalUrl.empty()&&(finalUrl.back()=='\n'||finalUrl.back()=='\r'))finalUrl.pop_back();
     }
-    if(finalUrl.empty()){printf("[VPay] upstream submit empty\n");return"";}
-    printf("[VPay] upstream final url: [%s]\n",finalUrl.c_str());
+    if(finalUrl.empty()){vlog("[VPay] upstream submit empty\n");return"";}
+    vlog("[VPay] upstream final url: [%s]\n",finalUrl.c_str());
     size_t ps=finalUrl.rfind("/pay/");
-    if(ps==std::string::npos){printf("[VPay] upstream final url unexpected: %s\n",finalUrl.c_str());return"";}
+    if(ps==std::string::npos){vlog("[VPay] upstream final url unexpected: %s\n",finalUrl.c_str());return"";}
     std::string uoid=finalUrl.substr(ps+5);
     size_t qpos=uoid.find_first_of("/?#");
     if(qpos!=std::string::npos)uoid=uoid.substr(0,qpos);
-    if(uoid.empty()){printf("[VPay] upstream order id empty\n");return"";}
+    if(uoid.empty()){vlog("[VPay] upstream order id empty\n");return"";}
     // 3. POST /api/order/qrcode → {code:200,data:{qrcode:"wxp://…",scheme,uri,qrcode_data}}
     std::string apiHost=finalUrl.substr(0,finalUrl.find('/',finalUrl.find("://")+3));
     std::string qresp=httpPostJsonT(apiHost+"/api/order/qrcode","{\"order_id\":\""+uoid+"\"}");
     if(StringUtils::jsonVal(qresp,"code")!="200"){
-        printf("[VPay] upstream qrcode api failed: %.200s\n",qresp.c_str());
+        vlog("[VPay] upstream qrcode api failed: %.200s\n",qresp.c_str());
         return"";
     }
     std::string dq=jsonObj(qresp,"data");
@@ -317,12 +376,16 @@ static std::string resolveRealPayCode(const std::string &jumpUrl){
     if(qc.empty())qc=StringUtils::jsonVal(dq,"uri");
     // qrcode_data 是 base64 图片, 客户端二维码生成器吃不下 → 交给 jump 兜底
     if(qc.rfind("data:image",0)==0)qc.clear();
-    if(qc.empty()){printf("[VPay] upstream qrcode empty (data: %.200s)\n",dq.c_str());return"";}
-    printf("[VPay] real pay code: %.12s…(%zu chars)\n",qc.c_str(),qc.size());
+    if(qc.empty()){vlog("[VPay] upstream qrcode empty (data: %.200s)\n",dq.c_str());return"";}
+    vlog("[VPay] real pay code: %.12s…(%zu chars)\n",qc.c_str(),qc.size());
     return qc;
 }
 
-uint32_t VPayService::daysForProduct(const std::string &pid) const {for(auto &p:plans())if(p.productId==pid)return p.days;return 0;}
+uint32_t VPayService::daysForProduct(const std::string &pid) const {
+    auto ps = plans();   // shared_ptr 快照 (2026-09-09)
+    for (auto &p : *ps) if (p.productId == pid) return p.days;
+    return 0;
+}
 
 // ── 下单: /api/pay/create 返回 JSON {code:0,msg,trade_no,pay_type,pay_info,...} ──
 // method=jump → pay_type=jump, pay_info=支付跳转链接 (扫码/打开后拉起支付)
@@ -330,7 +393,8 @@ std::pair<bool,std::string> VPayService::createOrder(uint64_t uid,const std::str
                                                      const std::string &clientIp,
                                                      const std::string &payType){
     uint64_t amt=0; std::string nm; bool found=false;
-    for(auto &p:plans()) if(p.productId==pid){amt=p.amount;nm=p.name;found=true;break;}
+    auto ps = plans();   // shared_ptr 快照 (2026-09-09)
+    for(auto &p:*ps) if(p.productId==pid){amt=p.amount;nm=p.name;found=true;break;}
     if(!found||amt==0) return{false,"套餐不存在"};
 
     uint64_t oid=Snowflake::generate(); std::string ono=std::to_string(oid);
@@ -357,18 +421,18 @@ std::pair<bool,std::string> VPayService::createOrder(uint64_t uid,const std::str
     std::string ss=buildSignStr(pr);
     std::string sign=rsaSignSha256(ss);
     if(sign.empty())return{false,"签名密钥缺失"};
-    printf("[VPay] sign_src: %s\n[VPay] sign(RSA): %s\n",ss.c_str(),sign.c_str());
+    // 签名原文不再打印 (2026-09-09: 敏感信息, 排障只需知道成功与否)
     std::ostringstream bd; bool first=true;
     for(auto &kv:pr){ if(!first)bd<<"&"; first=false; bd<<kv.first<<"="<<StringUtils::urlEncode(kv.second); }
     bd<<"&sign="<<StringUtils::urlEncode(sign)<<"&sign_type=RSA";
     std::string resp=httpPost(m_apiUrl+"/api/pay/create",bd.str());
-    printf("[VPay] resp: %s\n",resp.c_str());
+    vlog("[VPay] resp: %s\n",resp.c_str());
 
     std::string code=StringUtils::jsonVal(resp,"code");
     if(code!="0"){
         std::string msg=StringUtils::jsonVal(resp,"msg");
         if(msg.empty()) msg="平台下单失败";
-        printf("[VPay] create order FAILED: %s\n",msg.c_str());
+        vlog("[VPay] create order FAILED: %s\n",msg.c_str());
         return{false,msg};
     }
     std::string tn=StringUtils::jsonVal(resp,"trade_no");
@@ -378,7 +442,7 @@ std::pair<bool,std::string> VPayService::createOrder(uint64_t uid,const std::str
     for(size_t p=0;(p=payurl.find("\\/",p))!=std::string::npos;p+=1)payurl.replace(p,2,"/");
     if(payurl.empty()){
         std::string msg="平台未返回支付链接";
-        printf("[VPay] create order FAILED: %s\n",msg);
+        vlog("[VPay] create order FAILED: %s\n",msg.c_str());
         return{false,msg};
     }
 
@@ -418,7 +482,7 @@ bool VPayService::applyPayment(uint64_t oid, const std::string &tradeNo){
     snprintf(qb,sizeof(qb),"UPDATE payment_orders SET status='paid',zp_trade_no='%s' WHERE id=%llu AND status='pending'",etn,oid);
     mysql_query(db,qb);
     if (mysql_affected_rows(db) == 0) {
-        printf("[VPay] order %llu already applied by another path, skip\n",(unsigned long long)oid);
+        vlog("[VPay] order %llu already applied by another path, skip\n",(unsigned long long)oid);
         return true;
     }
     // 只有抢占成功者才写订阅/余额
@@ -431,7 +495,7 @@ bool VPayService::applyPayment(uint64_t oid, const std::string &tradeNo){
     }
     try{RedisClient::instance().del("sub:"+std::to_string(du));RedisClient::instance().del("pay:order:"+std::to_string(oid));}
     catch(const std::exception &e){fprintf(stderr,"[VPay] redis del sub:%llu FAILED: %s\n",(unsigned long long)du,e.what());}
-    printf("[VPay] order %llu -> paid, user %llu +%u days +%llu balance\n",(unsigned long long)oid,(unsigned long long)du,dd,(unsigned long long)amt);
+    vlog("[VPay] order %llu -> paid, user %llu +%u days +%llu balance\n",(unsigned long long)oid,(unsigned long long)du,dd,(unsigned long long)amt);
     return true;
 }
 
@@ -481,10 +545,10 @@ bool VPayService::rsaVerifySha256(const std::string &data, const std::string &b6
     if(sig.empty())return false;
 
     std::string pem=readFile("rsa_plat_pub.pem");
-    if(pem.empty()){printf("[VPay] rsa_plat_pub.pem missing\n");return false;}
+    if(pem.empty()){vlog("[VPay] rsa_plat_pub.pem missing\n");return false;}
     BIO*b=BIO_new_mem_buf(pem.data(),(int)pem.size());
     EVP_PKEY*pk=PEM_read_bio_PUBKEY(b,nullptr,nullptr,nullptr);BIO_free(b);
-    if(!pk){printf("[VPay] platform pubkey parse FAILED\n");return false;}
+    if(!pk){vlog("[VPay] platform pubkey parse FAILED\n");return false;}
     EVP_MD_CTX*c=EVP_MD_CTX_new();
     bool ok=EVP_DigestVerifyInit(c,nullptr,EVP_sha256(),nullptr,pk)==1
           && EVP_DigestVerifyUpdate(c,data.data(),data.size())==1
@@ -504,7 +568,7 @@ bool VPayService::handleCallback(const std::string &q){
         if(kv.first=="sign_type"){stype=kv.second;continue;}
         pr.push_back(kv);
     }
-    if(stype!="RSA"){printf("[VPay] callback sign_type=%s rejected (RSA only)\n",stype.c_str());return false;}
+    if(stype!="RSA"){vlog("[VPay] callback sign_type=%s rejected (RSA only)\n",stype.c_str());return false;}
     if(sign.empty())return false;
 
     // 时间戳新鲜度 (±10min 防重放)
@@ -514,7 +578,7 @@ bool VPayService::handleCallback(const std::string &q){
         long long ts=0; try{ts=std::stoll(tsStr);}catch(...){}
         long long now=(long long)time(nullptr);
         if(ts==0||now-ts>600||ts-now>600){
-            printf("[VPay] callback timestamp out of range (%lld vs now %lld)\n",ts,now);
+            vlog("[VPay] callback timestamp out of range (%lld vs now %lld)\n",ts,now);
             return false;
         }
     }
@@ -523,7 +587,7 @@ bool VPayService::handleCallback(const std::string &q){
     std::string ss=buildSignStr(pr);
     if(!rsaVerifySha256(ss,sign)){
         // ikunpay callback sign=0 (platform unsigned): do not ship on trust, fallback to active query
-        printf("[VPay] callback RSA verify FAILED, fallback to active query\n");
+        vlog("[VPay] callback RSA verify FAILED, fallback to active query\n");
         std::string fon;
         for(auto &kv:pr) if(kv.first=="out_trade_no") fon=kv.second;
         if(fon.empty()) return false;
@@ -540,7 +604,7 @@ bool VPayService::handleCallback(const std::string &q){
         else if(kv.first=="out_trade_no")on=kv.second;
         else if(kv.first=="trade_no")tn=kv.second;
     }
-    if(pid!=m_appId){printf("[VPay] callback pid mismatch: %s\n",pid.c_str());return false;}
+    if(pid!=m_appId){vlog("[VPay] callback pid mismatch: %s\n",pid.c_str());return false;}
     if(st!="TRADE_SUCCESS"||on.empty())return false;
 
     // 金额核对 (按分比较, 防金额篡改)
@@ -565,7 +629,7 @@ bool VPayService::handleCallback(const std::string &q){
         }
         if(valid){try{cents=std::stoull(yuan)*100+std::stoull(fen);}catch(...){valid=false;}}
         if(!valid||cents!=o->amount){
-            printf("[VPay] callback money mismatch: got %s expect %llu\n",money.c_str(),(unsigned long long)o->amount);
+            vlog("[VPay] callback money mismatch: got %s expect %llu\n",money.c_str(),(unsigned long long)o->amount);
             return false;
         }
     }
@@ -587,7 +651,7 @@ bool VPayService::syncOrderStatus(uint64_t oid){
     for(auto &kv:pr){ if(!first)bd<<"&"; first=false; bd<<kv.first<<"="<<StringUtils::urlEncode(kv.second); }
     bd<<"&sign="<<StringUtils::urlEncode(sign)<<"&sign_type=RSA";
     std::string resp=httpPost(m_apiUrl+"/api/pay/query",bd.str());
-    printf("[VPay] pay/query resp: %s\n",resp.c_str());
+    vlog("[VPay] pay/query resp: %s\n",resp.c_str());
     if(StringUtils::jsonVal(resp,"code")!="0")return false;
     if(StringUtils::jsonVal(resp,"status")!="1")return false;   // 1=平台已支付
     std::string tn=StringUtils::jsonVal(resp,"trade_no");
@@ -596,3 +660,93 @@ bool VPayService::syncOrderStatus(uint64_t oid){
 
 std::optional<PayOrder> VPayService::queryOrder(uint64_t oid){auto g=m_pool.acquire(5000);if(!g)return{};MYSQL*db=g->get();char qb[256];
     snprintf(qb,sizeof(qb),"SELECT id,user_id,amount,duration_days,status,COALESCE(zp_trade_no,'')FROM payment_orders WHERE id=%llu",oid);mysql_query(db,qb);MYSQL_RES*res=mysql_store_result(db);if(!res||mysql_num_rows(res)==0){if(res)mysql_free_result(res);return{};}MYSQL_ROW rw=mysql_fetch_row(res);PayOrder o;o.orderId=std::stoull(rw[0]?rw[0]:"0");o.userId=std::stoull(rw[1]?rw[1]:"0");o.amount=std::stoull(rw[2]?rw[2]:"0");o.durationDays=(uint32_t)std::stoul(rw[3]?rw[3]:"0");o.status=rw[4]?rw[4]:"";o.tradeNo=rw[5]?rw[5]:"";mysql_free_result(res);return o;}
+
+// ═══════════════════════════════════════════════════════
+//  refundUserOrders — 退款全流程 (2026-09-09 收敛自
+//  SystemRoutes admin/refund 直连 SQL, SQL 逐字保留)
+// ═══════════════════════════════════════════════════════
+VPayService::RefundResult VPayService::refundUserOrders(uint64_t uid, bool forceRefund) {
+    RefundResult out;
+    auto guard = m_pool.acquire(5000);
+    if (!guard) { out.errcode = "DB_ERROR"; out.msg = "db busy"; return out; }
+    MYSQL *db = guard->get();
+
+    // 1) 先查 paid 订单 (count + 总额)
+    char q[512];
+    snprintf(q, sizeof(q),
+        "SELECT COUNT(*), COALESCE(SUM(amount),0) FROM payment_orders "
+        "WHERE user_id=%llu AND status='paid'", (unsigned long long)uid);
+    if (mysql_query(db, q) != 0)
+        { out.errcode = "DB_ERROR"; out.msg = mysql_error(db); return out; }
+    MYSQL_RES *res = mysql_store_result(db);
+    if (res && mysql_num_rows(res) > 0) {
+        MYSQL_ROW row = mysql_fetch_row(res);
+        out.cnt       = row[0] ? atoll(row[0]) : 0;
+        out.totalCents = row[1] ? atoll(row[1]) : 0;
+    }
+    if (res) mysql_free_result(res);
+
+    // 2) 无付费记录 → 不动任何数据 (防误伤兑换码/福利订阅)
+    if (out.cnt <= 0) { out.noPaidOrders = true; out.ok = true; return out; }
+
+    // 2.5) 退款时限: 最新付费 30 分钟内可退 (force=true 人工流程不受限)
+    if (!forceRefund) {
+        snprintf(q, sizeof(q),
+            "SELECT COUNT(*) FROM payment_orders WHERE user_id=%llu "
+            "AND status='paid' AND created_at >= NOW() - INTERVAL 30 MINUTE",
+            (unsigned long long)uid);
+        if (mysql_query(db, q) != 0)
+            { out.errcode = "DB_ERROR"; out.msg = mysql_error(db); return out; }
+        MYSQL_RES *tres = mysql_store_result(db);
+        long long recent = 0;
+        if (tres && mysql_num_rows(tres) > 0) {
+            MYSQL_ROW trow = mysql_fetch_row(tres);
+            recent = (trow && trow[0]) ? atoll(trow[0]) : 0;
+        }
+        if (tres) mysql_free_result(tres);
+        if (recent <= 0)
+            { out.errcode = "REFUND_TIMEOUT"; out.msg = "已超过 30 分钟退款时限, 无法退款"; return out; }
+    }
+
+    // 3) ikunpay refund first (all succeed -> then mark system)
+    {
+        snprintf(q, sizeof(q),
+            "SELECT id, amount FROM payment_orders WHERE user_id=%llu AND status='paid'",
+            (unsigned long long)uid);
+        if (mysql_query(db, q) != 0)
+            { out.errcode = "DB_ERROR"; out.msg = mysql_error(db); return out; }
+        MYSQL_RES *ores = mysql_store_result(db);
+        if (!ores) { out.errcode = "DB_ERROR"; out.msg = "no result"; return out; }
+        MYSQL_ROW orow;
+        while ((orow = mysql_fetch_row(ores)) != nullptr) {
+            uint64_t oid = strtoull(orow[0], nullptr, 10);
+            long long cents = atoll(orow[1]);
+            char money[32];
+            snprintf(money, sizeof(money), "%.2f", (double)cents / 100.0);
+            if (!forceRefund) {
+                std::string rerr;
+                if (!refundOrder(oid, money, rerr)) {
+                    mysql_free_result(ores);
+                    out.errcode = "REFUND_FAIL"; out.msg = "PLATFORM_REFUND_FAIL: " + rerr;
+                    return out;
+                }
+            }
+        }
+        mysql_free_result(ores);
+    }
+
+    // 4) mark orders refunded + clear subscription
+    snprintf(q, sizeof(q),
+        "UPDATE payment_orders SET status='refunded', refunded_at=NOW() "
+        "WHERE user_id=%llu AND status='paid'", (unsigned long long)uid);
+    if (mysql_query(db, q) != 0)
+        { out.errcode = "DB_ERROR"; out.msg = mysql_error(db); return out; }
+    snprintf(q, sizeof(q),
+        "UPDATE users SET subscription_expires=NULL WHERE id=%llu", (unsigned long long)uid);
+    mysql_query(db, q);
+    // 订阅缓存走唯一实现 (原直连 Redis del 收敛)
+    SubCache::write(uid, "");
+
+    out.ok = true;
+    return out;
+}

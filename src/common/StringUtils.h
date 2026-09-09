@@ -11,6 +11,24 @@ namespace StringUtils {
 /// 实现见 StringUtils.cpp (2026-09-06 起用 nlohmann/json 解析, 替换手写子串匹配)
 std::string jsonVal(const std::string &json, const std::string &key);
 
+/// JSON 字符串转义 (唯一实现, 2026-09-09 下移自 AuthService::jsonEscape)。
+/// 业务层/存储层组 JSON 时一律用本函数, 不再依赖 AuthService。
+inline std::string jsonEscape(const std::string &s) {
+    std::string r;
+    r.reserve(s.size() + 4);
+    for (char c : s) {
+        switch (c) {
+        case '"':  r += "\\\""; break;
+        case '\\': r += "\\\\"; break;
+        case '\n': r += "\\n";  break;
+        case '\r': r += "\\r";  break;
+        case '\t': r += "\\t";  break;
+        default:   r += c;
+        }
+    }
+    return r;
+}
+
 /// URL-decode %XX and '+' sequences per RFC 3986 / form-urlencoded.
 inline std::string urlDecode(const std::string &s) {
     std::string r;

@@ -101,15 +101,20 @@ namespace SessionManager {
 
         // 转义字符串防注入
         char eEmail[512], eProv[128];
-        mysql_real_escape_string(db, eEmail, email.c_str(), email.size());
-        mysql_real_escape_string(db, eProv, provider.c_str(), provider.size());
+        mysql_real_escape_string(db, eEmail, email.c_str(), (unsigned long)email.size());
+        mysql_real_escape_string(db, eProv, provider.c_str(), (unsigned long)provider.size());
+
+        // user_id 按数字插入 (2026-09-09 修复: 原 %s 直插未转义,
+        // userId 来自 JWT sub, JWT 密钥一旦泄漏即构成注入链; 数字转换从根上消除)
+        unsigned long long uid = 0;
+        try { uid = std::stoull(userId); } catch (...) { uid = 0; }
 
         char q[1024];
         snprintf(q, sizeof(q),
             "INSERT INTO refresh_tokens (id,token_hash,user_id,email,provider,expires_at) "
-            "VALUES(%lld,'%s',%s,'%s','%s','%s') "
+            "VALUES(%lld,'%s',%llu,'%s','%s','%s') "
             "ON DUPLICATE KEY UPDATE expires_at='%s'",
-            (long long)id, hex.c_str(), userId.c_str(),
+            (long long)id, hex.c_str(), uid,
             eEmail, eProv, expireStr, expireStr);
         mysql_query(db, q);
     }

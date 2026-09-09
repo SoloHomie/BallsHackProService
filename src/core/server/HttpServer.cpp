@@ -3,6 +3,7 @@
 #include "TlsConnection.h"
 #include "../config/ServerConfig.h"
 #include "../../common/Logger.h"
+#include "../../common/Snowflake.h"
 #include <iostream>
 #include <sstream>
 #include <cstring>
@@ -77,12 +78,13 @@ void HttpServer::stop() {
         m_acceptThread.join();
 }
 
-void HttpServer::route(const std::string &method, const std::string &path, Handler h) {
-    m_routes.push_back({method, path, std::move(h), false, nullptr});
+void HttpServer::route(const std::string &method, const std::string &path, Handler h,
+                       AuthFn guard) {
+    m_routes.push_back({method, path, std::move(h), false, nullptr, std::move(guard)});
 }
 
 void HttpServer::routeStream(const std::string &method, const std::string &path, StreamHandler h) {
-    m_routes.push_back({method, path, nullptr, true, std::move(h)});
+    m_routes.push_back({method, path, nullptr, true, std::move(h), nullptr});
 }
 
 // ── Accept loop: 无上限并发 ─────────────────────────────
@@ -97,7 +99,14 @@ void HttpServer::acceptLoop() {
         socket_t client = accept(m_listenSock, (sockaddr*)&clientAddr, &addrLen);
         if (client == INVALID_SOCK) continue;
 
-        // 无上限: 每个连接直接起独立线程
+        // 并发上限: 满则直接拒绝 (2026-09-09, 此前无任何限制)
+        if (m_activeConns.load(std::memory_order_relaxed) >= ServerConfig::MAX_CONN) {
+            sock_close(client);
+            continue;
+        }
+        m_activeConns.fetch_add(1, std::memory_order_relaxed);
+
+        // 每连接一个线程 (上限由 m_activeConns 保证)
         std::thread([this, client]() {
             handleClient(client);
         }).detach();
@@ -176,9 +185,25 @@ std::string HttpServer::readRequest(socket_t sock, TlsConnection *tls) {
 // ── Send response ──────────────────────────────────────
 void HttpServer::sendResponse(socket_t sock, TlsConnection *tls,
                                int status, const std::string &body,
-                               const std::string &redirectUrl) {
+                               const std::string &redirectUrl,
+                               const std::string &reqId) {
     bool isHtml = (body.find("<!DOCTYPE") == 0 || body.find("<!doctype") == 0 || body.find("<html") == 0);
     bool isBin  = (body.compare(0, 4, "BIN:") == 0);
+
+    // reason phrase 全表 (2026-09-09 修复: 此前 500 也发 "Not Found")
+    auto reason = [](int s) -> const char * {
+        switch (s) {
+        case 200: return "OK";
+        case 204: return "No Content";
+        case 302: return "Found";
+        case 400: return "Bad Request";
+        case 404: return "Not Found";
+        case 422: return "Unprocessable Entity";
+        case 500: return "Internal Server Error";
+        default:  return "Status";
+        }
+    };
+
     std::ostringstream ss;
 
     if (status == 302) {
@@ -187,10 +212,7 @@ void HttpServer::sendResponse(socket_t sock, TlsConnection *tls,
            << "Content-Length: 0\r\n"
            << "Connection: close\r\n\r\n";
     } else {
-        ss << "HTTP/1.1 " << status << " "
-           << (status == 200 ? "OK" : status == 204 ? "No Content"
-              : status == 422 ? "Unprocessable Entity" : "Not Found")
-           << "\r\n"
+        ss << "HTTP/1.1 " << status << " " << reason(status) << "\r\n"
            << "Content-Type: " << (isBin ? "application/octet-stream" : isHtml ? "text/html" : "application/json") << "\r\n"
            << "Content-Length: " << (isBin ? body.size() - 4 : body.size()) << "\r\n"
            << "X-Content-Type-Options: nosniff\r\n"
@@ -198,8 +220,10 @@ void HttpServer::sendResponse(socket_t sock, TlsConnection *tls,
            << "Strict-Transport-Security: max-age=31536000\r\n"
            << "Access-Control-Allow-Origin: *\r\n"
            << "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n"
-           << "Access-Control-Allow-Headers: Content-Type, Authorization\r\n"
-           << "Connection: close\r\n"
+           << "Access-Control-Allow-Headers: Content-Type, Authorization\r\n";
+        if (!reqId.empty())
+            ss << "X-Request-Id: " << reqId << "\r\n";
+        ss << "Connection: close\r\n"
            << "\r\n"
            << (isBin ? body.substr(4) : body);
     }
@@ -216,31 +240,31 @@ void HttpServer::sendResponse(socket_t sock, TlsConnection *tls,
     }
 }
 
-void HttpServer::sendStreamHeader(socket_t sock, TlsConnection *tls,
-                                   const std::string &contentType, size_t fileSize) {
-    std::ostringstream ss;
-    ss << "HTTP/1.1 200 OK\r\n"
-       << "Content-Type: " << contentType << "\r\n"
-       << "Content-Length: " << fileSize << "\r\n"
-       << "Connection: close\r\n"
-       << "Access-Control-Allow-Origin: *\r\n"
-       << "Strict-Transport-Security: max-age=31536000\r\n"
-       << "\r\n";
-    std::string header = ss.str();
-    if (tls) {
-        tls->write(header.data(), (int)header.size());
-    } else {
-#ifdef _WIN32
-        send(sock, header.data(), (int)header.size(), 0);
-#else
-        send(sock, header.data(), header.size(), 0);
-#endif
-    }
-}
-
 // ── Per-client handler ─────────────────────────────────
 void HttpServer::handleClient(socket_t sock) {
     auto t0 = std::chrono::steady_clock::now();
+    // request-id 贯穿 (2026-09-09): 响应头 X-Request-Id + 访问日志同键,
+    // 客户端报错时凭 id 可直接定位服务端日志行
+    std::string reqId = std::to_string(Snowflake::generate());
+
+    // 连接计数 RAII 守卫 (acceptLoop 已 ++, 本线程任何退出路径自动 --)
+    struct ConnGuard {
+        std::atomic<int> &c;
+        ~ConnGuard() { c.fetch_sub(1, std::memory_order_relaxed); }
+    } connGuard{m_activeConns};
+
+    // 读请求头超时 5s (2026-09-09: 原非 TLS 路径无超时, 慢速客户端可永久占线程)
+    {
+#ifdef _WIN32
+        DWORD tv = 5000;
+        setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
+#else
+        struct timeval tv;
+        tv.tv_sec = 5;
+        tv.tv_usec = 0;
+        setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+#endif
+    }
 
     TlsConnection *tls = tlsHandshake(sock);
     if (m_useTls && m_tlsCtx && !tls) { sock_close(sock); return; }
@@ -248,21 +272,22 @@ void HttpServer::handleClient(socket_t sock) {
     std::string raw = readRequest(sock, tls);
     Parsed req = parseRequest(raw);
 
-    // 请求日志
+    // 请求日志 (时间戳由 Logger 统一输出)
     auto logReq = [&](int status) {
         auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::steady_clock::now() - t0).count();
-        std::cout << "[" << req.method << " " << req.path << "] " << status
-                  << " " << ms << "ms" << std::endl;
+        Logger::info("Http", "req=" + reqId + " " + req.method + " " + req.path
+                     + " -> " + std::to_string(status) + " " + std::to_string(ms) + "ms");
     };
 
     if (req.method == "OPTIONS") {
-        sendResponse(sock, tls, 204, "", "");
+        sendResponse(sock, tls, 204, "", "", reqId);
         logReq(204);
         delete tls; sock_close(sock); return;
     }
     if (req.method.empty()) {
-        sendResponse(sock, tls, 400, "{\"success\":false,\"message\":\"Bad Request\"}", "");
+        sendResponse(sock, tls, 400,
+            "{\"success\":false,\"errcode\":\"BAD_REQUEST\",\"message\":\"Bad Request\"}", "", reqId);
         logReq(400);
         delete tls; sock_close(sock); return;
     }
@@ -277,12 +302,24 @@ void HttpServer::handleClient(socket_t sock) {
                 logReq(200);
             } catch (...) {
                 sendResponse(sock, tls, 500,
-                    "{\"success\":false,\"message\":\"Internal Server Error\"}", "");
+                    "{\"success\":false,\"errcode\":\"INTERNAL_ERROR\",\"message\":\"Internal Server Error\"}",
+                    "", reqId);
                 logReq(500);
             }
             delete tls;
             sock_close(sock);
             return;
+        }
+
+        // ── 鉴权守卫: handler 执行前统一拦截 (未登录/无权限 → 422) ──
+        if (r.guard) {
+            if (auto err = r.guard(req.headers)) {
+                sendResponse(sock, tls, 422, *err, "", reqId);
+                logReq(422);
+                delete tls;
+                sock_close(sock);
+                return;
+            }
         }
 
         std::string respBody;
@@ -291,20 +328,23 @@ void HttpServer::handleClient(socket_t sock) {
         try {
             respBody = r.handler(req.body, req.query, req.headers);
         } catch (const std::exception &e) {
-            respBody = "{\"success\":false,\"message\":\"Internal Server Error\"}";
+            respBody = "{\"success\":false,\"errcode\":\"INTERNAL_ERROR\",\"message\":\"Internal Server Error\"}";
             status = 500;
-            std::cerr << "[ERROR] " << r.method << " " << r.path << ": " << e.what() << std::endl;
+            Logger::err("Http", "req=" + reqId + " " + r.method + " " + r.path
+                        + " exception: " + e.what());
         } catch (...) {
-            respBody = "{\"success\":false,\"message\":\"Internal Server Error\"}";
+            respBody = "{\"success\":false,\"errcode\":\"INTERNAL_ERROR\",\"message\":\"Internal Server Error\"}";
             status = 500;
-            std::cerr << "[ERROR] " << r.method << " " << r.path << ": unknown exception" << std::endl;
+            Logger::err("Http", "req=" + reqId + " " + r.method + " " + r.path
+                        + " unknown exception");
         }
         if (respBody.rfind("REDIRECT:", 0) == 0) {
             redirectUrl = respBody.substr(9);
             status = 302;
-        } else if (respBody.find("\"success\":false") != std::string::npos)
+        } else if (respBody.rfind("{\"success\":false", 0) == 0)
+            // 前缀判定 (2026-09-09): 此前 find 子串匹配会误伤含嵌套 success:false 的响应
             status = 422;
-        sendResponse(sock, tls, status, respBody, redirectUrl);
+        sendResponse(sock, tls, status, respBody, redirectUrl, reqId);
         logReq(status);
         delete tls;
 
@@ -328,7 +368,8 @@ void HttpServer::handleClient(socket_t sock) {
     }
 
     // 404
-    sendResponse(sock, tls, 404, "{\"success\":false,\"message\":\"not found\"}", "");
+    sendResponse(sock, tls, 404,
+        "{\"success\":false,\"errcode\":\"NOT_FOUND\",\"message\":\"not found\"}", "", reqId);
     logReq(404);
     delete tls;
     sock_close(sock);

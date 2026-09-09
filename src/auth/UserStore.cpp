@@ -6,6 +6,7 @@
 #include <iostream>
 #include <algorithm>
 #include <cctype>
+#include <cstdlib>
 
 // ── 辅助：预处理语句 RAII ──────────────────────────────
 struct StmtGuard {
@@ -789,4 +790,189 @@ unsigned long long UserStore::balanceOf(uint64_t id) const {
     mysql_stmt_bind_result(stmt, r);
     mysql_stmt_fetch(stmt);
     return bal;
+}
+
+// ═══════════════════════════════════════════════════════
+//  profileOf (2026-09-09 收敛自 AuthRoutes profile 直连 SQL)
+//  balance 按字符串读: 列类型为 DECIMAL, 保留原始形态与旧实现一致
+// ═══════════════════════════════════════════════════════
+std::optional<UserStore::Profile> UserStore::profileOf(uint64_t id) const {
+    auto guard = m_pool.acquire(5000);
+    if (!guard) return std::nullopt;
+    MYSQL* db = guard->get();
+
+    StmtGuard stmt{mysql_stmt_init(db)};
+    const char* sql =
+        "SELECT email, username, COALESCE(avatar_url,''), provider, "
+        "UNIX_TIMESTAMP(GREATEST(COALESCE(subscription_expires, NOW()), NOW())), "
+        "balance FROM users WHERE id=?";
+    if (mysql_stmt_prepare(stmt, sql, (unsigned long)strlen(sql)) != 0)
+        return std::nullopt;
+
+    MYSQL_BIND b[1] = {};
+    b[0].buffer_type = MYSQL_TYPE_LONGLONG; b[0].buffer = &id;
+    mysql_stmt_bind_param(stmt, b);
+    if (mysql_stmt_execute(stmt) != 0) return std::nullopt;
+
+    char dbEmail[256] = {}, dbName[256] = {}, dbAvatar[1024] = {}, dbProv[64] = {}, dbBal[64] = {};
+    unsigned long lenEmail = 0, lenName = 0, lenAvatar = 0, lenProv = 0, lenBal = 0;
+    bool nullEmail = 0, nullName = 0, nullAvatar = 0, nullProv = 0, nullBal = 0;
+    long long subTs = 0;
+
+    MYSQL_BIND r[6] = {};
+    r[0].buffer_type = MYSQL_TYPE_STRING; r[0].buffer = dbEmail; r[0].buffer_length = sizeof(dbEmail) - 1;
+    r[0].length = &lenEmail; r[0].is_null = &nullEmail;
+    r[1].buffer_type = MYSQL_TYPE_STRING; r[1].buffer = dbName; r[1].buffer_length = sizeof(dbName) - 1;
+    r[1].length = &lenName; r[1].is_null = &nullName;
+    r[2].buffer_type = MYSQL_TYPE_STRING; r[2].buffer = dbAvatar; r[2].buffer_length = sizeof(dbAvatar) - 1;
+    r[2].length = &lenAvatar; r[2].is_null = &nullAvatar;
+    r[3].buffer_type = MYSQL_TYPE_STRING; r[3].buffer = dbProv; r[3].buffer_length = sizeof(dbProv) - 1;
+    r[3].length = &lenProv; r[3].is_null = &nullProv;
+    r[4].buffer_type = MYSQL_TYPE_LONGLONG; r[4].buffer = &subTs;
+    r[5].buffer_type = MYSQL_TYPE_STRING; r[5].buffer = dbBal; r[5].buffer_length = sizeof(dbBal) - 1;
+    r[5].length = &lenBal; r[5].is_null = &nullBal;
+    mysql_stmt_bind_result(stmt, r);
+    mysql_stmt_store_result(stmt);
+
+    if (mysql_stmt_fetch(stmt) != 0) return std::nullopt;  // 用户不存在
+
+    if (!nullEmail)  dbEmail[lenEmail] = '\0';
+    if (!nullName)   dbName[lenName] = '\0';
+    if (!nullAvatar) dbAvatar[lenAvatar] = '\0';
+    if (!nullProv)   dbProv[lenProv] = '\0';
+    if (!nullBal)    dbBal[lenBal] = '\0';
+
+    Profile p;
+    p.email        = dbEmail;
+    p.username     = dbName;
+    p.avatarUrl    = dbAvatar;
+    p.provider     = dbProv;
+    p.subExpiresTs = subTs;
+    p.balance      = dbBal;
+    return p;
+}
+
+// ═══════════════════════════════════════════════════════
+//  管理操作 (2026-09-09 收敛自 SystemRoutes admin 直连 SQL)
+// ═══════════════════════════════════════════════════════
+bool UserStore::setStatus(const std::string &email, int status) {
+    auto guard = m_pool.acquire(5000);
+    if (!guard) return false;
+    MYSQL* db = guard->get();
+
+    StmtGuard stmt{mysql_stmt_init(db)};
+    const char* sql = "UPDATE users SET status=? WHERE LOWER(email)=LOWER(?)";
+    if (mysql_stmt_prepare(stmt, sql, (unsigned long)strlen(sql)) != 0) return false;
+    MYSQL_BIND b[2] = {};
+    b[0].buffer_type = MYSQL_TYPE_TINY; b[0].buffer = &status;
+    b[1].buffer_type = MYSQL_TYPE_STRING;
+    b[1].buffer = (void*)email.c_str(); b[1].buffer_length = (unsigned long)email.size();
+    mysql_stmt_bind_param(stmt, b);
+    return mysql_stmt_execute(stmt) == 0;
+}
+
+int UserStore::adjustSubscriptionDays(const std::string &email, int days) {
+    auto guard = m_pool.acquire(5000);
+    if (!guard) return -1;
+    MYSQL* db = guard->get();
+
+    // 两分支保留旧语义: 减天数时仅对已订阅用户生效 (IS NOT NULL)
+    const char* sql = days > 0
+        ? "UPDATE users SET subscription_expires=DATE_ADD("
+          "GREATEST(COALESCE(subscription_expires,NOW()),NOW()), INTERVAL ? DAY)"
+          " WHERE LOWER(email)=LOWER(?)"
+        : "UPDATE users SET subscription_expires=DATE_SUB("
+          "GREATEST(COALESCE(subscription_expires,NOW()),NOW()), INTERVAL ? DAY)"
+          " WHERE LOWER(email)=LOWER(?) AND subscription_expires IS NOT NULL";
+    StmtGuard stmt{mysql_stmt_init(db)};
+    if (mysql_stmt_prepare(stmt, sql, (unsigned long)strlen(sql)) != 0) return -1;
+    int absDays = std::abs(days);
+    MYSQL_BIND b[2] = {};
+    b[0].buffer_type = MYSQL_TYPE_LONG; b[0].buffer = &absDays;
+    b[1].buffer_type = MYSQL_TYPE_STRING;
+    b[1].buffer = (void*)email.c_str(); b[1].buffer_length = (unsigned long)email.size();
+    mysql_stmt_bind_param(stmt, b);
+    if (mysql_stmt_execute(stmt) != 0) return -1;
+    return (int)mysql_stmt_affected_rows(stmt);
+}
+
+bool UserStore::setSubscriptionExpires(const std::string &email,
+                                       const std::string &expires) {
+    auto guard = m_pool.acquire(5000);
+    if (!guard) return false;
+    MYSQL* db = guard->get();
+
+    StmtGuard stmt{mysql_stmt_init(db)};
+    const char* sql = (expires == "clear")
+        ? "UPDATE users SET subscription_expires=NULL WHERE LOWER(email)=LOWER(?)"
+        : "UPDATE users SET subscription_expires=? WHERE LOWER(email)=LOWER(?)";
+    if (mysql_stmt_prepare(stmt, sql, (unsigned long)strlen(sql)) != 0) return false;
+
+    MYSQL_BIND b[2] = {};
+    b[0].buffer_type = MYSQL_TYPE_STRING;
+    b[0].buffer = (void*)expires.c_str(); b[0].buffer_length = (unsigned long)expires.size();
+    b[1].buffer_type = MYSQL_TYPE_STRING;
+    b[1].buffer = (void*)email.c_str(); b[1].buffer_length = (unsigned long)email.size();
+    mysql_stmt_bind_param(stmt, b);
+    return mysql_stmt_execute(stmt) == 0;
+}
+
+// ═══════════════════════════════════════════════════════
+//  设备风控 (2026-09-09 收敛自 SystemRoutes payload/key)
+// ═══════════════════════════════════════════════════════
+uint64_t UserStore::deviceBindCount(uint64_t uid) {
+    auto guard = m_pool.acquire(5000);
+    if (!guard) return 0;
+    MYSQL* db = guard->get();
+
+    StmtGuard stmt{mysql_stmt_init(db)};
+    const char* sql =
+        "SELECT COUNT(*) FROM device_bind WHERE uid=? AND first_seen > NOW() - INTERVAL 7 DAY";
+    if (mysql_stmt_prepare(stmt, sql, (unsigned long)strlen(sql)) != 0) return 0;
+    MYSQL_BIND b[1] = {};
+    b[0].buffer_type = MYSQL_TYPE_LONGLONG; b[0].buffer = &uid;
+    mysql_stmt_bind_param(stmt, b);
+    mysql_stmt_execute(stmt);
+    mysql_stmt_store_result(stmt);
+
+    long long cnt = 0;
+    MYSQL_BIND r[1] = {};
+    r[0].buffer_type = MYSQL_TYPE_LONGLONG; r[0].buffer = &cnt;
+    mysql_stmt_bind_result(stmt, r);
+    if (mysql_stmt_fetch(stmt) != 0) return 0;
+    return (uint64_t)cnt;
+}
+
+void UserStore::deviceBindTouch(uint64_t uid, const std::string &devId) {
+    auto guard = m_pool.acquire(5000);
+    if (!guard) return;
+    MYSQL* db = guard->get();
+
+    StmtGuard stmt{mysql_stmt_init(db)};
+    const char* sql =
+        "INSERT INTO device_bind(uid,device_id,first_seen,last_seen) VALUES(?,?,NOW(),NOW()) "
+        "ON DUPLICATE KEY UPDATE last_seen=NOW()";
+    mysql_stmt_prepare(stmt, sql, (unsigned long)strlen(sql));
+    MYSQL_BIND b[2] = {};
+    b[0].buffer_type = MYSQL_TYPE_LONGLONG; b[0].buffer = &uid;
+    b[1].buffer_type = MYSQL_TYPE_STRING;
+    b[1].buffer = (void*)devId.c_str(); b[1].buffer_length = (unsigned long)devId.size();
+    mysql_stmt_bind_param(stmt, b);
+    mysql_stmt_execute(stmt);
+}
+
+bool UserStore::updateUsername(uint64_t id, const std::string &username) {
+    auto guard = m_pool.acquire(5000);
+    if (!guard) return false;
+    MYSQL* db = guard->get();
+
+    StmtGuard stmt{mysql_stmt_init(db)};
+    const char* sql = "UPDATE users SET username=? WHERE id=?";
+    if (mysql_stmt_prepare(stmt, sql, (unsigned long)strlen(sql)) != 0) return false;
+    MYSQL_BIND b[2] = {};
+    b[0].buffer_type = MYSQL_TYPE_STRING;
+    b[0].buffer = (void*)username.c_str(); b[0].buffer_length = (unsigned long)username.size();
+    b[1].buffer_type = MYSQL_TYPE_LONGLONG; b[1].buffer = &id;
+    mysql_stmt_bind_param(stmt, b);
+    return mysql_stmt_execute(stmt) == 0;
 }

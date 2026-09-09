@@ -15,7 +15,9 @@ static size_t writeCb(char *ptr, size_t size, size_t nmemb, void *userdata) {
 }
 
 OAuthService::OAuthService()  { curl_global_init(CURL_GLOBAL_DEFAULT); }
-OAuthService::~OAuthService() { curl_global_cleanup(); }
+// 析构不再调 curl_global_cleanup (2026-09-09): 进程退出时 detached 邮件线程
+// 可能仍在 curl_easy_perform, cleanup 构成 use-after-free; 全局状态由 OS 回收。
+OAuthService::~OAuthService() = default;
 
 // ── HTTP POST ────────────────────────────────────────
 std::string OAuthService::httpPost(const std::string &url,

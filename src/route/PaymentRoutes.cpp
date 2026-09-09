@@ -1,4 +1,5 @@
 #include "PaymentRoutes.h"
+#include "RouteGuard.h"
 #include "../core/server/HttpServer.h"
 #include "../auth/AuthService.h"
 #include "../payment/VPayService.h"
@@ -79,8 +80,9 @@ void registerPaymentRoutes(HttpServer &server, AuthService &auth, DbPool &pool) 
     // ── 套餐列表 ──
     server.route("GET", "/api/payment/plans",
         [&](const std::string &, const std::string &, const std::string &) {
+            auto plans = VPayService::plans();   // shared_ptr 快照 (线程安全)
             std::string j = "{\"success\":true,\"plans\":["; bool f=true;
-            for (auto &p : VPayService::plans()) {
+            for (auto &p : *plans) {
                 if (!f) j+=","; f=false;
                 j += "{\"product_id\":\""+AuthService::jsonEscape(p.productId)+"\""
                    + ",\"name\":\""+AuthService::jsonEscape(p.name)+"\""
@@ -104,9 +106,8 @@ void registerPaymentRoutes(HttpServer &server, AuthService &auth, DbPool &pool) 
     // ── 创建订单 (pay_type 可选: alipay 默认 / wxpay / douyinpay) ──
     server.route("POST", "/api/payment/order",
         [&](const std::string &body, const std::string &, const std::string &headers) {
-            auto tp = auth.authenticate(headers);
-            if (!tp) return AuthService::jsonErr("UNAUTHORIZED", "请先登录");
-            uint64_t uid = std::stoull(tp->sub);
+            const auto &tp = route::currentUser();
+            uint64_t uid = std::stoull(tp.sub);
             std::string pid = StringUtils::jsonVal(body, "product_id");
             if (pid.empty()) return AuthService::jsonErr("FIELDS_REQUIRED", "请选择套餐");
             std::string payType = StringUtils::jsonVal(body, "pay_type");
@@ -121,7 +122,7 @@ void registerPaymentRoutes(HttpServer &server, AuthService &auth, DbPool &pool) 
             auto [ok, result] = payService.createOrder(uid, pid, clientIp, payType);
             if (!ok) return AuthService::jsonErr("ORDER_FAILED", result);
             return "{\"success\":true,"+result.substr(1);
-        });
+        }, route::requireAuth(auth));
 
     // ── 回调（GET 请求，RSA 验签）──
     server.route("GET", "/api/payment/callback",
@@ -148,9 +149,7 @@ void registerPaymentRoutes(HttpServer &server, AuthService &auth, DbPool &pool) 
 
     // ── 查询订单状态（含过期检测 + 平台主动查单补账）──────
     server.route("GET", "/api/payment/order/status",
-        [&](const std::string &, const std::string &query, const std::string &headers) {
-            auto tp = auth.authenticate(headers);
-            if (!tp) return AuthService::jsonErr("UNAUTHORIZED", "请先登录");
+        [&](const std::string &, const std::string &query, const std::string &) {
             std::string oid = StringUtils::queryVal(query, "order_id");
             if (oid.empty()) return AuthService::jsonErr("ID_REQUIRED", "请提供订单ID");
             uint64_t orderId = 0;
@@ -178,5 +177,5 @@ void registerPaymentRoutes(HttpServer &server, AuthService &auth, DbPool &pool) 
              <<",\"id\":"<<o->orderId<<",\"amount\":"<<o->amount
              <<",\"duration_days\":"<<o->durationDays<<"}";
             return j.str();
-        });
+        }, route::requireAuth(auth));
 }
